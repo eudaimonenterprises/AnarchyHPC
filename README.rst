@@ -1,18 +1,20 @@
-.. image:: img/trinityxbanner_scaled.png
+.. image:: img/AnarchyHPC.png
 
 Overview
 ========
 
-Welcome to TrinityX 15!
+Welcome to AnarchyHPC!
 
-TrinityX is the new generation of ClusterVision's open-source HPC, AI and cloud platform. It is designed from the ground up to provide all services required in a modern HPC, AI and cloud system, and to allow full customization of the installation. Also it includes optional modules for specific needs, please check the controller and compute playbooks.
+AnarchyHPC is the AppArmor-inclusive modern successor to the original TrinityX cluster management system. This compatibility-conscious, forward-facing fork is not affiliated with or endorsed by ClusterVision. Legacy references to "TrinityX", "trinityx", "trinity" and the like currently persist due to technical constraints and will be systematically removed as refactoring progresses.
+
+AnarchyHPC is the postmodern open-source HPC, AI and cloud platform. It is designed from the ground up to provide all services required in a postmodern HPC, AI and cloud system, and to allow full customization of the installation. Also it includes optional modules for specific needs, please check the controller and compute playbooks.
 
 
 
 Quick start
 ===========
 
-In standard configuration TrinityX provides the following services to the cluster:
+In standard configuration AnarchyHPC provides the following services to the cluster:
 
 * Luna, our default super-efficient node provisioner
 * OpenLDAP
@@ -33,39 +35,24 @@ It will also set up:
 * High Availability/HA
 * and more
 
-.. image:: img/triX_300.png
+.. image:: img/AnarchyHPC_300.png
    :width: 300px
    :height: 300px
 
 
-Steps to install TrinityX
+Steps to install AnarchyHPC
 =========================
 
-1. Install an Enterprise Linux version 8, 9 or 10 (i.e. RHEL, Rocky) on your controller(s). It is recommended to put ``/trinity`` and  ``/trinity/local`` on it's own filesystem. Note the partition configuration must be finalized (i.e. mounted and in fstab) before starting the TrinityX installation.
+1. Install an Enterprise Linux version 8, 9 or 10 (i.e. RHEL, Rocky) on your controller(s). It is recommended to put ``/trinity`` and  ``/trinity/local`` on it's own filesystem. Note the partition configuration must be finalized (i.e. mounted and in fstab) before starting the AnarchyHPC installation.
 
 2. Configure network interfaces that will be used in the cluster, e.g public, provisioning and MPI networks on the controller(s).
    Ansible uses the interface address to determine the course of the playbook.
 
 3. Configure passwordless authentication to the controller itself or/and optionally for in between both controllers in the HA case.
 
-----
+4. Clone AnarchyHPC repository into your working directory. Then run ``INSTALL.sh`` to install and be guided through the steps::
 
-*GRAPHICAL METHOD*
-~~~~~~~~~~~~~~~~~~
-
-4. Download the graphical installer on https://clustervision.com/trinityx/ and let it guide you through the installation.
-
-   Please note: the graphical installer does rely on best-practice defaults and does not configure advanced features like HA.
-   For advanced configuration, please follow the manual installation steps.
-
-----
-
-*TEXT BASED METHOD*
-~~~~~~~~~~~~~~~~~~~
-
-4. Clone TrinityX repository into your working directory. Then run ``INSTALL.sh`` to install and be guided through the steps::
-
-       # git clone http://github.com/clustervision/trinityX
+       # git clone https://github.com/eudaimonenterprises/AnarchyHPC.git
        # cd trinityX
        # bash INSTALL.sh
 
@@ -76,7 +63,7 @@ Steps to install TrinityX
 
 4. Step by step manual configuration and installation
 
-4.1. Clone TrinityX repository into your working directory. Then run ``prepare.sh`` to install all the prerequisites::
+4.1. Clone AnarchyHPC repository into your working directory. Then run ``prepare.sh`` to install all the prerequisites::
 
        # git clone http://github.com/clustervision/trinityX
        # cd trinityX
@@ -118,7 +105,7 @@ Steps to install TrinityX
    In this case, no SSH keys need to be exchanged between the controllers and the ``hosts`` file does not require any change.
    It's important though to have the primary controller finish the controller.yml playbook first before running on the other controllers.
 
-4.4. Start TrinityX installation::
+4.4. Start AnarchyHPC installation::
 
      # ansible-playbook controller.yml
 
@@ -141,7 +128,7 @@ Now you have your controller(s) installed and the default OS image(s) created!
 Customizing your installation
 =============================
 
-Now, if you want to tailor TrinityX to your needs, you can modify the ansible playbooks and variable files.
+Now, if you want to tailor AnarchyHPC to your needs, you can modify the ansible playbooks and variable files.
 
 Descriptions to configuration options are given inside ``controller.yml`` and ``group_vars/*``. Options that might be changed include:
 
@@ -170,25 +157,25 @@ Fencing is supported by enforcing stonith. The BMC-s of each controller need to 
 OpenHPC Support
 ===============
 
-The OpenHPC project provides a framework for building, managing and maintain HPC clusters. This project provides packages for most popular scientific and HPC applications. TrinityX can integrate this effort into it's ecosystem. In order to enable this integration set the flag ``enable_openhpc`` in ``group_vars/all`` to ``true`` (default). 
+The OpenHPC project provides a framework for building, managing and maintain HPC clusters. This project provides packages for most popular scientific and HPC applications. AnarchyHPC can integrate this effort into it's ecosystem. In order to enable this integration set the flag ``enable_openhpc`` in ``group_vars/all`` to ``true`` (default).
 
 Documentation
 =============
 A pre-built PDF is provided in the main directory.
-Please visit https://docs.clustervision.com for more documentation on the TrinityX project.
+Please visit https://github.com/eudaimonenterprises/AnarchyHPC/wiki for more documentation on the AnarchyHPC project.
 An URL with the Luna REST API documentation will follow.
 
 Contributing
 ============
 
-To contribute to TrinityX:
+To contribute to AnarchyHPC:
 
 1. Get familiar with our `code guidelines <Guidelines.rst>`_
-2. Clone TrinityX repository
+2. Clone AnarchyHPC repository
 3. Commit your changes in your repository and create a pull request to the ``dev`` branch in ours.
 
-TrinityX Support
+AnarchyHPC Support
 ================
 
-For further products and professional support, please contact us at sales@clustervision.com
+For further products and professional support, please contact us at eudaimonent@protonmail.com
 
