@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# This code is part of the TrinityX software suite
+# This code is part of the AnarchyHPC software suite
 # Copyright (C) 2023  ClusterVision Solutions b.v.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -50,13 +50,13 @@ azure_tenant_id       = "{{ azure_tenant_id }}"
 azure_resource_group  = "{{ azure_resource_group_name }}"
 azure_location        = "{{ azure_location }}"
 azure_resource_group_tag = {
-  HPC = "TrinityX"
+  HPC = "AnarchyHPC"
 }
 
 # Azure Network Service Group & Rules
-azure_nsg      = "TrinityX-NSG"
+azure_nsg      = "AnarchyHPC-NSG"
 azure_nsg_tags = {
-  HPC        = "TrinityX",
+  HPC        = "AnarchyHPC",
   module     = "network",
   sub-module = "security group"
 }
@@ -71,7 +71,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "22"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 22 for SSH."
+    description                = "AnarchyHPC Using Port 22 for SSH."
   },
   {
     name                       = "Allow-HTTP"
@@ -83,7 +83,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "80"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 80 for Nginx."
+    description                = "AnarchyHPC Using Port 80 for Nginx."
   },
   {
     name                       = "Allow-HTTPS"
@@ -95,7 +95,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "443"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 443 for SSL."
+    description                = "AnarchyHPC Using Port 443 for SSL."
   },
   {
     name                       = "Allow-HTTP-Alt"
@@ -107,7 +107,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "8080"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 8080 for OOD."
+    description                = "AnarchyHPC Using Port 8080 for OOD."
   },
   {
     name                       = "Allow-Custom-1"
@@ -119,7 +119,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "7050"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 7050 for Lunqa2 Daemon."
+    description                = "AnarchyHPC Using Port 7050 for Lunqa2 Daemon."
   },
   {
     name                       = "Allow-Custom-2"
@@ -131,7 +131,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "7055"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 7055 for Nginx."
+    description                = "AnarchyHPC Using Port 7055 for Nginx."
   },
   {
     name                       = "Allow-Custom-3"
@@ -143,7 +143,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "7051"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 7051 for Nginx."
+    description                = "AnarchyHPC Using Port 7051 for Nginx."
   },
   {
     name                       = "Allow-TFTP"
@@ -155,7 +155,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "69"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 69 for TFTP."
+    description                = "AnarchyHPC Using Port 69 for TFTP."
   },
   {
     name                       = "Allow-WireGuard"
@@ -167,7 +167,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "51820"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 51820 for TFTP."
+    description                = "AnarchyHPC Using Port 51820 for TFTP."
   },
   {
     name                       = "Allow-SSH-Out"
@@ -179,7 +179,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "22"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 22 for SSH."
+    description                = "AnarchyHPC Using Port 22 for SSH."
   },
   {
     name                       = "Allow-HTTP-Out"
@@ -191,7 +191,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "80"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 80 for Nginx."
+    description                = "AnarchyHPC Using Port 80 for Nginx."
   },
   {
     name                       = "Allow-HTTPS-Out"
@@ -203,7 +203,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "443"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 443 for SSL."
+    description                = "AnarchyHPC Using Port 443 for SSL."
   },
   {
     name                       = "Allow-HTTP-Alt-Out"
@@ -215,7 +215,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "8080"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 8080 for OOD."
+    description                = "AnarchyHPC Using Port 8080 for OOD."
   },
   {
     name                       = "Allow-Custom-1-Out"
@@ -227,7 +227,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "7050"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 7050 for Lunqa2 Daemon."
+    description                = "AnarchyHPC Using Port 7050 for Lunqa2 Daemon."
   },
   {
     name                       = "Allow-Custom-2-Out"
@@ -239,7 +239,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "7055"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 7055 for Nginx."
+    description                = "AnarchyHPC Using Port 7055 for Nginx."
   },
   {
     name                       = "Allow-Custom-3-Out"
@@ -251,7 +251,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "7051"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 7051 for Nginx."
+    description                = "AnarchyHPC Using Port 7051 for Nginx."
   },
   {
     name                       = "Allow-TFTP-Out"
@@ -263,7 +263,7 @@ azure_nsg_security_rules = [
     destination_port_range     = "69"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 69 for TFTP."
+    description                = "AnarchyHPC Using Port 69 for TFTP."
   },
   {
     name                       = "Allow-WireGuard-Out"
@@ -275,14 +275,14 @@ azure_nsg_security_rules = [
     destination_port_range     = "51820"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
-    description                = "TrinityX Using Port 51820 for TFTP."
+    description                = "AnarchyHPC Using Port 51820 for TFTP."
   }
 ]
 
 # Azure Virtual Network, Address Space, Subnets
-azure_virtual_network                = "TrinityX-Vnet"
+azure_virtual_network                = "AnarchyHPC-Vnet"
 azure_virtual_network_tags           = {
-  HPC        = "TrinityX",
+  HPC        = "AnarchyHPC",
   module     = "network",
   sub-module = "virtual network"
 }
@@ -295,17 +295,17 @@ azure_virtual_network_address_space  =  [
 ]
 #{ % if primary and on_controller and not in_cloud % }
 azure_virtual_network_subnets        = [
-  {"name": "cluster",   "address_prefix": "{{ azure_cluster_net }}/{{ azure_cluster_netprefix }}", "security_group": "TrinityX-NSG"},
-#  {"name": "cluster",   "address_prefix": "{{ trix_cluster_net }}/{{ trix_cluster_netprefix }}", "security_group": "TrinityX-NSG"},
-#  {"name": "ib",        "address_prefix": "{{ trix_infiniband_net }}/{{ trix_infiniband_netprefix }}", "security_group": "TrinityX-NSG"},
-#  {"name": "ipmi",      "address_prefix": "{{ trix_bmc_net }}/{{ trix_bmc_netprefix }}", "security_group": "TrinityX-NSG"},
+  {"name": "cluster",   "address_prefix": "{{ azure_cluster_net }}/{{ azure_cluster_netprefix }}", "security_group": "AnarchyHPC-NSG"},
+#  {"name": "cluster",   "address_prefix": "{{ trix_cluster_net }}/{{ trix_cluster_netprefix }}", "security_group": "AnarchyHPC-NSG"},
+#  {"name": "ib",        "address_prefix": "{{ trix_infiniband_net }}/{{ trix_infiniband_netprefix }}", "security_group": "AnarchyHPC-NSG"},
+#  {"name": "ipmi",      "address_prefix": "{{ trix_bmc_net }}/{{ trix_bmc_netprefix }}", "security_group": "AnarchyHPC-NSG"},
 ]
 
 # Azure Virtual Network, Address Space, Subnets.
 azure_virtual_network_gateway_subnet = {"name": "GatewaySubnet", "address_prefix": "{{ azure_gateway_net }}/{{ azure_gateway_netprefix }}", "security_group": null}
-azure_local_network_gateway      = "TrinityXLNG"
+azure_local_network_gateway      = "AnarchyHPCLNG"
 azure_local_network_gateway_tags = {
-  HPC        = "TrinityX",
+  HPC        = "AnarchyHPC",
   module     = "network",
   sub-module = "local network gateway"
 }
@@ -319,9 +319,9 @@ azure_local_network_gateway_bgp_asn = 0
 azure_local_network_gateway_bgp_peering_address = ""
 azure_local_network_gateway_bgp_peer_weight = 0
 
-azure_vpn_public_ip              = "TrinityXVNGIP"
+azure_vpn_public_ip              = "AnarchyHPCVNGIP"
 azure_vpn_public_ip_tags         = {
-  HPC        = "TrinityX",
+  HPC        = "AnarchyHPC",
   module     = "network",
   sub-module = "virtual network gateway"
 }
@@ -329,9 +329,9 @@ azure_vpn_public_ip_allocation_method = "Static"
 azure_vpn_public_ip_sku               = "Standard"
 azure_vpn_public_ip_zones             = ["1", "2", "3"]
 
-azure_virtual_network_gateway                = "TrinityXVNG"
+azure_virtual_network_gateway                = "AnarchyHPCVNG"
 azure_virtual_network_gateway_tags           = {
-  HPC        = "TrinityX",
+  HPC        = "AnarchyHPC",
   module     = "network",
   sub-module = "virtual network gateway"
 }
@@ -349,7 +349,7 @@ azure_virtual_network_gateway_ip_config_name = "GatewayIpConfig"
 
 azure_virtual_network_gateway_connection            = "{{ azure_vpn_connection_name }}"
 azure_virtual_network_gateway_connection_tags       = {
-  HPC        = "TrinityX",
+  HPC        = "AnarchyHPC",
   module     = "network",
   sub-module = "local-vertual network gateway connection"
 }
@@ -358,9 +358,9 @@ azure_virtual_network_gateway_connection_mode       = "Default"
 azure_virtual_network_gateway_connection_shared_key = "{{ vpn_psk_secret }}"
 
 # Azure Storage Account
-azure_storage_account               = "trinityx"
+azure_storage_account               = "anarchyhpc"
 azure_storage_account_tag           = {
-  HPC        = "TrinityX"
+  HPC        = "AnarchyHPC"
   module     = "storage",
   sub-module = "account"
 }
@@ -380,7 +380,7 @@ azure_storage_blob_change_feed      = false
 azure_storage_retain_deleted_blobs  = 7
 
 # Azure Storage Account Container
-azure_storage_container             = "trinityx-images"
+azure_storage_container             = "anarchyhpc-images"
 azure_storage_container_access_type = "private"
 
 # Azure Storage Storage Blob VHD
@@ -390,9 +390,9 @@ azure_vhd_file_path   = "{{ trix_images }}/{{ vhd_name }}.vhd"
 azure_vhd_access_tier = "Hot"
 
 # Azure Image
-azure_image                     = "TrinityX-Compute"
+azure_image                     = "AnarchyHPC-Compute"
 azure_image_tags                = {
-  HPC        = "TrinityX"
+  HPC        = "AnarchyHPC"
   module     = "image",
   sub-module = "vhd"
 }
@@ -403,19 +403,19 @@ azure_image_os_state            = "Generalized"
 azure_image_cachinge            = "ReadWrite"
 
 # Azure Compute Gallery
-azure_compute_gallery             = "TrinityXGallery"
+azure_compute_gallery             = "AnarchyHPCGallery"
 azure_compute_gallery_tags        = {
-  HPC        = "TrinityX"
+  HPC        = "AnarchyHPC"
   module     = "image",
   sub-module = "gallery"
 }
-azure_compute_gallery_description = "This is TrinityX Image Gallery. Here you can attach your own OS Images and share depends on your need."
+azure_compute_gallery_description = "This is AnarchyHPC Image Gallery. Here you can attach your own OS Images and share depends on your need."
 azure_compute_gallery_sharing     = "Private"
 
 # Azure Compute Gallery Image
-azure_shared_image                    = "TrinityX-Compute"
+azure_shared_image                    = "AnarchyHPC-Compute"
 azure_shared_image_tags               = {
-  HPC        = "TrinityX"
+  HPC        = "AnarchyHPC"
   module     = "image",
   sub-module = "gallery shared"
 }
@@ -424,14 +424,14 @@ azure_shared_image_trusted_launch     = true
 azure_shared_image_hyper_v_generation = "V2"
 azure_shared_accelerated_network      = true
 azure_shared_architecture             = "x64"
-azure_shared_image_publisher          = "TrinityX"
+azure_shared_image_publisher          = "AnarchyHPC"
 azure_shared_image_offer              = "HPC"
 azure_shared_image_sku                = "iPXE-GRUB"
 
 # Azure Compute Gallery Image Version
 azure_shared_image_version                        = "0.0.1"
 azure_shared_image_version_tags                   = {
-  HPC        = "TrinityX"
+  HPC        = "AnarchyHPC"
   module     = "image",
   sub-module = "gallery version"
 }
@@ -441,17 +441,17 @@ azure_shared_image_version_latest                 = false
 azure_shared_image_version_storage_account_type   = "Standard_ZRS"
 
 # Azure Controller
-azure_trinityx_ssh_key_algorithm  = "RSA"
-azure_trinityx_ssh_key_rsa_bits   = 4096
-azure_trinityx_ssh_key_name       = "TrinityX-SSH"
-azure_trinityx_ssh_key_tags       = {
-  HPC        = "TrinityX"
+azure_anarchyhpc_ssh_key_algorithm  = "RSA"
+azure_anarchyhpc_ssh_key_rsa_bits   = 4096
+azure_anarchyhpc_ssh_key_name       = "AnarchyHPC-SSH"
+azure_anarchyhpc_ssh_key_tags       = {
+  HPC        = "AnarchyHPC"
   module     = "controller",
   sub-module = "ssh"
 }
-azure_controller_controller_public_ip         = "TrinityXControllerIP"
+azure_controller_controller_public_ip         = "AnarchyHPCControllerIP"
 azure_controller_public_ip_tags               = {
-  HPC        = "TrinityX",
+  HPC        = "AnarchyHPC",
   module     = "controller",
   sub-module = "ip"
 }
@@ -459,9 +459,9 @@ azure_controller_public_ip_allocation_method  = "Static"
 azure_controller_public_ip_sku                = "Standard"
 azure_controller_public_ip_zones              = ["1", "2", "3"]
 
-azure_controller_network_interface              = "TrinityX-Controller-nic"
+azure_controller_network_interface              = "AnarchyHPC-Controller-nic"
 azure_controller_network_interface_tags         = {
-  HPC        = "TrinityX"
+  HPC        = "AnarchyHPC"
   module     = "vm",
   sub-module = "controller"
 }
@@ -486,7 +486,7 @@ azure_controller_os_plan                      = "8-lvm"
 azure_controller_os_plan_publisher            = "resf"
 azure_controller_os_plan_product              = "rockylinux-x86_64"
 azure_controller_os_username                  = "azureuser"
-azure_controller_os_password                  = "TrinityX@24"
+azure_controller_os_password                  = "AnarchyHPC@24"
 azure_controller_disable_auth                 = false
 azure_controller_ssh_public_key_access        = "{{ ssh_public_key_access }}"
 
@@ -500,6 +500,6 @@ azure_node_os_caching                     = "ReadWrite"
 azure_node_os_create                      = "FromImage"
 azure_node_os_disk_type                   = "Standard_LRS"
 azure_node_os_username                    = "azureuser"
-azure_node_os_password                    = "TrinityX@24"
+azure_node_os_password                    = "AnarchyHPC@24"
 azure_node_disable_auth                   = false
 

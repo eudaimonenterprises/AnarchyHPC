@@ -1,5 +1,5 @@
 ---
-# Main file to enable the GCP Support for the TrinityX Installation.
+# Main file to enable the GCP Support for the AnarchyHPC Installation.
 
 - block:
   - name: Verifying terraform files directory exists

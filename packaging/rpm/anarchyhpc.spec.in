@@ -1,0 +1,144 @@
+Name:           anarchyhpc
+Version:        __VERSION__
+%define build_ver __BUILD__
+Release:        %{build_ver}%{?dist}
+
+Summary:        AnarchyHPC – HPC/AI Cluster Management Platform
+License:        GPL-3.0-or-later
+URL:            https://github.com/eudaimonenterprises/AnarchyHPC
+Source0:        %{name}-%{version}-%{build_ver}.tar.gz
+
+BuildRoot:      %{_tmppath}/%{name}-%{version}-%{build_ver}
+%define anarchy_path /opt/anarchyhpc
+
+# Disable debuginfo package
+%define debug_package %{nil}
+
+# ============================================
+# BUILD REQUIREMENTS
+# ============================================
+BuildRequires:  bash
+BuildRequires:  ansible-core
+BuildRequires:  python3 >= 3.9
+BuildRequires:  python3-devel
+BuildRequires:  python3-virtualenv
+BuildRequires:  make
+
+# ============================================
+# INSTALL REQUIREMENTS (Cluster Services)
+# ============================================
+Requires:       bash >= 4.4
+Requires:       ansible-core >= 2.13
+Requires:       python3 >= 3.9
+Requires:       python3-virtualenv
+
+# Authentication
+Requires:       openldap-servers >= 2.6
+Requires:       sssd >= 2.5
+Requires:       bind-utils >= 9.11
+
+# Database
+Requires:       mariadb-server >= 10.5
+Requires:       mariadb >= 10.5
+
+# Workload Management
+Requires:       slurmdbd >= 22.05
+Requires:       slurmd >= 22.05
+Requires:       munge >= 0.5.13
+Requires:       munge-libs >= 0.5.13
+
+# Monitoring
+Requires:       prometheus >= 2.40
+Requires:       alertmanager >= 0.24
+Requires:       grafana >= 9.0
+
+# Infrastructure
+Requires:       chrony >= 4.2
+Requires:       firewalld >= 0.8
+
+# High Availability
+Requires:       pacemaker >= 2.1
+Requires:       corosync >= 3.1
+Requires:       pcs >= 0.11
+
+# Filesystems
+Requires:       nfs-utils >= 2.3
+Requires:       drbd-utils >= 9.0
+
+# ============================================
+# DESCRIPTION
+# ============================================
+%description
+AnarchyHPC is a modern HPC/AI cluster management platform built on Ansible.
+This package installs the controller-side installer tree, documentation,
+and supporting scripts. Cluster services are installed as dependencies,
+while configuration is performed via Ansible playbooks.
+
+# ============================================
+# PREPARATION SECTION
+# ============================================
+%prep
+%setup -q -n %{name}-%{version}-%{build_ver}
+
+# ============================================
+# BUILD SECTION
+# ============================================
+%build
+# Build documentation in a modern Python environment
+mkdir -p virtenv
+python3 -m venv virtenv/sphinx
+source virtenv/sphinx/bin/activate
+pip install --upgrade pip setuptools wheel
+pip install Sphinx RinohType sphinx_rtd_theme
+
+pushd doc
+make html
+make singlehtml
+popd
+
+# ============================================
+# INSTALL SECTION
+# ============================================
+%install
+rm -rf %{buildroot}
+
+# Installer tree
+%{__install} -m 755 -d %{buildroot}%{anarchy_path}
+%{__cp} -pr site/* %{buildroot}%{anarchy_path}
+
+# Documentation
+%{__install} -m 755 -d %{buildroot}%{_defaultdocdir}/%{name}-%{version}-%{release}
+%{__cp} -pr doc/_build/{html,singlehtml} \
+    %{buildroot}%{_defaultdocdir}/%{name}-%{version}-%{release}/
+
+# ============================================
+# POST INSTALLATION PHASE
+# ============================================
+%post
+echo "AnarchyHPC %{version}-%{release} installed."
+
+# ============================================
+# POST REMOVE PHASE
+# ============================================
+%postun
+echo "AnarchyHPC removed."
+
+# ============================================
+# CLEAN SECTION
+# ============================================
+%clean
+rm -rf %{buildroot}
+
+# ============================================
+# FILE LIST SECTION
+# ============================================
+%files
+%defattr(-, root, root)
+%dir %{anarchy_path}
+%{anarchy_path}/*
+%doc %{_defaultdocdir}/%{name}-%{version}-%{release}
+
+# ============================================
+# CHANGELOG
+# ============================================
+%changelog

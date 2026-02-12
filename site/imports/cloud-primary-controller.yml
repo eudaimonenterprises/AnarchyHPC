@@ -1,7 +1,8 @@
 ---
 - hosts: controllers
+  when: cloud_install | bool
   roles:
-    - role: trinity/prepare
+    - role: anarchy/prepare
       stage: "controller"
 
 - name: Cloud Support
@@ -10,7 +11,7 @@
   tasks:
     - name: Calling init
       include_role:
-        name: "trinity/init"
+        name: "anarchy/init"
       when: init_dmidecode is not defined
 
     - name: Set cloud_condition fact
@@ -45,7 +46,7 @@
       
       - name: Verifying if iPXE uEFI image has already been build
         stat:
-          path: /etc/trinity/cloud-image.done
+          path: /etc/anarchy/cloud-image.done
         register: cloud_uefi_image_done
 
       - block:
@@ -58,12 +59,12 @@
         - name: Signing iPXE uEFI image creation off
           copy:
             content: ""
-            dest: /etc/trinity/cloud-image.done
+            dest: /etc/anarchy/cloud-image.done
         when: not cloud_uefi_image_done.stat.exists
       
       - name: Verifying if cloud phase one already done
         stat:
-          path: /etc/trinity/cloud-phaseone.done
+          path: /etc/anarchy/cloud-phaseone.done
         register: cloud_phaseone_done
 
       - block:
@@ -89,12 +90,12 @@
         - name: Signing cloud phase one off
           copy:
             content: ""
-            dest: /etc/trinity/cloud-phaseone.done
+            dest: /etc/anarchy/cloud-phaseone.done
         when: not cloud_phaseone_done.stat.exists
       
       - name: Verifying if cloud phase two already done
         stat:
-          path: /etc/trinity/cloud-phasetwo.done
+          path: /etc/anarchy/cloud-phasetwo.done
         register: cloud_phasetwo_done
 
       - block:
@@ -112,7 +113,7 @@
         - name: Signing cloud phase two off
           copy:
             content: ""
-            dest: /etc/trinity/cloud-phasetwo.done
+            dest: /etc/anarchy/cloud-phasetwo.done
         when: not cloud_phasetwo_done.stat.exists
       when: cloud_condition
     

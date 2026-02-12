@@ -1,0 +1,203 @@
+---
+- hosts: '{{ hostlist }}'
+  # The below pre-tasks is a bit ugly,
+  # but it's most effective here.
+  # We do not run init for ubuntu playbook.
+  # That might change in the future.
+  pre_tasks:
+    - set_fact:
+        in_image: true
+        on_controller: false
+        primary: false
+      tags: always
+
+    - debug:
+        msg: "ansible_os_family: {{ ansible_os_family }}"
+      tags: always
+
+  roles:
+  - role: ansible/read_facts
+    tags: always
+
+  - role: anarchy/init-nodes
+    tags: init-nodes
+
+  - role: anarchy/password
+    tags: password
+
+  - role: anarchy/trix-tree
+    tags: trix-tree
+
+  #- role: anarchy/packages
+  #  tags: packages
+
+  #- role: OndrejHome.pcs-modules-2
+  #  tags: ha,pcs,pacemaker,shared-fs
+
+  # - role: anarchy/tunables
+  #   tags: tunables
+
+  - role: anarchy/firewalld
+    tags: firewalld
+
+  - role: anarchy/ssh
+    tags: ssh
+
+  - role: anarchy/hostname
+    tags: hostname
+
+  - role: anarchy/ssl-cert
+    tags: ssl-cert
+
+  # - role: anarchy/chrony
+  #   chrony_upstream_servers:
+  #   - '{{ trix_ctrl_ip }}'
+  #   tags: chrony
+
+  # - role: anarchy/rdma-centos
+  #   tags: rdma-centos
+
+  - role: anarchy/sssd
+    sss_allowed_groups:
+    - '{{ admin_group }}'
+    sss_ldap_hosts:
+    - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+    sss_filter_enabled: '{{ not enable_slurm_pam }}'
+    sss_use_ds389: '{{ trix_use_ds389 | default(False) }}'
+    tags: sssd
+
+  - role: anarchy/nfs-mounts
+    nfs_enable_rdma: false
+    nfs_mounts:
+    - path: '{{ trix_shared }}'
+      remote: '{{ trix_ctrl_hostname }}:{{ trix_shared }}'
+      options: 'defaults,nfsvers=4,ro,retrans=4,_netdev'
+    - path: '{{ trix_home }}'
+      remote: '{{ trix_ctrl_hostname }}:{{ trix_home }}'
+      options: 'defaults,nfsvers=4,rw,retrans=4,noatime,_netdev'
+    nfs_remote_mask: '{{ shared_fs_disks }}'
+    nfs_prefix_path: '{{ shared_fs_prefix }}'
+    nfs_use_mask: "{{ ha | default(False) }}"
+    tags: nfs-mounts
+
+  # - role: anarchy/environment-modules
+  #   envmodules_skiproot: true
+  #   when: not enable_openhpc
+  #   tags: environment-modules
+
+  # - role: anarchy/openhpc
+  #   openhpc_skiproot: true
+  #   when: enable_openhpc
+  #   tags: openhpc
+
+#  - role: anarchy/nfs-mounts
+#    nfs_enable_rdma: false
+#    nfs_mounts:
+#    - path: '{{ trix_ohpc }}'
+#      remote: '{{ trix_ctrl_hostname }}:{{ trix_ohpc }}'
+#      options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
+#    nfs_remote_mask: '{{ shared_fs_disks }}'
+#    nfs_prefix_path: '{{ shared_fs_prefix }}'
+#    nfs_use_mask: "{{ ha | default(False) }}"
+#    when: enable_openhpc == true
+#    tags: nfs-mounts
+
+  - role: anarchy/easybuild
+    easybuild_export: '{{ export_easybuild }}'
+    easybuild_skiproot: true
+    when: enable_easybuild
+    tags: easybuild
+
+  - role: anarchy/nfs-mounts
+    nfs_enable_rdma: false
+    nfs_mounts:
+    - path: '{{ trix_easybuild }}'
+      remote: '{{ trix_ctrl_hostname }}:{{ trix_easybuild }}'
+      options: '{{ "ro," if export_easybuild!="rw" else "" }}nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
+    nfs_remote_mask: '{{ shared_fs_disks }}'
+    nfs_prefix_path: '{{ shared_fs_prefix }}'
+    nfs_use_mask: "{{ ha | default(False) }}"
+    when: enable_easybuild
+    tags: nfs-mounts
+
+  # - role: anarchy/slurm
+  #   slurm_conf_path: '{{ trix_shared }}/etc/slurm'
+  #   slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
+  #   munge_conf_path: '{{ trix_shared }}/etc/munge'
+  #   tags: slurm
+  #   when:  "{{ 'slurm' in workload_manager }}" 
+
+  - role: anarchy/syslog-ng
+    syslog_forwarding_rules:
+    - name: default
+      proto: 'tcp'
+      port: 514
+      host: '{{ trix_ctrl_ip }}'
+      facility: '*'
+      level: '*'
+    tags: syslog-ng
+
+#  - role: anarchy/nscd
+#    tags: nscd
+
+#  - role: anarchy/ood-vnc
+#    tags: ood
+#    when: enable_ood
+
+  - role: anarchy/ood-apps
+    tags: ood, ood-apps, apps
+    when: enable_ood
+
+  - role: anarchy/target
+    default_target: "{{ image_default_target | default('multi-user') }}"
+    tags: target
+
+  - role: anarchy/prometheus-node-exporter
+    # Prometheus system exporter
+    tags: prometheus, prometheus-node-exporter, monitoring
+
+  - role: anarchy/prometheus-slurm-job-exporter
+    # Prometheus system exporter
+    tags: prometheus, prometheus-slurm-job-exporter, monitoring
+
+  - role: anarchy/prometheus-ipmi-exporter
+    # Prometheus ipmi exporter
+    prometheus_ipmi_exporter_system_user: root
+    tags: prometheus-ipmi-exporter, prometheus, monitoring
+  
+  - role: anarchy/prometheus-nvidia-exporter
+    # Prometheus nvidia exporter
+    prometheus_nvidia_exporter_system_user: root
+    tags: prometheus-nvidia-exporter, prometheus, monitoring
+
+  - role: anarchy/prometheus-amd-exporter
+    # Prometheus amd exporter
+    prometheus_amd_exporter_system_user: root
+    tags: prometheus-amd-exporter, prometheus, monitoring
+
+  - role: anarchy/prometheus-lshw-exporter
+    # Prometheus lshw exporter, used by alertx
+    prometheus_lshw_exporter_system_user: root
+    tags: prometheus-lshw-exporter, prometheus, monitoring, lshw, alertx
+
+  - role: anarchy/alertx
+    tags: monitoring, alertx
+
+  - role: anarchy/logrotate
+    logrotate_files:
+      - prometheus-on-nodes
+    tags: logrotate
+
+  - role: anarchy/osconfig
+    tags: osconfig
+
+  - role: anarchy/cleanup-legacy
+    tags: cleanup-legacy
+
+  - role: anarchy/wrapup-images
+    tags: wrapup-images
+
+  environment:
+    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+  tags: image-setup

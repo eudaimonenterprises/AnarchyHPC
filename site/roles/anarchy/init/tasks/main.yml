@@ -1,0 +1,530 @@
+---
+# Initialize required variables
+#
+# Keep in mind that this role applies to the controllers
+# as well as compute nodes and images
+
+- name: Install init packages
+  yum:
+    name: '{{ item }}'
+    state: present
+  tags: install-only
+  with_items: '{{ init_packages }}'
+  when:
+    - ansible_facts['os_family'] == "RedHat"
+    - init_packages is defined
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- block:
+  - name: Set architecture specific variables
+    set_fact:
+      package_arch: "{{ _arch | from_yaml | default('x64') }}"
+    vars:
+      _arch: |
+        {% for type in ('armv6l','armhf','armv7l','aarch64','arm64') %}
+          {% if type == ansible_architecture %}
+            {{ 'aa64' }}
+          {% endif %}
+        {% endfor %}
+        {% if ansible_architecture == 'x86_64' %}
+          {{ 'x64' }}
+        {% endif %}
+
+  - name: Set system architecture specific variables
+    set_fact:
+      system_arch: "{{ _arch | from_yaml | default('x86_64') }}"
+    vars:
+      _arch: |
+        {% for type in ('armv6l','armhf','armv7l','aarch64','arm64') %}
+          {% if type == ansible_architecture %}
+            {{ 'aarch64' }}
+          {% endif %}
+        {% endfor %}
+        {% if ansible_architecture == 'x86_64' %}
+          {{ 'x86_64' }}
+        {% endif %}
+
+  - debug:
+      msg: "Detected architecture {{ package_arch }}/{{ system_arch }} based on {{ ansible_architecture }}"
+
+  - debug:
+      msg: "Using stream {{ trix_stream }}"
+
+  - name: Check if this node is a controller
+    set_fact:
+      on_controller: '{{ True if "controllers" in group_names else False }}'
+
+  - name: Set in_image variable
+    set_fact:
+      in_image: '{{ True if ansible_connection in "chroot" else False }}'
+
+  - name: Check if i am on real hardware or inside cloud
+    shell: dmidecode -s system-manufacturer | grep -iE "microsoft|google|amazon" || true
+    register: init_dmidecode
+
+  - name: Setting supported clouds
+    set_fact:
+      cloud_support: "{{ cloud_support }}"
+
+  - name: Set cloud fact
+    set_fact:
+      in_cloud: '{{ True if init_dmidecode.stdout_lines | length > 0 else False }}'
+
+  - name: Set cloud install fact
+    set_fact:
+      cloud_install: >-
+        {{ cloud_support | map('regex_replace', '^(.*)$', '\1_cloud') | map('extract', vars) | select('equalto', true) | list | length > 0 }}
+
+  - block:
+    - name: Setting cloud vpn namekey
+      set_fact:
+        cloud_vpn_namekey: "{{ cloud_vpn_namekey }}"
+
+    - name: Setting cloud vpn pskkey
+      set_fact:
+        cloud_vpn_pskkey: "{{ cloud_vpn_pskkey }}"
+
+    - name: Include Cloud variables
+      include_vars: "group_vars/{{ item }}.yml"
+      loop: "{{ vars.cloud_support }}"
+      when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+
+    - name: Reconfiguring resolv_search_domains
+      set_fact: 
+        resolv_search_domains:
+          "{{ resolv_search_domains | replace('__CLOUD__', vars[item + '_domain'] | default() + ' __CLOUD__') }}"
+      loop: "{{ vars.cloud_support }}"
+      when:
+        - '"__CLOUD__" in resolv_search_domains'
+        - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+    when: cloud_install 
+      
+  - name: Cleaning up resolv_search_domains
+    set_fact:
+      resolv_search_domains:
+        "{{ resolv_search_domains | replace('__CLOUD__','') }}"
+    when: '"__CLOUD__" in resolv_search_domains'
+
+  - block:
+    - name: Update the trix_ctrl_* variables in case of non-HA setup
+      set_fact:
+        trix_ctrl_hostname: '{{ trix_ctrl1_hostname }}'
+        trix_ctrl_ip: '{{ trix_ctrl1_ip }}'
+        trix_ctrl2_hostname: ''
+        trix_ctrl2_ip: ''
+
+    - name: Standard controller host list
+      set_fact:
+         all_ctrl_hostname:
+           - '{{ trix_ctrl1_hostname }}'
+
+    - name: Standard controller ip list
+      set_fact:
+        all_ctrl_ip:
+          - '{{ trix_ctrl1_ip }}'
+    when: not ha | default(False)
+
+  - debug:
+      msg: "trix_ctrl_hostname: {{ trix_ctrl_hostname }}, trix_ctrl_ip: {{ trix_ctrl_ip }}"
+
+    # we HAVE to make sure we determine who is primary, else a re-run of the playbook
+    # at a later stage WILL cause trouble if there was a failover.
+  - name: Check with pacemaker who is the primary controller
+    shell: "/usr/local/sbin/pcs resource status|(grep -m1 -E 'anarchy-ip\\s+' || echo 'Started not_available') | awk -F'tarted ' '{ print $2 }'"
+    register: pcs_primary
+    ignore_errors: true
+
+    # we also support a file to override the primary. Useful during recovery of the
+    # the original primary controller.
+  - name: Verify if primary override exists
+    stat:
+      path: /etc/anarchy/primary
+    register: stat_primary_file
+
+  - name: Using override to set who is primary
+    set_fact:
+      primary_controller: "{{ lookup('file', '/etc/anarchy/primary') | trim }}"
+    when: stat_primary_file.stat.exists
+
+    # although we call it override, ultimately pcs/pacemaker is leading as it will
+    # absolutely destroy the setup if someone makes a mistake here.
+  - name: Check if this node is the primary controller based on override
+    set_fact:
+      primary: '{{ True if primary_controller == ansible_hostname else False }}'
+    when:
+      - on_controller
+      - primary_controller is defined
+
+    # we assume that we start with controller 1 as being the first installed and primary
+    # technically controller2 could be the primary but i do not dare to judge if things
+    # would work as expected. for now we leave it as it is.
+  - name: Check if this node is the primary controller based on ip or hostname
+    set_fact:
+      primary: >-
+        {{ True if trix_ctrl1_ip in ansible_all_ipv4_addresses
+           or trix_ctrl1_hostname == ansible_hostname
+           else False }}
+    when:
+      - on_controller
+      - pcs_primary.stdout is not defined or pcs_primary.stdout == "not_available"
+      - primary_controller is not defined
+
+    # leading. as this is 100% true if it's available.
+  - name: Check if this node is the primary controller based on pacemaker data
+    set_fact:
+      primary: '{{ True if pcs_primary.stdout == ansible_hostname else False }}'
+      on_controller: true
+    when:
+      - pcs_primary is defined 
+      - pcs_primary.stdout != "not_available"
+
+  - name: Set primary false if we cannot confirm with confidence
+    set_fact:
+       primary: False
+    when: primary is not defined
+
+  - debug:
+      msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}, in_cloud: {{ in_cloud }}, in_image: {{ in_image }}"
+  tags: always
+
+
+- name: Running keys vault tasks
+  ansible.builtin.include_tasks:
+    file: keys.yml
+    apply:
+      tags: always
+  tags: always
+  when: on_controller
+
+
+- block:
+  - name: Setting up how many controllers we support here
+    set_fact:
+      init_controller_array: "{{ ['1','2','3','4'] }}"
+
+  - name: All controller hostnames
+    set_fact:
+      all_ctrl_hostname: "{{ all_ctrl_hostname | default([]) + [ lookup('vars', 'trix_ctrl' + item + '_hostname') ] }}"
+    loop: "{{ init_controller_array }}"
+    when: vars['trix_ctrl' + item + '_hostname'] is defined
+
+  - name: All controller ips
+    set_fact:
+      all_ctrl_ip: "{{ all_ctrl_ip | default([]) + [ lookup('vars', 'trix_ctrl' + item + '_ip') ] }}"
+    loop: "{{ init_controller_array }}"
+    when: vars['trix_ctrl' + item + '_ip'] is defined
+
+  - name: All controller bmc
+    set_fact:
+      all_ctrl_bmcip: "{{ all_ctrl_bmcip | default([]) + [ lookup('vars', 'trix_ctrl' + item + '_bmcip') ] }}"
+    loop: "{{ init_controller_array }}"
+    when: vars['trix_ctrl' + item + '_bmcip'] is defined
+
+  - debug:
+      msg: 'all_ctrl_hostname: {{ all_ctrl_hostname }}'
+
+  - name: Collecting controller hostname information
+    include_tasks: find-hostname.yml
+    with_items: "{{ all_ctrl_hostname }}"
+    loop_control:
+      loop_var: inner_loop_var
+
+  - name: Verify controller hostname is configured
+    fail:
+      msg: "Current controller hostname does not match any configured in 'trix_ctrl1_hostname' or 'trix_ctrl2_hostname', ... Please set the hostname to match what is configured"
+    when: trix_this_ctrl_hostname is not defined or trix_this_ctrl_hostname == ""
+
+  - debug:
+      msg: 'Using {{ trix_this_ctrl_hostname }} as configured hostname'
+    when: trix_this_ctrl_hostname is defined
+  when: ha | default(False)
+  tags: always,ha,verify-ip
+
+- name: Verify controller hostname is configured
+  fail:
+    msg: "Current controller hostname does not match configured 'trix_ctrl1_hostname'. Please set the hostname to match what is configured"
+  when:
+    - not ha | default(False)
+    - trix_ctrl_hostname != ansible_hostname
+
+- block:
+  - name: Adding cloud controllers hostnames
+    set_fact:
+      cloud_ctrl_hostname: "{{ cloud_ctrl_hostname | default([]) + [ lookup('vars', item + '_ctrl_hostname') ] }}"
+    loop: "{{ vars.cloud_support }}"
+    when:
+      - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+      - vars[item + '_controller'] | default(False)
+      - vars[item + '_ctrl_hostname'] is defined
+
+  - name: Adding cloud controllers ips
+    set_fact:
+      cloud_ctrl_ip: "{{ cloud_ctrl_ip | default([]) + [ lookup('vars', item + '_ctrl_ip') ] }}"
+    loop: "{{ vars.cloud_support }}"
+    when:
+      - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+      - vars[item + '_controller'] | default(False)
+      - vars[item + '_ctrl_ip'] is defined
+
+  - debug:
+      msg: "cloud_ctrl_hostname: {{ cloud_ctrl_hostname|default('None') }}"
+
+  - name: Adding cloud networks
+    set_fact:
+      cloud_networks: >-
+       {{ cloud_networks | default([]) + [{
+           'name': lookup('vars', item + '_domain'),
+           'function': 'cloud',
+           'ip': lookup('vars', item + '_cluster_net'),
+           'prefix': lookup('vars', item + '_cluster_netprefix'),
+           'start_ip': lookup('vars', item + '_cluster_dhcp_start', default=''),
+           'end_ip': lookup('vars', item + '_cluster_dhcp_end', default=''),
+           'type': 'ethernet'
+         }]
+       }}
+    loop: "{{ vars.cloud_support }}"
+    when:
+      - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+      - vars[item + '_domain'] is defined
+      - vars[item + '_cluster_net'] is defined
+  when: cloud_install    
+  tags: always,cloud
+
+  # we check if networks, subnets and addresses match
+- block:
+  - name: Copy verify-ip.sh script to /tmp
+    copy:
+      src: 'verify-ip.sh'
+      dest: '/tmp/verify-ip.sh'
+      mode: 0755
+
+  - name: Verifying controller IP addresses with network
+    ansible.builtin.shell:
+      cmd: "/tmp/verify-ip.sh {{ item }} {{ trix_cluster_net }}/{{ trix_cluster_netprefix }}"
+    with_items: "{{ all_ctrl_ip }}"
+
+  - name: Verifying DHCP addresses with network
+    ansible.builtin.shell:
+      cmd: "/tmp/verify-ip.sh {{ item }} {{ trix_cluster_net }}/{{ trix_cluster_netprefix }}"
+    with_items:
+      - "{{ trix_cluster_dhcp_start }}"
+      - "{{ trix_cluster_dhcp_end }}"
+
+  - name: Verifying BMC IP addresses with network
+    ansible.builtin.shell:
+      cmd: "/tmp/verify-ip.sh {{ item }} {{ trix_bmc_net }}/{{ trix_bmc_netprefix }}"
+    with_items: "{{ all_ctrl_bmcip }}"
+    when: all_ctrl_bmcip is defined
+  tags: luna,verify-ip
+  when:
+    - on_controller
+    - not no_checks | default(False)
+
+  # checking nic configs and fix if it can
+- block:
+  - name: Collecting controller interface information
+    include_tasks: find-interface.yml
+    with_items: "{{ all_ctrl_ip }}"
+    loop_control:
+      loop_var: inner_loop_var
+
+  - block:
+    - name: Configuring interface if required
+      ansible.builtin.include_tasks:
+        file: conf-interface.yml
+
+    - name: Re-gather facts to get latest information
+      setup:
+
+    - name: Collecting controller interface information
+      include_tasks: find-interface.yml
+      with_items: "{{ all_ctrl_ip + cloud_ctrl_ip|default([]) }}"
+      loop_control:
+        loop_var: inner_loop_var
+    when: trix_ctrl_interface is not defined or trix_ctrl_interface == ""
+
+  - debug:
+      msg: "trix_ctrl_interface: {{ trix_ctrl_interface|default('Undefined') }}"
+
+  - name: Verify internal controller interface is configured
+    fail:
+      msg: "Interface with config set in 'trix_ctrl1_ip' ({{ trix_ctrl1_ip }}) or 'trix_ctrlX_ip' ({{ trix_ctrl2_ip }}, ...) not found. Please make sure the interface is configured and up"
+    when: trix_ctrl_interface is not defined or trix_ctrl_interface == ""
+
+    # we figure out our local ip. handy if we want local connection but through ip.
+  - set_fact:
+      trix_ctrl_local_ip: '{{ item.1 }}'
+    with_together:
+      - '{{ all_ctrl_hostname }}'
+      - '{{ all_ctrl_ip }}'
+    when: item.0 == ansible_hostname
+
+  - set_fact:
+      trix_ctrl_local_ip: '{{ trix_ctrl_ip }}'
+    when: trix_ctrl_local_ip is not defined
+
+  - debug:
+      msg: "trix_ctrl_local_ip: {{ trix_ctrl_local_ip|default('Undefined') }}"
+  when: on_controller
+  tags: always
+
+- name: Collect number of controllers
+  set_fact:
+    num_ctrl: "{{ all_ctrl_ip | length }}"
+  tags: always
+
+
+- block:
+  - block:
+    - name: Trying to figure out external interface
+      shell: "ip route | grep default | grep -oP 'dev \\K\\S+' | grep '^.\\+$'"
+      ignore_errors: true
+      register: init_ctrl_external_nic
+
+    - name: Set trix_ctrl_external_nic
+      set_fact:
+        trix_ctrl_external_nic: "{{ init_ctrl_external_nic.stdout }}"
+      when: init_ctrl_external_nic.rc | int == 0
+
+    - debug:
+        msg: "trix_ctrl_external_nic: {{ trix_ctrl_external_nic }}"
+    when: trix_ctrl_external_nic is not defined
+
+  - block:
+    - block:
+      - name: Store external nic address information
+        set_fact:
+          init_ctrl_external_network_info: "{{ hostvars[inventory_hostname]['ansible_'+trix_ctrl_external_nic]['ipv4'] }}"
+
+      - name: Resolving external interface ip address
+        set_fact:
+          trix_ctrl_external_ip: "{{ init_ctrl_external_network_info['address'] }}"
+        when: trix_ctrl_external_ip is not defined or trix_ctrl_external_ip == "" 
+
+      - name: Resolving external interface network address
+        set_fact:
+          trix_ctrl_external_network: "{{ init_ctrl_external_network_info['network']+'/'+init_ctrl_external_network_info['prefix'] }}"
+        when: trix_ctrl_external_network is not defined or trix_ctrl_external_network == "" 
+
+      - name: Resolving external interface netprefix address
+        set_fact:
+          trix_ctrl_external_netprefix: "{{ init_ctrl_external_network_info['prefix'] }}"
+        when: trix_ctrl_external_netprefix is not defined or trix_ctrl_external_netprefix == "" 
+      when: hostvars[inventory_hostname]['ansible_'+trix_ctrl_external_nic]['ipv4'] is defined
+    when: trix_ctrl_external_nic is defined
+
+  - debug:
+      msg: "trix_ctrl_external_ip: {{ trix_ctrl_external_ip }}, trix_ctrl_external_network: {{ trix_ctrl_external_network }}"
+    when:
+      - trix_ctrl_external_ip is defined
+      - trix_ctrl_external_network is defined
+  tags: always
+  when: on_controller
+
+
+- block:
+  - name: Copy resolv.sh script to /tmp
+    copy:
+      src: 'resolve.sh'
+      dest: '/tmp/resolve.sh'
+      mode: 0755
+
+  - name: Resolving trix_external_fqdn
+    command: "/tmp/resolve.sh {{ trix_ctrl_external_ip }} {{ trix_dns_forwarders | default([]) | first }}"
+    register: trix_resolved_host_fqdn
+    ignore_errors: true
+    when: trix_ctrl_external_ip is defined
+
+  - name: Setting trix_external_fqdn
+    set_fact:
+      trix_external_fqdn: "{{ trix_resolved_host_fqdn.stdout }}"
+    when:
+      - (trix_external_fqdn is not defined) or trix_external_fqdn==""
+      - trix_resolved_host_fqdn is defined
+
+  - block:
+    - fail: 
+        msg: 'trix_external_fqdn is not configured and it could not be resolved. OpenOndemand will not work properly. This check can be skipped by "-e skip_fqdn=true"'
+      ignore_errors: "{{ skip_fqdn | default(False) }}"
+      when: enable_ood
+
+    - name: Setting trix_external_fqdn
+      set_fact:
+        trix_external_fqdn: '{{ ansible_fqdn }}'
+      ignore_errors: true
+      when: (trix_external_fqdn is not defined) or trix_external_fqdn==""
+  tags: always
+  when:
+    - on_controller
+    - (trix_external_fqdn is not defined) or trix_external_fqdn==""
+
+- block:
+  - debug:
+      msg: "trix_external_fqdn: {{ trix_external_fqdn }}"
+    when:
+      - on_controller
+      - trix_external_fqdn is defined
+
+  - name: Using replacable name for trix_login_fqdn
+    set_fact:
+      trix_login_fqdn: '__HOSTNAME__'
+    when: (trix_login_fqdn is not defined) or trix_login_fqdn==""
+
+  - debug:
+      msg: "trix_login_fqdn: {{ trix_login_fqdn }}"
+    when:
+      - in_login_image | default(False)
+      - trix_login_fqdn is defined
+  tags: always
+
+- block:
+  - name: Resolve admin group
+    getent:
+      database: group
+      split: ':'
+      key: '{{ admin_group }}'
+    ignore_errors: true
+
+  - name: Override admin group
+    set_fact:
+      admin_group: 'root'
+    when: ansible_facts.getent_group is not defined
+
+  - debug:
+      msg: "admin_group: {{ admin_group }}"
+  when:
+    - on_controller
+    - not enable_authentication|default(False)
+  tags: always
+
+
+- block:
+  - name: Fetch selinux state
+    shell: getenforce || echo 'Disabled'
+    register: init_selinux_state
+    ignore_errors: true
+
+  - name: Verify if selinux matches with preferred state
+    fail:
+      msg: "Selinux enabled, but the system needs a reboot first to take effect. Please re-run after reboot"
+    when:
+      - enable_selinux|default(True)
+      - init_selinux_state.stdout is defined
+      - init_selinux_state.stdout == 'Disabled'
+
+  - name: Verify if selinux matches with preferred state
+    fail:
+      msg: "Selinux disabled, but the system needs a reboot first to take effect. Please re-run after reboot"
+    when:
+      - not enable_selinux|default(True)
+      - init_selinux_state.stdout is defined
+      - init_selinux_state.stdout == 'Enforcing'
+  when: on_controller
+
+- name: Toggle selinux state
+  selinux:
+    state: "{{ 'permissive' if enable_selinux else 'disabled' }}"
+    policy: 'targeted'
+  when: ansible_facts['os_family'] == "RedHat"
+

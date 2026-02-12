@@ -1,0 +1,14 @@
+---
+
+- block:
+  - name: Ensure /etc/anarchy/passwords/images/{{ image_name }} exists
+    file:
+      path: '/etc/anarchy/passwords/images/{{ image_name }}'
+      state: directory
+
+  - name: Store root password if defined
+    template:
+      src: root.txt
+      dest: '/etc/anarchy/passwords/images/{{ image_name }}/root.txt'
+    when: image_password|default([])
+  when: image_name is defined

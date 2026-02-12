@@ -1,0 +1,18 @@
+---
+prometheus_slurm_job_exporter_version: "0.4.10"
+
+# Upstream maintained source for slurm-job-exporter releases
+prometheus_slurm_job_exporter_binary_url: "https://github.com/guilbaults/slurm-job-exporter/releases/download/v{{ prometheus_slurm_job_exporter_version }}/slurm-job-exporter-{{ prometheus_slurm_job_exporter_version }}-{{ system_arch }}.tar.gz"
+
+prometheus_slurm_job_exporter_web_listen_port: "14207"
+prometheus_slurm_job_exporter_web_listen_host: "0.0.0.0"
+
+prometheus_slurm_job_exporter_log_dir: "/var/log/prometheus"
+
+prometheus_slurm_job_exporter_binary_install_dir: "/usr/local/bin"
+
+prometheus_slurm_job_exporter_system_user: "root"
+prometheus_slurm_job_exporter_system_group: "root"
+prometheus_slurm_job_exporter_additional_system_groups: []
+
+prometheus_slurm_job_exporter_extra_flags: ""

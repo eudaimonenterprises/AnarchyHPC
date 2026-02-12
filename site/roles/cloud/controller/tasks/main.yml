@@ -22,19 +22,19 @@
       src: all.yml.j2
       dest: /tmp/remote_controller/all.yml
 
-  - name: preparing TrinityX repo for remote controller
-    shell: "tar -C {{ playbook_dir }}/../.. --exclude site/group_vars/*.yml --exclude .git -zcvf /tmp/remote_controller/trinityx.tgz ."
+  - name: preparing AnarchyHPC repo for remote controller
+    shell: "tar -C {{ playbook_dir }}/../.. --exclude site/group_vars/*.yml --exclude .git -zcvf /tmp/remote_controller/anarchyhpc.tgz ."
 
   - name: Transferring file to remote controller
     shell: "scp /tmp/remote_controller/{{ item }} {{ controller }}:"
     with_items:
       - all.yml
-      - trinityx.tgz
+      - anarchyhpc.tgz
 
   - debug:
       msg: "Please note that the next tasks may take very long.... Progress can be followed tailing /tmp/cloud-controller-pre.out and /tmp/cloud-controller-run.out"
 
-#  Below should be the way, but we have roles where file_globs (e.g. trinity/ssl-cert) renders below invalid
+#  Below should be the way, but we have roles where file_globs (e.g. anarchy/ssl-cert) renders below invalid
 #  We're stuck with the further down below....
 #
 #  - name: Preparing remote hosts inventory
@@ -48,7 +48,7 @@
 #    shell: "ansible-playbook -i hosts-{{ cloudname }} imports/cloud-shadow-controller.yml"
 
   - name: Preparing remote controller installation
-    shell: "ssh {{ controller }} \"mkdir install; cd install && tar -zxvf ../trinityx.tgz && cp ../all.yml site/group_vars/ && touch site/group_vars/{{ cloudname }}.yml\" | tee /tmp/cloud-controller-pre.out"
+    shell: "ssh {{ controller }} \"mkdir install; cd install && tar -zxvf ../anarchyhpc.tgz && cp ../all.yml site/group_vars/ && touch site/group_vars/{{ cloudname }}.yml\" | tee /tmp/cloud-controller-pre.out"
 
   - name: Creating dummy vars files for remote controller installation
     shell: "ssh {{ controller }} \"touch install/site/group_vars/{{ item }}.yml\" | tee -a /tmp/cloud-controller-pre.out"

@@ -146,7 +146,7 @@
       state: absent
 
   - name: Set root user password
-    shell: "echo 'root:TrinityX@24' | chroot {{ vhd_path }} /bin/bash -c 'chpasswd'"
+    shell: "echo 'root:AnarchyHPC@24' | chroot {{ vhd_path }} /bin/bash -c 'chpasswd'"
   
   - name: Update the Shadow
     shell: "chroot {{ vhd_path }} chmod 640 /etc/shadow"
@@ -184,9 +184,9 @@
       initrd_version: "{{ latest_initramfs.stdout | basename }}"
 
 #  - name: Update Grub
-#    shell: "chroot {{ vhd_path }} grub2-set-default 'Trinity iPXE'"
+#    shell: "chroot {{ vhd_path }} grub2-set-default 'Anarchy iPXE'"
 
-  - name: Grub Set Default to Trinity iPXE
+  - name: Grub Set Default to Anarchy iPXE
     lineinfile:
       path: "{{ vhd_path }}/etc/rc.local"
       line: "sed -i 's/default=1/default=0/' /boot/efi/EFI/*/grub.cfg /root/boot/grub2/grub.cfg && shutdown -r now"
@@ -194,10 +194,10 @@
   - name: Set Permissions for RC Local
     shell: "chroot {{ vhd_path }} chmod +x /etc/rc.d/rc.local"
  
-  - name: Enable RC Local to Boot to Trinity iPXE
+  - name: Enable RC Local to Boot to Anarchy iPXE
     shell: "chroot {{ vhd_path }} systemctl enable rc-local"
  
-  - name: Start RC Local to Boot to Trinity iPXE
+  - name: Start RC Local to Boot to Anarchy iPXE
     shell: "chroot {{ vhd_path }} systemctl start rc-local"
  
   - name: Update Azure Provising

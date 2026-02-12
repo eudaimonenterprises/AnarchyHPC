@@ -1,0 +1,55 @@
+---
+- name: Create the prometheus_node_exporter group
+  ansible.builtin.group:
+    name: "{{ prometheus_node_exporter_system_group }}"
+    state: present
+    system: true
+  when: prometheus_node_exporter_system_group != "root"
+
+- name: Create the prometheus_node_exporter user
+  ansible.builtin.user:
+    name: "{{ prometheus_node_exporter_system_user }}"
+    group: "{{ prometheus_node_exporter_system_group }}"
+    groups: "{{ prometheus_node_exporter_additional_system_groups }}"
+    append: true
+    shell: /usr/sbin/nologin
+    system: true
+    create_home: false
+    home: /
+  when: prometheus_node_exporter_system_user != "root"
+
+- name: Create prometheus_node_exporter config directory
+  ansible.builtin.file:
+    path: "{{prometheus_node_exporter_config_dir}}"
+    state: directory
+    owner: root
+    group: root
+    mode: u+rwX,g+rwX,o=rX
+
+- name: Create prometheus_node_exporter log directory
+  ansible.builtin.file:
+    path: "{{ prometheus_node_exporter_log_dir }}"
+    state: directory
+    mode: 0755
+  when:
+    - prometheus_node_exporter_log_dir is defined
+
+- name: "Download prometheus-node-exporter binary from {{prometheus_node_exporter_binary_url}} to local folder"
+  get_url:
+    url: "{{ prometheus_node_exporter_binary_url }}"
+    dest: "{{prometheus_node_exporter_binary_install_dir}}/prometheus-node-exporter"
+    mode: 0755
+    validate_certs: false
+  register: _download_archive
+  until: _download_archive is succeeded
+  retries: 10
+  delay: 15
+
+- name: Copy the prometheus_node_exporter systemd service file
+  ansible.builtin.template:
+    src: prometheus-node-exporter.service.j2
+    dest: /etc/systemd/system/prometheus-node-exporter.service
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart prometheus-node-exporter

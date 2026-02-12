@@ -1,0 +1,26 @@
+---
+# tasks file for environment-modules
+
+- name: Install environment module packages
+  yum:
+    name: '{{ envmodules_packages }}'
+    state: present
+    enablerepo:
+      - powertools
+  tags: install-only
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Install profile for modules
+  template:
+    src: z_modules.sh.j2
+    dest: /etc/profile.d/z_modules.sh
+  tags: install-only
+
+- name: Install dummy module
+  template:
+    src: dummy-module.lua.j2
+    dest: "{{ trix_modulefiles }}/dummy-module.lua"
+  when:
+    - on_controller
+    - primary | default(True)

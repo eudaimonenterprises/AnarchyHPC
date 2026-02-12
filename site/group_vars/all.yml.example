@@ -9,7 +9,7 @@ administrator_email: 'root@localhost'
 
 
 # -----------------------------------------------------------------------
-# Trinity version number
+# Anarchy version number
 
 trix_version: '15.3'
 
@@ -27,11 +27,16 @@ project_id: '000000'
 #                           Cloud Details                               #
 #########################################################################
 
+# Cloud provisioning is currently disabled by default.
+cloud_install: false
+
+
 # Which Cloud Providers need to be used for this installation.
-# Currently only azure_cloud is supported.
-azure_cloud: false
-aws_cloud: false
+
+azure_cloud: false # azure not supported yet. keep at false
+aws_cloud: false  # aws not supported yet. keep at false
 gcp_cloud: false  # gcp not supported yet. keep at false
+openstack_cloud: false # openstack not supported yet. keep at false
 
 # Detailed configuration can be found in group_vars/<cloud>.yml
 # Please consider configuring these yml files, before proceeding
@@ -141,7 +146,7 @@ trix_ctrl_hostname: controller
 # -----------------------------------------------------------------------
 # HA: Configure a floating ip address on the external interfaces (read:
 # outbound interfaces) as well. The trix_ctrl_external_nic can be set
-# but is optional. TrinityX tries to figure this out based on the default
+# but is optional. AnarchyHPC tries to figure this out based on the default
 # route, which most likely uses the preferred external nic. If netprefix is
 # not given, it'll be tried by looking at trix_ctrl_external_network.
 
@@ -185,16 +190,16 @@ resolv_search_domains: '{{ trix_domain }} __CLOUD__ ib ipmi'
 #                          Paths configuration                          #
 #########################################################################
 #
-# Path to which the customizable TrinityX files will be installed.
+# Path to which the customizable AnarchyHPC files will be installed.
 # If not set, it will default to /
 
-trix_root: '/trinity'
+trix_root: '/anarchy'
 
-# The TrinityX root contains multiple subdirectories for different uses:
+# The AnarchyHPC root contains multiple subdirectories for different uses:
 # - trix_images For the compute node images
 # - trix_shared for everything shared by the controllers to the nodes
 # - trix_local for configuration files specific to each machine. This one
-#              is not listed and hard configured to /trinity/local.
+#              is not listed and hard configured to /anarchy/local.
 # - trix_home for the user home directories
 #
 # The partitioning on the controller must be set up before starting the installation.
@@ -228,7 +233,7 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 #                  but also lvm or zfs. In this case
 #                  partitions have to be defined.
 # When 'type' is set to 'manual', this indicates that this is being
-# taken care off outside TrinityX
+# taken care off outside AnarchyHPC
 
 # --- examples:
 #
@@ -239,7 +244,7 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 #     device: '/dev/drbd4'
 #     fstype: 'zfs'
 #     partitions:
-#     - name: '/trinity/other'
+#     - name: '/anarchy/other'
 #       fsoptions: '-o xattr=sa'
 #
 #   - name: 'LVM1'
@@ -274,7 +279,7 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 #     portal: '192.168.0.1'
 #     target: 'iqn.2003-01.org.linux-iscsi.iscsi-host.x8664:sn.693ca380655e'
 #     partitions:
-#     - mount: '/trinity/ext1'
+#     - mount: '/anarchy/ext1'
 #       size: '8192M'
 #       fstype: 'ext4'
 #       fsoptions: '-b 4096'
@@ -284,7 +289,7 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 #     device: /dev/sdz
 #     fstype: 'lvm'
 #     partitions:
-#     - mount: '/trinity/ext2'
+#     - mount: '/anarchy/ext2'
 #       size: '16384M'
 #       fstype: 'ext4'
 #       fsoptions: '-b 4096'
@@ -310,7 +315,7 @@ trix_modulefiles: '{{ trix_shared }}/modulefiles'
 # !! mountoptions was introduced to allow pcs to mount a disk according to these.
 
 shared_fs_disks:
-  - name: 'trinityx'
+  - name: 'anarchyhpc'
     type: 'drbd'
     disk: '/dev/vda'
     device: '/dev/drbd0'
@@ -336,7 +341,7 @@ shared_fs_disks:
 # you want all controllers to be able to mount the shared disks, using NFS,
 # through the shared ip.
 # when xmount is false or shared_fs_prefix is empty, this functionality
-# will be disabled and shared_fs_disks will be mounted like TrinityX 14.x,
+# will be disabled and shared_fs_disks will be mounted like AnarchyHPC 14.x,
 # only on the active controller.
 # Note: this settings only affects drbd, iscsi and direct mounted disks.
 
@@ -410,7 +415,7 @@ ssl_cert_group: ssl
 # Note: for RedHat, Rocky and Alma distributions of version 10+,
 # the backend is set to ds389 as a default
 
-trinity_ldap_backend: 'openldap'
+anarchy_ldap_backend: 'openldap'
 
 
 #########################################################################
@@ -474,7 +479,7 @@ image_default_target: 'multi-user'
 
 # =======================================================================
 # The following variables give the ability to enable or disable
-# certain features in TrinityX:
+# certain features in AnarchyHPC:
 
 
 # -----------------------------------------------------------------------

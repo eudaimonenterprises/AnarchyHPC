@@ -1,0 +1,10 @@
+---
+
+# External repository RPMs for Red Hat 9–based systems
+# Only official upstream repos are included.
+external_repository_rpms:
+  - name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ hostvars[inventory_hostname].ansible_distribution_major_version }}.noarch.rpm
+    no_gpgcheck: True
+
+# No package-based repositories defined here
+package_based_repositories: []

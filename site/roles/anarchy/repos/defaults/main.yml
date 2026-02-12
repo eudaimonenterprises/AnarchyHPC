@@ -1,0 +1,44 @@
+---
+
+# Primary AnarchyHPC repositories (vendor-neutral placeholders)
+anarchyhpc_repositories:
+  - name: anarchyhpc
+    repo: ""
+    gpgcheck: False
+
+# External repository RPMs (previously ClusterVision-hosted)
+# Leave empty unless you provide your own RPM URLs.
+external_repository_rpms: []
+
+# Package-based repositories (generic and safe)
+package_based_repositories:
+  - name: epel-release
+
+# Custom repositories (empty by default)
+custom_repositories: []
+
+# Repositories that should use baseurl instead of mirrorlist
+use_baseurl_repositories:
+  - name: elrepo-release
+
+# Repositories to disable by default
+disable_repositories:
+  - name: elrepo
+  - name: elrepo-testing
+  - name: elrepo-kernel
+  - name: elrepo-extras
+
+# Replace baseurls for specific repositories (generic mirror example)
+replace_baseurls:
+  - name: elrepo
+    filter_url: 'http://elrepo.org'
+    replace_url: 'http://linux-mirrors.fnal.gov'
+  - name: elrepo-testing
+    filter_url: 'http://elrepo.org'
+    replace_url: 'http://linux-mirrors.fnal.gov'
+  - name: elrepo-kernel
+    filter_url: 'http://elrepo.org'
+    replace_url: 'http://linux-mirrors.fnal.gov'
+  - name: elrepo-extras
+    filter_url: 'http://elrepo.org'
+    replace_url: 'http://linux-mirrors.fnal.gov'

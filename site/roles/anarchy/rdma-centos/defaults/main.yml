@@ -1,0 +1,6 @@
+---
+# defaults for the rdma-centos role
+
+rdma_packages:
+  - rdma
+  - rdma-ndd

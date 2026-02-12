@@ -1,0 +1,12 @@
+{{ ansible_managed | comment }}
+
+# Eudaimon Enterprises: added to allow memlock permissions for User space Infiniband verbs
+ * hard memlock unlimited
+ * soft memlock unlimited
+# Eudaimon Enterprises: added for OpenIB gen2 stack.
+ * - memlock unlimited
+# Eudaimon Enterprises: added for making sure stack size is not limited.
+* - stack unlimited
+# Eudaimon Enterprises: increase max open files limit
+ * - nofile 65536
+

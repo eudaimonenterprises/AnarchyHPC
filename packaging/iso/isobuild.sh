@@ -21,7 +21,7 @@ else
     BUILD=$(git describe --tag --long --match r${VERSION}  | sed -r 's/^r([\.0-9]*)-(.*)$/\2/' | tr - .)
 fi
 
-ISO_NAME="TrinityX-${VERSION}-${BUILD}_$(date +"%Y-%m-%d_%H-%M").iso"
+ISO_NAME="AnarchyHPC-${VERSION}-${BUILD}_$(date +"%Y-%m-%d_%H-%M").iso"
 
 SCRIPTDIR=$(
     cd $(dirname "$0")
@@ -32,7 +32,7 @@ ISO_DIR=${SCRIPTDIR}/ISO
 
 mkdir -p ${ISO_DIR}/Packages
 
-TRINITY_RPM=trinityx-${VERSION}-${BUILD}.el7.x86_64.rpm
+ANARCHY_RPM=anarchyhpc-${VERSION}-${BUILD}.el7.x86_64.rpm
 
 pushd ${SCRIPTDIR}/${PLAYBOOKS_DIR}
 pwd
@@ -86,7 +86,7 @@ if [[ ! -z ${ORPHANED_PACKAGES} ]]; then
     exit 1
 fi
 
-cp ${SCRIPTDIR}/../rpm/RPMS/x86_64/${TRINITY_RPM} ${ISO_DIR}/Packages/
+cp ${SCRIPTDIR}/../rpm/RPMS/x86_64/${ANARCHY_RPM} ${ISO_DIR}/Packages/
 
 cp -pr ${CENTOS_CONTENT}/{EFI,GPL,images,isolinux,LiveOS} ${ISO_DIR}/
 
@@ -94,10 +94,10 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' > ${ISO_DIR}/comps.xml
 echo '<!DOCTYPE comps PUBLIC "-//CentOS//DTD Comps info//EN" "comps.dtd">' >> ${ISO_DIR}/comps.xml
 echo '<comps>' >> ${ISO_DIR}/comps.xml
 xsltproc \
-    --novalid ${SCRIPTDIR}/trinity-comps.xsl \
+    --novalid ${SCRIPTDIR}/anarchy-comps.xsl \
     ${CENTOS_CONTENT}/repodata/*-comps.xml \
     | grep -v '<?xml version="1.0"?>' >> ${ISO_DIR}/comps.xml
-cat ${SCRIPTDIR}/trinity-comps.xml >> ${ISO_DIR}/comps.xml
+cat ${SCRIPTDIR}/anarchy-comps.xml >> ${ISO_DIR}/comps.xml
 echo '</comps>' >> ${ISO_DIR}/comps.xml
 
 pushd ${ISO_DIR}

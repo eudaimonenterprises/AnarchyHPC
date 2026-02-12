@@ -1,6 +1,6 @@
 ---
 
-luna_image_path: /trinity/images/nonexistent
+luna_image_path: /anarchy/images/nonexistent
 
 luna_image_detect_major_version:
   - name: RedHat

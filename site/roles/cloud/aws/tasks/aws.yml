@@ -1,5 +1,5 @@
 ---
-# Enable the AWS CLI Support for the TrinityX Installation.
+# Enable the AWS CLI Support for the AnarchyHPC Installation.
 
 - name: Check if aws-cli is already Installed
   shell: "aws help | grep AWS"

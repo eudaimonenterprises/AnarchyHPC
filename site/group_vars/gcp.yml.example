@@ -33,7 +33,7 @@ gcp_subscription_id: ''
 gcp_client_id: ''
 gcp_client_secret: ''
 gcp_tenant_id: ''
-gcp_resource_group_name: "TrinityX-resource"
+gcp_resource_group_name: "AnarchyHPC-resource"
 gcp_location: "Germany West Central"
 
 #########################################################################

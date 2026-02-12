@@ -5,7 +5,7 @@ Overview
 
 Welcome to AnarchyHPC!
 
-AnarchyHPC is the AppArmor-inclusive modern successor to the original TrinityX cluster management system. This compatibility-conscious, forward-facing fork is not affiliated with or endorsed by ClusterVision. Legacy references to "TrinityX", "trinityx", "trinity" and the like currently persist due to technical constraints and will be systematically removed as refactoring progresses.
+AnarchyHPC is the AppArmor-inclusive modern successor to the original AnarchyHPC cluster management system. This compatibility-conscious, forward-facing fork is not affiliated with or endorsed by ClusterVision. Legacy references to "AnarchyHPC", "anarchyhpc", "anarchy" and the like currently persist due to technical constraints and will be systematically removed as refactoring progresses.
 
 AnarchyHPC is the postmodern open-source HPC, AI and cloud platform. It is designed from the ground up to provide all services required in a postmodern HPC, AI and cloud system, and to allow full customization of the installation. Also it includes optional modules for specific needs, please check the controller and compute playbooks.
 
@@ -43,7 +43,7 @@ It will also set up:
 Steps to install AnarchyHPC
 =========================
 
-1. Install an Enterprise Linux version 8, 9 or 10 (i.e. RHEL, Rocky) on your controller(s). It is recommended to put ``/trinity`` and  ``/trinity/local`` on it's own filesystem. Note the partition configuration must be finalized (i.e. mounted and in fstab) before starting the AnarchyHPC installation.
+1. Install an Enterprise Linux version 8, 9 or 10 (i.e. RHEL, Rocky) on your controller(s). It is recommended to put ``/anarchy`` and  ``/anarchy/local`` on it's own filesystem. Note the partition configuration must be finalized (i.e. mounted and in fstab) before starting the AnarchyHPC installation.
 
 2. Configure network interfaces that will be used in the cluster, e.g public, provisioning and MPI networks on the controller(s).
    Ansible uses the interface address to determine the course of the playbook.
@@ -53,7 +53,7 @@ Steps to install AnarchyHPC
 4. Clone AnarchyHPC repository into your working directory. Then run ``INSTALL.sh`` to install and be guided through the steps::
 
        # git clone https://github.com/eudaimonenterprises/AnarchyHPC.git
-       # cd trinityX
+       # cd anarchyX
        # bash INSTALL.sh
 
 ----
@@ -65,8 +65,8 @@ Steps to install AnarchyHPC
 
 4.1. Clone AnarchyHPC repository into your working directory. Then run ``prepare.sh`` to install all the prerequisites::
 
-       # git clone http://github.com/clustervision/trinityX
-       # cd trinityX
+       # git clone http://github.com/clustervision/anarchyX
+       # cd anarchyX
        # bash prepare.sh
 
 4.2. Copy the all file which will contain the controller and cluster configuration. Please view the contents of the file on the directives that may need modification(s)::
@@ -111,7 +111,7 @@ Steps to install AnarchyHPC
 
     **Note**: If errors are encoutered during the installation process, analyze the error(s) in the output and try to fix it then re-run the installer.
 
-    **Note**: By default, the installation logs will be available at ``/var/log/trinity.log``
+    **Note**: By default, the installation logs will be available at ``/var/log/anarchy.log``
 
 4.5. Create a default RedHat/Rocky OS image::
 

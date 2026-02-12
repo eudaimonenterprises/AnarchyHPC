@@ -1,0 +1,452 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "home"
+      ],
+      "targetBlank": false,
+      "title": "AnarchyHPC Home",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "dashboard"
+      ],
+      "targetBlank": false,
+      "title": "AnarchyHPC Dashboards",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "camptocamp-prometheus-alertmanager-datasource",
+        "uid": "${alertmanager}"
+      },
+      "description": "List of the alerts active in the cluster ( excluding silenced and inhibited )",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "severity"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "1": {
+                        "color": "red",
+                        "index": 3,
+                        "text": "critical"
+                      },
+                      "2": {
+                        "color": "orange",
+                        "index": 2,
+                        "text": "danger"
+                      },
+                      "3": {
+                        "color": "yellow",
+                        "index": 1,
+                        "text": "warning"
+                      },
+                      "4": {
+                        "color": "#7c7e80",
+                        "index": 0,
+                        "text": "info"
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "description"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 629
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hostname"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 185
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "nhc"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 49
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "false": {
+                        "color": "red",
+                        "index": 1,
+                        "text": "no"
+                      },
+                      "true": {
+                        "color": "green",
+                        "index": 0,
+                        "text": "yes"
+                      }
+                    },
+                    "type": "value"
+                  },
+                  {
+                    "options": {
+                      "match": "null+nan",
+                      "result": {
+                        "color": "red",
+                        "index": 2,
+                        "text": "no"
+                      }
+                    },
+                    "type": "special"
+                  },
+                  {
+                    "options": {
+                      "match": "empty",
+                      "result": {
+                        "color": "red",
+                        "index": 3,
+                        "text": "no"
+                      }
+                    },
+                    "type": "special"
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 23,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "frameIndex": 1,
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.1.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "alertmanager",
+            "uid": "${alertmanager}"
+          },
+          "filters": "hostname=~\"$hostname\",luna_group=~\"$luna_group\",severity=~\"$severity\"",
+          "inhibited": false,
+          "receiver": "",
+          "refId": "A",
+          "silenced": false
+        }
+      ],
+      "title": "Alerts",
+      "transformations": [
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": false,
+                "field": "SeverityValue"
+              }
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "SeverityValue": false,
+              "Time": true,
+              "alertstatus": true,
+              "alertstatus_code": true,
+              "cluster": true,
+              "disabled": true,
+              "exporter": true,
+              "id": true,
+              "job": true,
+              "name": true,
+              "severity": true,
+              "type": true
+            },
+            "indexByName": {
+              "SeverityValue": 0,
+              "Time": 6,
+              "alertname": 4,
+              "alertstatus": 14,
+              "alertstatus_code": 15,
+              "capacity": 23,
+              "class": 16,
+              "clock": 17,
+              "cluster": 8,
+              "description": 7,
+              "disabled": 18,
+              "exporter": 9,
+              "hostname": 2,
+              "id": 11,
+              "job": 10,
+              "luna_group": 3,
+              "name": 12,
+              "nhc": 5,
+              "path": 19,
+              "product": 20,
+              "serial": 21,
+              "severity": 1,
+              "size": 24,
+              "type": 13,
+              "vendor": 22
+            },
+            "renameByName": {
+              "SeverityValue": "severity"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "dashboard",
+    "alerts"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "AlertManagerDatasource",
+          "value": "trixalertmanagerds"
+        },
+        "description": "Alertmanager Datasource",
+        "hide": 2,
+        "includeAll": false,
+        "label": "Alertmanager data source",
+        "multi": false,
+        "name": "alertmanager",
+        "options": [],
+        "query": "camptocamp-prometheus-alertmanager-datasource",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "trixprometheus"
+        },
+        "definition": "label_values(up,luna_group)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Luna Group",
+        "multi": true,
+        "name": "luna_group",
+        "options": [],
+        "query": {
+          "query": "label_values(up,luna_group)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "trixprometheus"
+        },
+        "definition": "label_values(up{luna_group=~\"$luna_group\"},hostname)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Hostname",
+        "multi": true,
+        "name": "hostname",
+        "options": [],
+        "query": {
+          "query": "label_values(up{luna_group=~\"$luna_group\"},hostname)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "trixprometheus"
+        },
+        "definition": "label_values(ALERTS,severity)",
+        "description": "Severity",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Severity",
+        "multi": false,
+        "name": "severity",
+        "options": [],
+        "query": {
+          "query": "label_values(ALERTS,severity)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Alerts",
+  "uid": "trixalerts",
+  "version": 13,
+  "weekStart": ""
+}

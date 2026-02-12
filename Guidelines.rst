@@ -19,7 +19,7 @@ Variables
     
     mariadb_db_path: '/var/lib/mysql'
   
-- To make roles portable and reusable, avoid relying on playbook-level and trinityX-specific variables. Define all the variables that are needed to run the role in ``defaults/main.yml``::
+- To make roles portable and reusable, avoid relying on playbook-level and anarchyX-specific variables. Define all the variables that are needed to run the role in ``defaults/main.yml``::
   
     # cat roles/drbd/defaults/main.yml
     ---
@@ -43,10 +43,10 @@ Passwords
   
 - Use the ``lookup()`` plugin to generate and retrieve stored passwords::
   
-    - name: Acquire root password (generate or use one from /etc/trinity/passwords)
+    - name: Acquire root password (generate or use one from /etc/anarchy/passwords)
       set_fact:
         mysql_root_pwd: "{{ lookup('password',
-                        '/etc/trinity/passwords/mysql/root.txt
+                        '/etc/anarchy/passwords/mysql/root.txt
                         chars=ascii_letters,digits,hexdigits') }}"
   
 Tags

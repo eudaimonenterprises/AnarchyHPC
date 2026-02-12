@@ -42,7 +42,7 @@ azure_client_secret: ''                           # https://portal.azure.com/#vi
 azure_tenant_id: ''                               # https://portal.azure.com/#view/Microsoft_AAD_IAM/StartboardApplicationsMenuBlade/~/AppAppsPreview/applicationType/All/appVisibleStatus/Hidden
 
 # -----------------------------------------------------------------------
-azure_resource_group_name: "TrinityX-resource"    # https://portal.azure.com/#view/HubsExtension/BrowseResourceGroups
+azure_resource_group_name: "AnarchyHPC-resource"    # https://portal.azure.com/#view/HubsExtension/BrowseResourceGroups
 azure_location: "Germany West Central"            # https://portal.azure.com/#create/Microsoft.ResourceGroup
 
 # -----------------------------------------------------------------------

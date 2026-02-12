@@ -1,0 +1,130 @@
+---
+# tasks file for sssd
+
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}.yaml"
+  no_log: true
+  ignore_errors: true
+
+- name: Install sssd packages
+  package:
+    name: '{{ sss_packages }}'
+    state: present
+  tags: install-only
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- block:
+  - name: Generate ds389 root password and save it to /etc/anarchy/passwords
+    set_fact:
+      tmp_pwd: "{{ lookup('password',
+                          '/etc/anarchy/passwords/ds389/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+
+  - name: Get ds389 root password from /etc/anarchy/passwords
+    set_fact:
+      ds389_root_pwd: "{{ lookup('password',
+                          '/etc/anarchy/passwords/ds389/root.txt
+                           chars=ascii_letters,digits,hexdigits') }}"
+  when: sss_use_ds389 | default(False)
+
+- name: Add configuration file to /etc/sssd/sssd.conf
+  template:
+    src: 'sssd.conf.j2'
+    dest: '{{ sssd_config_location }}/sssd.conf'
+    owner: 'root'
+    group: 'root'
+    mode: '0600'
+  notify: restart sssd
+
+- name: Ensure certs directory exists
+  file:
+    path: "{{ ca_certificate_path }}"
+    state: directory
+
+- name: Copy CA certificate
+  copy:
+    remote_src: "{{ False if in_image else True }}"
+    src: "{{ ssl_ca_cert }}"
+    dest: "{{ ca_certificate_path }}/{{ ssl_ca_cert | basename }}"
+  notify: restart sssd
+
+- meta: flush_handlers
+
+- name: Adjust OpenLDAP client TLS configuration
+  lineinfile:
+    path: "{{ ldap_conf }}"
+    line: 'TLS_CACERT   {{ ca_certificate_path }}/{{ ssl_ca_cert | basename }}'
+  when: not sss_use_ds389 | default(False)
+
+- name: Enable sssd service
+  systemd:
+    name: sssd
+    enabled: true
+
+- name: Start sssd service
+  systemd:
+    name: sssd
+    state: started
+  when: not in_image
+
+  # the below block is there to let sssd start a little later as
+  # on slower hardware sssd might fail with 'Providers did not start in time'
+  # in the logs. EL10 affected only.
+- block:
+  - name: Add delay for sssd.service
+    copy:
+      src: sssd.timer
+      dest: /usr/lib/systemd/system/sssd.timer
+
+  - name: Disable sssd service
+    systemd:
+      name: sssd.service
+      enabled: false
+
+  - name: Enable sssd timer
+    systemd:
+      name: sssd.timer
+      enabled: true
+  when:
+    - in_image
+    - ansible_facts['os_family'] == "RedHat"
+    - ansible_facts['distribution_major_version']|int > 9
+
+- name: Adding access controler groups to the system
+  shell: '/usr/local/sbin/obol group list | grep {{ item }} || /usr/local/sbin/obol group add {{ item }}'
+  register: obol_result
+  with_items: '{{ sss_allowed_groups }}'
+  changed_when: item not in obol_result.stdout
+  when: 
+    - primary|default(True)
+    - on_controller   
+    - sss_allowed_groups is defined
+    - sss_allowed_groups is iterable
+
+- name: Setting up the system to use sssd for authentication
+  command: "{{ item.command }}"
+  changed_when: false
+  with_items: "{{ sss_authselect_command }}"
+  when:
+    - item.name == ansible_facts['os_family']
+    - item.version == ansible_facts['distribution_major_version']|int
+
+- block:
+  - name: Configure nsswitch.conf
+    template:
+      src: 'nsswitch-manually.conf.j2'
+      dest: '/etc/nsswitch.conf'
+      owner: 'root'
+      group: 'root'
+      mode: '0644'
+
+  - name: Configure pam to use sss
+    shell: "pam-auth-update --enable sss"
+
+  - name: Configure pam to create homedir on first logon
+    shell: "pam-auth-update --enable mkhomedir"
+  when: ansible_facts['os_family'] == "Debian"

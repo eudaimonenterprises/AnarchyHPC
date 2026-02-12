@@ -1,0 +1,19 @@
+---
+# defaults for the init role
+
+enable_selinux: false
+
+init_packages:
+  - python3-libselinux
+  - bind-utils
+
+cloud_support: ['azure', 'aws', 'gcp']
+
+cloud_vpn_namekey:
+  azure: vng_ip
+  aws: vpn_tunnel1_ip
+  gcp: vng_ip
+
+cloud_vpn_pskkey:
+  aws: vpn_tunnel1_preshared_key
+

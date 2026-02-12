@@ -1,0 +1,49 @@
+prometheus_alertmanager_receivers:
+  - name: 'null'
+  - name: 'enabled'
+  - name: 'mail'
+    email_configs:
+      - to: '{{ prometheus_alertmanager_mail }}'
+  - name: 'prometheus-sensu-bridge'
+    webhook_configs:
+      - url: 'http://localhost:5555/listener'
+        send_resolved: true
+
+prometheus_alertmanager_route:
+  group_by: ['cluster']
+  group_wait: 30s
+  group_interval: 30s
+  repeat_interval: 1h
+  receiver: 'null'
+
+  routes:
+    - matchers:
+        - disabled != true
+      receiver: 'enabled'
+      continue: true
+      routes:
+        - matchers:
+            - severity = warning
+          group_interval: 4h
+          repeat_interval: 720h
+          receiver: 'mail'
+          continue: true
+
+        - matchers:
+            - severity = danger
+          group_interval: 30m
+          repeat_interval: 4h
+          receiver: 'mail'
+          continue: true
+
+        - matchers:
+            - severity = critical
+          group_interval: 30s
+          repeat_interval: 4h
+          receiver: 'mail'
+          continue: true
+
+        - matchers:
+            - severity =~ "danger|critical"
+          receiver: prometheus-sensu-bridge
+          continue: true

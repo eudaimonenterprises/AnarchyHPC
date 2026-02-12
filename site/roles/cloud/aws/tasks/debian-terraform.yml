@@ -1,5 +1,5 @@
 ---
-# Enable the AWS Cloud Support with Terraform for the TrinityX Installation.
+# Enable the AWS Cloud Support with Terraform for the AnarchyHPC Installation.
 
 - name: Check if Terraform is already Installed
   shell: "terraform -h"

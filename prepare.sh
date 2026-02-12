@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ ! -d /etc/trinity ]; then
-    mkdir /etc/trinity
+if [ ! -d /etc/anarchy ]; then
+    mkdir /etc/anarchy
 fi
 
 # --------------------------------------------------------------------------------------
@@ -57,16 +57,16 @@ function get_confirmation() {
 function store_config() {
   local KEY=$1
   local VALUE=$2
-  if [ -f /etc/trinity/prepare.conf ] && [ "$(grep '^'$KEY'=' /etc/trinity/prepare.conf)" ]; then
-    sed -i 's/^'$KEY'=.*$/'$KEY'='$VALUE'/' /etc/trinity/prepare.conf
+  if [ -f /etc/anarchy/prepare.conf ] && [ "$(grep '^'$KEY'=' /etc/anarchy/prepare.conf)" ]; then
+    sed -i 's/^'$KEY'=.*$/'$KEY'='$VALUE'/' /etc/anarchy/prepare.conf
   else
-    echo "$KEY=$VALUE" >> /etc/trinity/prepare.conf
+    echo "$KEY=$VALUE" >> /etc/anarchy/prepare.conf
   fi
 }
 
 # --------------------------------------------------------------------------------------
 
-if [ -f /etc/trinity/prepare.conf ]; then
+if [ -f /etc/anarchy/prepare.conf ]; then
   while IFS='=' read -ra line; do
     comment=$(echo $line | grep '^#')
     if [ ! "$comment" ]; then
@@ -77,13 +77,13 @@ if [ -f /etc/trinity/prepare.conf ]; then
         echo "$key = $value"
       fi
     fi
-  done < /etc/trinity/prepare.conf
+  done < /etc/anarchy/prepare.conf
 fi
 
 # --------------------------------------------------------------------------------------
 
-if [ ! -f TrinityX.pdf ]; then
-  add_message "Please run from within the cloned TrinityX folder"
+if [ ! -f AnarchyHPC.pdf ]; then
+  add_message "Please run from within the cloned AnarchyHPC folder"
   show_message
   exit 1
 fi
@@ -111,7 +111,7 @@ else
     echo "SELinux in permissive state"
   else
     add_message "SELinux is currently not configured in permissive state"
-    add_message "TrinityX currently only supports permissive SELinux"
+    add_message "AnarchyHPC currently only supports permissive SELinux"
     show_message
     PERM_SELINUX=$(get_confirmation y "Do you want to proceed with permissive SELinux")
     if [ "$PERM_SELINUX" == "no" ] && [ ! "$GITLAB_CI" ]; then
@@ -124,19 +124,9 @@ else
   fi
 fi
 
-# --------------------- TUI INSTALL ---------------------
+# --------------------- TUI INSTALL (removed) ---------------------
+echo "Skipping vendor TUI download (replaced with upstream-safe version)."
 
-if [ ! "$GITLAB_CI" ]; then
-  if [ ! -f site/tui_configurator ]; then
-    if [ ! "$(which wget)" ]; then
-      dnf -y install wget
-    fi
-    ARCH=$(uname -m)
-    TRIX_VER=$(grep 'trix_version' site/group_vars/all.yml* 2> /dev/null | grep -oE '[0-9\.]+' | sort -n | tail -n1 | grep -v '' || echo '15')
-    wget --directory-prefix site/ https://updates.clustervision.com/trinityx/${TRIX_VER}/install/${ARCH}/tui_configurator
-    chmod 755 site/tui_configurator
-  fi
-fi
 
 # inside a runner (test mode) we do not update the kernel.
 if [ "$GITLAB_CI" ]; then
@@ -230,7 +220,7 @@ else
 fi
 add_message "Please configure the network before starting Ansible"
 
-touch /etc/trinity/prepare.done
+touch /etc/anarchy/prepare.done
 show_message
 
 

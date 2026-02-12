@@ -2,7 +2,7 @@
 
 # create an absolute bare minimal image for redistribution
 
-- import_playbook: imports/trinity-opensuse-image-create.yml
+- import_playbook: imports/anarchy-opensuse-image-create.yml
   vars:
     image_name: "opensuse"
     # The password to set up for the root user in the image.
@@ -20,5 +20,5 @@
 
 
 # pack afterwards with e.g.
-# /usr/bin/tar -C /trinity/images/opensuse --one-file-system --xattrs --selinux --acls --checkpoint=100000 --use-compress-program=/usr/bin/lbzip2 -c -f /trinity/images/base-image-OpenSUSE-15.5.tgz .
+# /usr/bin/tar -C /anarchy/images/opensuse --one-file-system --xattrs --selinux --acls --checkpoint=100000 --use-compress-program=/usr/bin/lbzip2 -c -f /anarchy/images/base-image-OpenSUSE-15.5.tgz .
 

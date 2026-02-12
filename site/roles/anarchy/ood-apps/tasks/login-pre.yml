@@ -1,0 +1,45 @@
+---
+- name: Prepare login image for OOD installation
+  when: in_login_image|default(False)
+  block:
+    - name: Render login-node-ood-prepare script
+      template:
+        src: 'login/login-node-ood-prepare-script.j2'
+        dest: '{{ trix_sbin }}/login-node-ood-prepare.sh'
+        owner: root
+        group: root
+        mode: 0750
+
+    - name: Render /etc/systemd/system/luna2-daemon.service
+      template:
+        src: 'login/login-node-ood-prepare-service.j2'
+        dest: '/etc/systemd/system/login-node-ood-prepare.service'
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Populate service facts
+      service_facts:
+
+    - name: Enable post boot login services for OOD preparation 
+      service:
+        name: 'login-node-ood-prepare'
+        state: stopped
+        enabled: true
+
+    - block:
+      - fail:
+          msg: "warning: root group used as admin group. reasons: either authentication role being disabled or group could not be resolved"
+        ignore_errors: true
+
+      - name: Wait 10s for reading...
+        wait_for:
+          timeout: 10
+      when: ood_apps_admin_group == 'root'
+
+    - name: Ensure '{{ ood_apps_admin_group }}' group exists
+      group:
+        name: '{{ ood_apps_admin_group }}'
+        gid: '1050'
+        system: 'yes'
+      when: ood_apps_admin_group != 'root'

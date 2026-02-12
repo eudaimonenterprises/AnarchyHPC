@@ -11,8 +11,8 @@
         <xsl:copy-of select="comps/group/id[text()='system-admin-tools']/.."/>
         <xsl:copy-of select="comps/group/id[text()='system-management']/.."/>
         <xsl:copy-of select="comps/environment/id[text()='minimal']/.."/>
-        <xsl:copy-of select="comps/group/id[text()='trinityx']/.."/>
-        <xsl:copy-of select="comps/environment/id[text()='trinityx']/.."/>
+        <xsl:copy-of select="comps/group/id[text()='anarchyhpc']/.."/>
+        <xsl:copy-of select="comps/environment/id[text()='anarchyhpc']/.."/>
     </xsl:template>
     <xsl:template match="/">
         <xsl:call-template name="identity" />

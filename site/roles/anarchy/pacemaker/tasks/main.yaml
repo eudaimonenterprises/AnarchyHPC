@@ -1,0 +1,251 @@
+---
+
+- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+  no_log: true
+  ignore_errors: true
+
+- name: Install H/A packages
+  yum:
+    name: '{{ ha_packages }}'
+    state: present
+    enablerepo: 
+      - ha
+      - highavailability
+      - resilientstorage
+      - rhel-8-for-x86_64-highavailability-rpms
+      - rhel-9-for-x86_64-highavailability-rpms
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Install additional packages
+  yum:
+    name: '{{ additional_packages }}'
+    state: present
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+# --- start syncing keys ---
+
+- name: Verify if corosync key exists
+  stat:
+    path: /etc/corosync/authkey
+  register: stat_corosync_key
+
+- name: Create corosync key
+  command: "corosync-keygen -l"
+  args:
+    creates: '/etc/corosync/authkey'
+  when: 
+    - not stat_corosync_key.stat.exists
+    - primary
+
+- block:
+  - name: Ensure corosync sync directory exists
+    file:
+      path: '{{ trix_sync }}/corosync'
+      state: directory
+
+  - name: Copy corosync key to sync
+    copy:
+      remote_src: true
+      src: '/etc/corosync/authkey'
+      dest: '{{ trix_sync }}/corosync/'
+      mode: 0640
+      owner: root
+      group: root
+  when: 
+    - primary
+
+- name: Copy corosync key from sync
+  copy:
+    remote_src: true
+    src: '{{ trix_sync }}/corosync/authkey'
+    dest: '/etc/corosync/'
+    mode: 0640
+    owner: root
+    group: root
+  when: 
+    - not primary
+
+# --- end syncing keys ---
+
+- name: Configure corosync
+  template:
+    src: "corosync.conf.j2"
+    dest: "/etc/corosync/corosync.conf"
+  register: corosync_config
+
+- name: Restart corosync
+  service:
+    name: corosync
+    state: restarted
+    enabled: true
+  when: corosync_config.changed
+
+# TODO: better way than below
+- name: Install PCS
+  ansible.builtin.shell: |
+    source {{ trix_local }}/python/bin/activate
+    pip3 install --upgrade {{ pcs_noarch_pip_repository }}/{{ pcs_pip }}
+    exit $?
+  args:
+    executable: /bin/bash
+  when: pcs_pip is defined
+
+# TODO: better way than below
+- name: Install PCS
+  ansible.builtin.shell: |
+    source {{ trix_local }}/python/bin/activate
+    pip3 install --upgrade -i {{ pcs_noarch_pip_repository }}/ pcs
+    exit $?
+  args:
+    executable: /bin/bash
+  when: pcs_pip is not defined
+
+- name: Get python libdir
+  shell: "echo {{ trix_local }}/python/lib/python*"
+  register: luna2_python_dir
+  changed_when: false
+
+- name: Install ruby gems
+  shell: "/bin/bash {{ luna2_python_dir.stdout }}/site-packages/pcs/cv/gems.sh"
+  ignore_errors: true
+
+- name: Install PCS wrapper
+  template:
+    src: 'pcs.j2'
+    dest: '/usr/local/sbin/pcs'
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Ensure corosync service.d directory exists
+  file:
+    path: /etc/corosync/service.d/
+    state: directory
+
+- name: Adding pcmk service to corosync
+  copy:
+    src: "{{ item }}"
+    dest: "/etc/corosync/service.d/"
+  with_items:
+    - pcmk
+
+# ---------------------- Add custom resource agents ----------
+
+- name: Ensure custom resource agents exist
+  copy:
+    src: '{{ item }}'
+    dest: '/usr/lib/ocf/resource.d/heartbeat/{{ item }}'
+    owner: root
+    group: root
+    mode: 0755
+    force: no
+  with_items:
+    - ZFS
+    - iscsi
+  ignore_errors: true
+
+# ---------------------- start pacemaker and corosync --------
+#
+- name: Start pacemaker service
+  service:
+    name: pacemaker
+    state: started
+    enabled: true
+
+- name: Start corosync service
+  service:
+    name: corosync
+    state: started
+    enabled: true
+
+  # this should calm pcs down, trying to failover to this incomplete non primary node....
+- name: set property 'standby' to 'on' for non primary node (standby)
+  pcs_property:
+    name: 'standby'
+    node: '{{ ansible_hostname }}'
+    value: 'on'
+  ignore_errors: true
+  when: not primary
+
+# ---------------------- resources and config ----------------
+
+- block:
+  - name: Set pacemaker properties
+    pcs_property:
+      name: '{{ item.key }}'
+      value: '{{ item.value }}'
+    with_dict: '{{ pacemaker_properties }}'
+
+  - name: Setup pacemaker resource defaults
+    command: pcs resource defaults '{{ item }}'
+    register: result
+    until: result.rc == 0
+    retries: 10
+    delay: 15
+    with_items: '{{ pacemaker_resource_defaults }}'
+
+  - name: Add floating IP resource
+    pcs_resource:
+      name: 'anarchy-ip'
+      resource_type: 'ocf:heartbeat:IPaddr2'
+      options: 'ip={{ trix_ctrl_ip }} nic={{ trix_ctrl_interface }} cidr_netmask={{ trix_cluster_netprefix }} op monitor interval=29s --group Anarchy'
+      state: present
+
+  - name: Add external floating IP resource
+    pcs_resource:
+      name: 'anarchy-ip-external'
+      resource_type: 'ocf:heartbeat:IPaddr2'
+      options: 'ip={{ trix_ctrl_external_floating_ip }} nic={{ trix_ctrl_external_nic }} cidr_netmask={{ trix_ctrl_external_netprefix }} op monitor interval=29s --group Anarchy'
+      state: present
+    when:
+      - trix_ctrl_external_floating_ip is defined
+      - trix_ctrl_external_floating_ip != ''
+      - trix_ctrl_external_netprefix is defined
+      - trix_ctrl_external_netprefix != ''
+      - trix_ctrl_external_nic is defined
+      - trix_ctrl_external_nic != ''
+  when: primary
+
+# --------------------- fencing ----------------------------
+# /usr/local/sbin/pcs property set stonith-enabled=false|true
+
+- block:
+  - name: Toggle pacemaker stonith property
+    pcs_property:
+      name: stonith-enabled
+      value: false
+#      value: '{{ fence_ipmilan_enabled }}'
+#     used to be based on the setting, but true will immediatley shoot the secondary... poor thing.
+#     though i am not supposed to have knowledge about other roles here, i enable it again if needed in wrapup
+
+  - block:
+    - name: Configure fencing resources using the ipmilan fencing agent
+      pcs_resource:
+        name: 'fence-{{ item.0 }}'
+        resource_class: 'stonith'
+        resource_type: 'fence_ipmilan'
+        options: 'pcmk_host_check={{ fence_ipmilan_host_check }} pcmk_host_list={{ item.0 }} pcmk_host_map={{ item.0 }}:{{ item.1 }} ipaddr={{ item.1 }} method={{ fence_ipmilan_method }} lanplus={{ fence_ipmilan_lanplus }} login={{ fence_ipmilan_login }} passwd={{ fence_ipmilan_passwd }}'
+        state: present
+      with_together:
+        - '{{ all_ctrl_hostname }}'
+        - '{{ all_ctrl_bmcip }}'
+
+    - name: Add fencing location constraints
+      pcs_constraint_location:
+        resource: 'fence-{{ item }}'
+        node_name: '{{ item }}'
+        score: '-INFINITY'
+        state: present
+      with_items: '{{ all_ctrl_hostname }}'
+    when: fence_ipmilan_enabled
+  when: primary
+  tags: fencing
+
+
+

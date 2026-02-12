@@ -1,0 +1,16 @@
+---
+prometheus_ipmi_exporter_version: "1.10.1"
+
+# Vendor-neutral: use official SoundCloud GitHub releases
+prometheus_ipmi_exporter_binary_url: "https://github.com/soundcloud/ipmi_exporter/releases/download/v{{ prometheus_ipmi_exporter_version }}/ipmi_exporter-{{ prometheus_ipmi_exporter_version }}.linux-{{ system_arch }}.tar.gz"
+
+prometheus_ipmi_exporter_web_listen_port: "14202"
+prometheus_ipmi_exporter_web_listen_host: "0.0.0.0"
+
+prometheus_ipmi_exporter_log_dir: "/var/log/prometheus"
+
+prometheus_ipmi_exporter_binary_install_dir: "/usr/local/bin"
+
+prometheus_ipmi_exporter_system_user: "prometheus-ipmi-exporter"
+prometheus_ipmi_exporter_system_group: "prometheus"
+prometheus_ipmi_exporter_additional_system_groups: []

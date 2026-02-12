@@ -1,0 +1,33 @@
+---
+- name: Include password tasks
+  include_role:
+    name: anarchy/password
+
+- name: Include ssh tasks
+  include_role: 
+    name: anarchy/ssh
+  vars:
+    extend_image: true
+
+- name: Include luna2 tasks
+  include_role: 
+    name: anarchy/luna2
+  vars:
+    extend_image: true
+
+- name: Add dracut.conf.d entries
+  template:
+    src: anarchy.conf.j2
+    dest: "{{ image_path}}/etc/dracut.conf.d/anarchy.conf"
+
+# - name: Copy gpg keys
+#  copy:
+#    remote_src: true
+#    src: "/etc/pki/rpm-gpg"
+#    dest: "{{ image_path }}/etc/pki/"
+
+- name: Configuring resolv.conf
+  copy:
+    dest: "{{ image_path }}/etc/resolv.conf"
+    content: "nameserver {{ trix_ctrl_ip }}"
+

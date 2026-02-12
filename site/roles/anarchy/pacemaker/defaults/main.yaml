@@ -1,0 +1,27 @@
+---
+# High Availability (Pacemaker/Corosync) defaults
+
+ha_enabled: true
+
+ha_packages:
+  - pacemaker
+  - corosync
+  - fence-agents-ipmilan
+  - libcurl-devel
+  - openssl-devel
+
+# Pacemaker cluster-wide properties
+pacemaker_properties:
+  no-quorum-policy: ignore
+
+# Default resource settings
+pacemaker_resource_defaults:
+  - "migration-threshold=1"
+
+# Fencing configuration
+fence_ipmilan_enabled: true
+fence_ipmilan_host_check: "static-list"
+fence_ipmilan_method: "cycle"
+fence_ipmilan_lanplus: true
+fence_ipmilan_login: "changeme"
+fence_ipmilan_passwd: "changeme"

@@ -1,0 +1,39 @@
+# defaults file for config-slurm
+
+# Optional Python packages required by config-slurm tooling.
+# Previously used 'luna2-python' (vendor-specific). Now empty by default.
+luna2_packages: []
+
+# Repository for retrieving config-slurm Python wheels.
+# Replace with your own internal repository or leave empty to disable.
+config_slurm_noarch_pip_repository: ""
+
+# Names of the wheels used by config-slurm.
+# Replace with your own package names or versioning scheme.
+config_slurm_wheel: ""
+config_blocks_wheel: ""
+
+# Files managed by AnarchyHPC config-slurm tooling.
+scripts_managed_files:
+  - /etc/slurm/slurm-nodes.conf
+  - /etc/slurm/slurm-partitions.conf
+  - /etc/slurm/gres.conf
+
+# Defaults block markers (safe and generic)
+scripts_defaults_block_comment1: "# Defaults blocks are for anarchyhpc-config-slurm to read and append generated config."
+scripts_defaults_block_comment2: "# The settings and values can be altered and will not be overwritten."
+scripts_defaults_block_start_delimiter: "#### Defaults Managed block start ####"
+scripts_defaults_block_end_delimiter:   "#### Defaults Managed block end   ####"
+scripts_defaults_block_start_regex:     "#### Defaults Managed block start ####"
+scripts_defaults_block_end_regex:       "#### Defaults Managed block end   ####"
+
+# Managed block markers (safe and generic)
+scripts_managed_block_comment1: "# AnarchyHPC will only manage inside 'AnarchyHPC Managed block'."
+scripts_managed_block_comment2: "# If manual override is desired, the 'AnarchyHPC Managed block' can be removed."
+scripts_managed_block_start_delimiter: "#### AnarchyHPC Managed block start ####"
+scripts_managed_block_end_delimiter:   "#### AnarchyHPC Managed block end   ####"
+scripts_managed_block_start_regex:     "#### (AnarchyHPC|AnarchyHPC-OOD) Managed block start ####"
+scripts_managed_block_end_regex:       "#### (AnarchyHPC|AnarchyHPC-OOD) Managed block end   ####"
+
+# Default admin group for Slurm or cluster administration
+cs_admin_group: 'admins'

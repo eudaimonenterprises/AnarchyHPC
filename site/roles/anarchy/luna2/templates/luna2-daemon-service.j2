@@ -1,0 +1,17 @@
+[Unit]
+Description = Luna 2 Daemon
+After = network.target
+
+[Service]
+PIDFile = /run/anarchy/luna.pid
+WorkingDirectory = {{ trix_luna }}/daemon
+ExecStartPre = /bin/mkdir /run/anarchy
+ExecStart = /bin/bash -c "source {{ trix_local }}/python/bin/activate && {{ trix_local }}/python/bin/gunicorn --config {{ trix_luna }}/daemon/config/gunicorn.py 'luna:daemon' --pid /run/anarchy/luna.pid"
+ExecReload = /bin/kill -s HUP
+ExecStop = /bin/kill -s TERM
+ExecStopPost = /bin/rm -rf /run/anarchy
+StandardOutput=null
+
+[Install]
+
+WantedBy = multi-user.target

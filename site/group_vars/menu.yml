@@ -122,7 +122,7 @@ Authentication config:
   enable_authentication:
     type: bool
     seperator: true
-  trinity_ldap_backend:
+  anarchy_ldap_backend:
     type: dropdown
     choices: ['openldap','ds389']
     seperator: true

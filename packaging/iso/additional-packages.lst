@@ -1,2 +1,3 @@
-ansible
-luna-ansible
+ansible-core
+openhpc-release
+ondemand-release

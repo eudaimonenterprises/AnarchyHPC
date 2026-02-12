@@ -3,41 +3,65 @@
 set -e
 set -x
 
-PROD_NAME=trinityx
+PROD_NAME=anarchyhpc
 SPEC_FILE=${PROD_NAME}.spec
 SPEC_IN_FILE=${SPEC_FILE}.in
 
 SCRIPTDIR=$(
-    cd $(dirname "$0")
+    cd "$(dirname "$0")"
     pwd
 )
 
-if [ ! -f ${SCRIPTDIR}/${SPEC_IN_FILE} ]; then
+if [ ! -f "${SCRIPTDIR}/${SPEC_IN_FILE}" ]; then
     echo "No ${SPEC_IN_FILE} file found"
     exit 1
 fi
 
-if  ! git describe --tag 2>/dev/null &>/dev/null
-then
-    VERSION=9999
-    BUILD=$(git log --pretty=format:'' | wc -l)
+# ---------------------------------------------
+# Determine VERSION and BUILD from Git
+# ---------------------------------------------
+if git describe --tags --long >/dev/null 2>&1; then
+    # Example tag: v15.3-12-gabcdef
+    DESCRIBE=$(git describe --tags --long)
+
+    # Extract version (strip leading v if present)
+    VERSION=$(echo "$DESCRIBE" | sed -E 's/^v?([0-9]+\.[0-9]+).*/\1/')
+
+    # Extract build number (the middle field)
+    BUILD=$(echo "$DESCRIBE" | awk -F- '{print $2}')
 else
-    VERSION=$(git describe --tag --long  | sed -r 's/^r([\.0-9]*)-(.*)$/\1/')
-    BUILD=$(git describe --tag --long --match r${VERSION}  | sed -r 's/^r([\.0-9]*)-(.*)$/\2/' | tr - .)
+    VERSION=9999
+    BUILD=$(git rev-list --count HEAD)
 fi
 
-mkdir -p ${SCRIPTDIR}/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+# ---------------------------------------------
+# Prepare RPM build tree
+# ---------------------------------------------
+mkdir -p "${SCRIPTDIR}"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
-sed -e "s/__VERSION__/$VERSION/" ${SCRIPTDIR}/${SPEC_IN_FILE} > ${SCRIPTDIR}/SPECS/${SPEC_FILE}
-sed -i "s/__BUILD__/$BUILD/" ${SCRIPTDIR}/SPECS/${SPEC_FILE}
+# Substitute version/build into spec
+sed -e "s/__VERSION__/$VERSION/" \
+    -e "s/__BUILD__/$BUILD/" \
+    "${SCRIPTDIR}/${SPEC_IN_FILE}" \
+    > "${SCRIPTDIR}/SPECS/${SPEC_FILE}"
 
-# git log to rpm's changelog
-git log --format="* %cd %aN%n- (%h) %s%d%n" --date=local --no-merges | sed -r 's/[0-9]+:[0-9]+:[0-9]+ //' >>  ${SCRIPTDIR}/SPECS/${SPEC_FILE}
+# Append git log to changelog
+git log --format="* %cd %aN%n- (%h) %s%n" --date=local --no-merges \
+    | sed -E 's/[0-9]+:[0-9]+:[0-9]+ //' \
+    >> "${SCRIPTDIR}/SPECS/${SPEC_FILE}"
 
-git archive --format=tar.gz --prefix=${PROD_NAME}-${VERSION}-${BUILD}/  -o ${SCRIPTDIR}/SOURCES/v${VERSION}-${BUILD}.tar.gz HEAD
+# Create source tarball
+git archive \
+    --format=tar.gz \
+    --prefix="${PROD_NAME}-${VERSION}-${BUILD}/" \
+    -o "${SCRIPTDIR}/SOURCES/${PROD_NAME}-${VERSION}-${BUILD}.tar.gz" \
+    HEAD
 
-rm -rf ${SCRIPTDIR}/SRPMS/*.rpm
-rpmbuild -bs --define "_topdir ${SCRIPTDIR}" ${SCRIPTDIR}/SPECS/${SPEC_FILE}
-rm -rf ${SCRIPTDIR}/RPMS/*.rpm
-rpmbuild --rebuild --define "_topdir ${SCRIPTDIR}" ${SCRIPTDIR}/SRPMS/*.rpm
+# ---------------------------------------------
+# Build SRPM and RPM
+# ---------------------------------------------
+rm -f "${SCRIPTDIR}/SRPMS/"*.rpm
+rpmbuild -bs --define "_topdir ${SCRIPTDIR}" "${SCRIPTDIR}/SPECS/${SPEC_FILE}"
 
+rm -f "${SCRIPTDIR}/RPMS/"*.rpm
+rpmbuild --rebuild --define "_topdir ${SCRIPTDIR}" "${SCRIPTDIR}/SRPMS/"*.rpm

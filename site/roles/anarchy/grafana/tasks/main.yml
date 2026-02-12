@@ -1,0 +1,163 @@
+---
+
+- name: Generate grafana admin password
+  set_fact:
+    grafana_admin_pwd: "{{ lookup('password',
+                          grafana_password_file,
+                          chars=['ascii_letters','digits','hexdigits']) }}"
+
+- name: Determine if alertmanager basic auth is enabled
+  set_fact:
+    grafana_alertmanager_basic_auth: "{{ grafana_alertmanager_basic_auth_file is defined and grafana_alertmanager_basic_auth_file | length > 0 }}"
+
+- name: Extract alertmanager basic auth username
+  set_fact:
+    grafana_alertmanager_basic_auth_user: "{{ grafana_alertmanager_basic_auth_file | basename | regex_replace('(.*)\\..*', '\\1') }}"
+
+- name: Read alertmanager basic auth password
+  set_fact:
+    grafana_alertmanager_basic_auth_pwd: "{{ lookup('file', grafana_alertmanager_basic_auth_file) }}"
+
+- name: Set protocol
+  set_fact:
+    grafana_protocol: "{{ 'https' if grafana_enable_ssl else 'http' }}"
+
+- name: Install dependencies
+  yum:
+    name: python3-firewall
+    state: present
+  when: ansible_virtualization_type != 'docker'
+
+- name: Install Grafana
+  yum:
+    name: "{{ grafana_rpm }}"
+    disable_gpg_check: true
+    state: present
+
+- name: Gather package facts
+  package_facts:
+    manager: auto
+
+- name: Install alertmanager datasource plugin
+  command: grafana-cli plugins install camptocamp-prometheus-alertmanager-datasource
+  when: ansible_facts.packages['grafana'][0]['version'] is version('10.2.0', '<')
+
+- name: Install alertmanager datasource plugin (Grafana >= 10.2.0)
+  command: grafana cli plugins install camptocamp-prometheus-alertmanager-datasource
+  when: ansible_facts.packages['grafana'][0]['version'] is version('10.2.0', '>=')
+
+- name: Configure LDAP
+  template:
+    src: ldap.toml.j2
+    dest: /etc/grafana/ldap.toml
+    owner: root
+    group: grafana
+  notify: restart grafana-server
+  when: ldap_auth
+
+- name: Configure grafana.ini
+  template:
+    src: grafana.ini.j2
+    dest: /etc/grafana/grafana.ini
+    owner: root
+    group: grafana
+  notify: restart grafana-server
+
+- name: Add grafana user to SSL group
+  user:
+    name: grafana
+    groups: ssl
+    append: yes
+  when: grafana_enable_ssl
+
+- name: Ensure dashboard directory exists
+  file:
+    state: directory
+    path: "{{ grafana_dashboard_dir }}"
+    owner: grafana
+    group: grafana
+
+- name: Ensure provisioning directories exist
+  file:
+    state: directory
+    path: "{{ grafana_provisioning_dir }}/{{ item }}"
+    owner: grafana
+    group: grafana
+  loop:
+    - datasources
+    - dashboards
+
+- name: Configure Grafana datasources
+  template:
+    src: cluster-datasource.yaml.j2
+    dest: "{{ grafana_provisioning_dir }}/datasources/cluster-datasource.yaml"
+  notify: restart grafana-server
+
+- name: Configure Grafana dashboards
+  template:
+    src: cluster-dashboards.yaml.j2
+    dest: "{{ grafana_provisioning_dir }}/dashboards/cluster-dashboards.yaml"
+  notify: restart grafana-server
+
+- name: Install dashboards
+  copy:
+    src: "{{ item }}"
+    dest: "{{ grafana_dashboard_dir }}/"
+    owner: grafana
+    group: grafana
+  with_fileglob:
+    - "files/dashboards/*"
+  notify: restart grafana-server
+
+- name: Start and enable Grafana
+  systemd:
+    name: grafana-server
+    state: started
+    enabled: true
+
+- name: List organizations
+  uri:
+    method: GET
+    url: "{{ grafana_protocol }}://{{ ansible_default_ipv4.address }}:{{ grafana_port }}/api/org/"
+    user: "{{ grafana_admin }}"
+    password: "{{ grafana_admin_pwd }}"
+    return_content: true
+    force_basic_auth: true
+    validate_certs: no
+    use_proxy: no
+  register: grafana_orgs
+
+- name: Configure organization
+  uri:
+    method: PUT
+    url: "{{ grafana_protocol }}://{{ ansible_default_ipv4.address }}:{{ grafana_port }}/api/org"
+    user: "{{ grafana_admin }}"
+    password: "{{ grafana_admin_pwd }}"
+    validate_certs: no
+    force_basic_auth: true
+    use_proxy: no
+    body_format: json
+    body:
+      name: "{{ grafana_org_name }}"
+  when: grafana_org_name not in grafana_orgs
+
+- name: Set home dashboard
+  uri:
+    method: PUT
+    url: "{{ grafana_protocol }}://{{ ansible_default_ipv4.address }}:{{ grafana_port }}/api/org/preferences"
+    user: "{{ grafana_admin }}"
+    password: "{{ grafana_admin_pwd }}"
+    validate_certs: no
+    force_basic_auth: true
+    use_proxy: no
+    body_format: json
+    body:
+      homeDashboardUID: "{{ grafana_home_dashboard_uid }}"
+
+- name: Configure firewalld
+  firewalld:
+    state: enabled
+    port: "{{ grafana_port }}/tcp"
+    permanent: yes
+    immediate: yes
+  when: ansible_virtualization_type != 'docker'

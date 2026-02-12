@@ -1,11 +1,11 @@
 
-# TrinityX GRUB Configuration
+# AnarchyHPC GRUB Configuration
 set default=1
 set timeout=5
 set menu_color_normal=white/black
 set menu_color_highlight=black/light-gray
 
-menuentry 'Trinity iPXE' {
+menuentry 'Anarchy iPXE' {
     insmod chain
     set root='hd0,gpt1'
     chainloader /efi/rocky/ipxe.efi

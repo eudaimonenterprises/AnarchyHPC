@@ -1,0 +1,28 @@
+---
+# vars file for ood-portal
+
+ood_rpms:
+  - name: epel-release
+  - name: https://yum.osc.edu/ondemand/4.0/ondemand-release-web-4.0-1.el{{ ansible_distribution_major_version }}.noarch.rpm
+    no_gpgcheck: true
+  - name: ["@nodejs:20", "@ruby:3.3", "ondemand", "luna2-python"]
+
+ood_dex_rpms:
+  - name: ondemand-dex
+
+ood_pam_rpms:
+  - name: mod_authnz_pam
+
+ood_port: 8080
+ood_user: apache
+ood_cfg_path: /etc/ood/config/
+ood_brand: AnarchyHPC
+ood_auth_provider: dex # 'pam' or 'dex' ( only openldap is configured for dex )
+ood_cluster_name: AnarchyHPC
+ood_login_host: localhost
+ood_ldap_host: localhost
+ood_enable_ssl: true
+
+ood_footer_dir: "/etc/ood/config/apps/dashboard/views/layouts"
+ood_footer_file: "_footer.html.erb"
+ood_admin_group: admins

@@ -1,25 +1,20 @@
 ---
-# Enable the Azure Support with Terraform for the TrinityX Installation.
-
-- name: Check if Terraform is already Installed
-  shell: "terraform -h"
+- name: Check if Terraform is installed
+  command: terraform -version
   register: terraform_check
   ignore_errors: true
 
 - block:
-  - name: Install Terraform Dependency
-    yum:
-      disable_gpg_check: true
-      name: "yum-utils"
-      state: present
+    - name: Install yum-utils
+      yum:
+        name: yum-utils
+        state: present
 
-  - name: Add Terraform Repository
-    shell: "yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo"
+    - name: Add HashiCorp repo
+      command: yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
 
-  - name: Install Terraform
-    yum:
-      disable_gpg_check: true
-      name: "terraform"
-      state: present
-  when: terraform_check.rc|int != 0
-
+    - name: Install Terraform
+      yum:
+        name: terraform
+        state: present
+  when: terraform_check.rc != 0

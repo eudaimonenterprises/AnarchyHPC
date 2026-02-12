@@ -1,5 +1,5 @@
 ---
-# Main file to enable the AWS Cloud Support for the TrinityX Installation.
+# Main file to enable the AWS Cloud Support for the AnarchyHPC Installation.
 
 #- name: Check if aws-cli is already Installed
 #  shell: "aws help"

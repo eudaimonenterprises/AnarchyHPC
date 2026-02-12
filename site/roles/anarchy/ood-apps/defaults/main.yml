@@ -1,0 +1,86 @@
+---
+ood_luna_apps_version: ""
+ood_luna_apps_url: ""
+
+ood_apps_admin_group: admins
+ood_apps_path: /var/www/ood/apps/sys/
+
+ood_apps_arch_map:
+  x86_64: 'amd64'
+  aarch64: 'arm64'
+
+ood_apps_arch: "{{ ood_apps_arch_map[system_arch] | default(system_arch) }}"
+
+ood_apps:
+
+  # Upstream apps (safe)
+  - name: jupyter
+    type: bc
+    node_rpms:
+      - name: [python3.11, python3.11-pip]
+    node_apts:
+      - name: [python3, python3-pip, python3-venv]
+
+  - name: codeserver
+    type: bc
+    node_rpms:
+      - name: "https://github.com/coder/code-server/releases/download/v4.89.0/code-server-4.89.0-{{ ood_apps_arch }}.rpm"
+        no_gpgcheck: true
+    node_apts:
+      - name: "https://github.com/coder/code-server/releases/download/v4.89.0/code-server_4.89.0_{{ ood_apps_arch }}.deb"
+
+  - name: desktop
+    override: true
+    type: bc
+    props:
+      idle_timeout: 3600
+      desktops:
+        - xfce
+      desktops_default: xfce
+    node_rpms:
+      - name: https://yum.osc.edu/ondemand/4.0/ondemand-release-compute-4.0-1.el{{ ansible_distribution_major_version }}.noarch.rpm
+        no_gpgcheck: true
+      - name: ["turbovnc", "python3-websockify", "dbus-x11", "@xfce"]
+        enablerepo: crb
+    tasks: ["desktop.yml"]
+
+ # TrinityX management apps disabled
+ # (These depended on vendor tooling that no longer exists)
+  # You can re-enable selectively later if needed.
+
+  # - name: bmcsetup
+  # - name: cluster
+  # - name: group
+  # - name: network
+  # - name: node
+  # - name: osimage
+  # - name: otherdev
+  # - name: secrets
+  # - name: service
+  # - name: switch
+  # - name: control
+  # - name: users
+  # - name: osimagetag
+  # - name: monitor
+  # - name: dns
+  # - name: slurm
+  # - name: infiniband
+  # - name: rack
+  # - name: alertx
+  # - name: passwd
+
+  - name: system-status
+    mode: "0000"
+
+  - name: shell
+    override: true
+    mode: "0750"
+    props:
+      lchroot_wrapper_path: /usr/local/sbin/ood_lchroot_wrapper
+    tasks: ["lchroot.yml"]
+
+  # Monitoring apps (safe)
+  - name: prometheus
+  - name: alertmanager
+    mode: "0750"
+  - name: grafana

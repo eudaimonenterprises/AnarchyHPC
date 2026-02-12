@@ -1,0 +1,37 @@
+---
+# tasks file for nginx
+
+- name: Install nginx packages
+  yum:
+    name: '{{ nginx_packages }}'
+    state: present
+  tags: install-only
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Ensure /etc/nginx/conf.d exists
+  file:
+    path: '/etc/nginx/conf.d'
+    owner: root
+    group: root
+    state: directory
+
+- name: Copy configuration file
+  copy:
+    src: "nginx.conf"
+    dest: "/etc/nginx/nginx.conf"
+    backup: true
+  notify: reload nginx in nginx role
+
+- name: Add default ssl configuration
+  copy:
+    src: "ssl.conf"
+    dest: "/etc/nginx/conf.d/ssl.conf"
+  notify: reload nginx in nginx role
+
+- name: Enable nginx service
+  service:
+    name: nginx
+    enabled: true
+    state: started
+

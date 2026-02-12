@@ -1,4 +1,3 @@
 ---
 
-cloud_terraform_repository: https://github.com/clustervision/trinityx-terraform.git
-
+cloud_terraform_repository: ""

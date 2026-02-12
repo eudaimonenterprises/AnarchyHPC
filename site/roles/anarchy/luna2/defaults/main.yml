@@ -1,0 +1,44 @@
+---
+# Provisioning role defaults (Warewulf 4 placeholder)
+
+provisioning_enabled: true
+
+# Generic provisioning infrastructure (kept from Luna2)
+provisioning_required_packages:
+  - dhcp-server
+  - tftp-server
+  - xinetd
+  - nginx
+  - dos2unix
+  - sqlite
+  - net-snmp-utils
+
+provisioning_enable_services:
+  - dhcpd
+  - tftp
+  - xinetd
+  - nginx
+
+provisioning_start_services:
+  - dhcpd
+  - tftp
+  - xinetd
+  - nginx
+
+# Warewulf 4 placeholders (safe to keep empty for now)
+warewulf_version: "4"
+warewulf_packages: []
+warewulf_config_dir: "/etc/warewulf"
+warewulf_wwctl: "/usr/bin/wwctl"
+
+# Basic network definition (adapted from your old Luna2 cluster)
+provisioning_network:
+  device: "eth0"
+  ipaddr: "10.141.255.254"
+  netmask: "255.255.0.0"
+  network: "10.141.0.0"
+  broadcast: "10.141.255.255"
+
+# Future expansion
+warewulf_nodes: []
+warewulf_images: []

@@ -1,0 +1,7 @@
+---
+
+- name: restart logrotate
+  service:
+    name: logrotate
+    state: restarted
+

@@ -1,170 +1,124 @@
 ---
 - hosts: controllers
+  become: true
 
-  # List of roles to apply to the controllers, in the order in which they will run.
-  # NOTE: These and their default configurations can be found in the "roles/"
-  #       directory.
+  vars:
+    controller_vip: "10.0.0.100"
+    controller_nodes:
+      - controller1
+      - controller2
+    cluster_name: "hpc-ha"
+    dns_forwarders:
+      - 8.8.8.8
+      - 1.1.1.1
 
   roles:
-    - role: trinity/prepare
-      tags: always
-
-    - role: trinity/yml-check
-      tags: always
-
-    - role: trinity/init
-      tags: 
-        - init
-        - authentication
-
-    - role: trinity/hostname
-      tags: hostname
-
-    - role: trinity/no_proxy
-      no_proxy:
-        - ".{{ trix_domain }}"
-        - "{{ trix_ctrl_ip }}"
-        - "{{ trix_external_fqdn }}"
-        - "{{ trix_ctrl_hostname }}"
-        - "{{ trix_ctrl1_hostname }}"
-        - "{{ trix_ctrl2_hostname }}"
-        - "{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }}"
-        - "{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-      tags: noproxy
-
-    - role: trinity/repos
-      tags: repos
-
-    - role: trinity/packages
-      tags: packages
-
-    - role: OndrejHome.pcs-modules-2
-      tags: ha,pcs,pacemaker,shared-fs
-
-    - role: trinity/trix-tree
-      tags: 
-        - trix-tree
-        - authentication
-
-    - role: trinity/cv_support
-      tags: cv_support
-
-    - role: trinity/tunables
-      tags: tunables
-
-    - role: trinity/firewalld
+    # Basic system prep
+    - role: geerlingguy.repo-epel
+    - role: geerlingguy.firewall
+      firewall_allowed_tcp_ports:
+        - 22
+        - 111
+        - 2049
+        - 3121
+        - 5405
+        - 21064
+        - 53
+        - 514
       tags: firewalld
 
-    - role: trinity/chrony
+    - role: geerlingguy.chrony
+      chrony_ntp_servers:
+        - "{{ controller_nodes[0] }}"
       tags: chrony
 
-#    - role: trinity/ssh
-#      tags: ssh
+    - role: geerlingguy.hostname
+      hostname: "{{ inventory_hostname }}"
+      tags: hostname
 
-    # -----
-    # - role: trinity/fail2ban
-    #   tags: fail2ban
-    # -----
+    # SSL certificates (self-signed or real)
+    - name: Create self-signed SSL certificate
+      command: >
+        openssl req -x509 -nodes -days 3650
+        -newkey rsa:2048
+        -keyout /etc/pki/tls/private/cluster.key
+        -out /etc/pki/tls/certs/cluster.crt
+        -subj "/C=NL/ST=Noord-Holland/L=Amsterdam/O=HPC/CN={{ inventory_hostname }}"
+      args:
+        creates: /etc/pki/tls/certs/cluster.crt
+      tags: ssl-cert
 
-    - role: trinity/ssl-cert
-      ssl_cert_country: 'NL'
-      ssl_cert_locality: 'Amsterdam'
-      ssl_cert_organization: 'ClusterVision Solutions B.V.'
-      ssl_cert_state: 'Noord Holland'
-      ssl_cert_altname: 
-        - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
-        - '{{ ansible_fqdn }}'
-        - '{{ trix_external_fqdn }}'
-      ssl_cert_altip: 
-        - '{{ cloud_ctrl_ip|default([]) }}'
-      ssl_cert_days: '36500'
-      tags: 
-        - ssl-cert
-        - authentication  
-
-    - role: trinity/bind
-      bind_db_path: '{{ trix_local }}/var/lib/named'
-      bind_dnssec_enable: "no"
-      bind_dns_forwarders: '{{ trix_dns_forwarders }}'
+    # Optional DNS server
+    - role: geerlingguy.bind
+      bind_forwarders: "{{ dns_forwarders }}"
+      bind_listen_ipv4:
+        - "any"
       tags: bind
 
-    - role: trinity/luna2
-      ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
-      ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-      luna2_cluster:
-        cluster:
-          domain_search: '{{ resolv_search_domains }}'
-          dns_forwarders: '{{ trix_dns_forwarders }}'
-        ha: '{{ True if ha or cloud_install else False }}'
-        nosharedip: '{{ True if cloud_install and not ha else False }}'
-        frontend_address: '{{ trix_ctrl_ip }}'
-        frontend_hostname: '{{ trix_ctrl_hostname }}'
-        controllers: 
-          hostnames: '{{ all_ctrl_hostname }}'
-          ip_addresses: '{{ all_ctrl_ip }}'
-        shadow_controllers:
-          hostnames: '{{ cloud_ctrl_hostname|default([]) }}'
-          ip_addresses: '{{ cloud_ctrl_ip|default([]) }}'
-        networks:
-        - name: '{{ trix_domain }}'
-          function: 'default'
-          ip: '{{ trix_cluster_net }}'
-          prefix: '{{ trix_cluster_netprefix }}'
-          start_ip: '{{ trix_cluster_dhcp_start }}'
-          end_ip: '{{ trix_cluster_dhcp_end }}'
-          type: 'ethernet'
-        - name: 'ipmi'
-          function: 'bmc'
-          ip: '{{ trix_bmc_net }}'
-          prefix: '{{ trix_bmc_netprefix }}'
-          type: 'ethernet'
-        - name: 'ib'
-          function: 'low-latency'
-          ip: '{{ trix_infiniband_net }}'
-          prefix: '{{ trix_infiniband_netprefix }}'
-          type: 'infiniband'
-        shadow_networks: "{{ cloud_networks|default({}) }}"
-      tags: luna
+    # Pacemaker + Corosync HA stack
+    - name: Install HA packages
+      package:
+        name:
+          - pacemaker
+          - corosync
+          - pcs
+        state: present
+      tags: ha
 
-    - role: trinity/resolv
-      bind_dns_forwarders: '{{ trix_dns_forwarders }}'
-      resolv_server: '{{ trix_ctrl_ip }}'
-      tags: resolv
+    - name: Enable and start pcsd
+      service:
+        name: pcsd
+        state: started
+        enabled: true
+      tags: ha
 
-    - role: trinity/rsyslog
-      syslog_listeners:
-        - name: default
-          proto: tcp
-          port: 514
-        - name: default
-          proto: udp
-          port: 514
-      syslog_file_template_rules:
-        - name: controllers
-          type: string
-          content: '/var/log/cluster-messages/%HOSTNAME%.messages'
-          field: '$fromhost-ip'
-          criteria: startswith
-          rule: '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}'
+    - name: Set hacluster password
+      command: "echo hacluster:password | chpasswd"
+      tags: ha
+
+    - name: Authenticate pcs cluster nodes
+      command: >
+        pcs host auth {{ controller_nodes | join(' ') }}
+        -u hacluster -p password
+      tags: ha
+      run_once: true
+
+    - name: Create HA cluster
+      command: >
+        pcs cluster setup {{ cluster_name }}
+        {{ controller_nodes | join(' ') }}
+      tags: ha
+      run_once: true
+
+    - name: Start and enable HA cluster
+      command: pcs cluster start --all
+      tags: ha
+      run_once: true
+
+    - name: Enable cluster services
+      command: pcs cluster enable --all
+      tags: ha
+      run_once: true
+
+    # Virtual IP for controller failover
+    - name: Create virtual IP resource
+      command: >
+        pcs resource create ClusterIP ocf:heartbeat:IPaddr2
+        ip={{ controller_vip }} cidr_netmask=24 op monitor interval=30s
+      tags: ha
+      run_once: true
+
+    # rsyslog forwarding
+    - name: Configure rsyslog forwarding
+      blockinfile:
+        path: /etc/rsyslog.d/10-controller.conf
+        block: |
+          *.* @@{{ controller_vip }}:514
+      notify: Restart rsyslog
       tags: rsyslog
 
-    - role: trinity/aria2c
-      tags: aria2c
-
-    - role: trinity/logrotate
-      logrotate_files:
-        - luna
-        - trinityx
-        - aria2c
-      tags: logrotate
-
-    - role: trinity/cleanup-legacy
-      tags: cleanup-legacy
-
-    - role: trinity/wrapup
-      tags: wrapup
-
-  environment:
-    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-
+  handlers:
+    - name: Restart rsyslog
+      service:
+        name: rsyslog
+        state: restarted

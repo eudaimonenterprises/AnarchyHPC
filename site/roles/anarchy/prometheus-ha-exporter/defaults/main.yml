@@ -1,0 +1,16 @@
+---
+prometheus_ha_exporter_version: "1.4.0"
+
+# Upstream, maintained source for ha_cluster_exporter releases
+prometheus_ha_exporter_binary_url: "https://github.com/ClusterLabs/ha_cluster_exporter/releases/download/v{{ prometheus_ha_exporter_version }}/ha_cluster_exporter-{{ prometheus_ha_exporter_version }}-{{ system_arch }}.tar.gz"
+
+prometheus_ha_exporter_web_listen_port: "14205"
+prometheus_ha_exporter_web_listen_host: "0.0.0.0"
+
+prometheus_ha_exporter_log_dir: "/var/log/prometheus"
+
+prometheus_ha_exporter_binary_install_dir: "/usr/local/bin"
+
+prometheus_ha_exporter_system_user: "prometheus-ha-exporter"
+prometheus_ha_exporter_system_group: "prometheus"
+prometheus_ha_exporter_additional_system_groups: []

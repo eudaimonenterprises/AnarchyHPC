@@ -1,0 +1,13 @@
+---
+# vars file for obol
+
+obol_packages:
+  - python3-pip
+  - python3-ldap
+  - openldap-devel
+
+users_home_path: '/home'
+obol_conf_path: '/etc'
+ldap_host: localhost
+
+obol_use_ds389: false

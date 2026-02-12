@@ -1,0 +1,6 @@
+---
+dependencies:
+  - nginx
+  - role: trix-tree
+  - role: kea
+    when: luna2_use_kea | default(False)

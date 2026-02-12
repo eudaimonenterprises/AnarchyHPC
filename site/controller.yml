@@ -1,563 +1,140 @@
 ---
 - hosts: controllers
+  become: true
   serial: 1
 
-  # List of roles to apply to the controllers, in the order in which they will run.
-  # NOTE: These and their default configurations can be found in the "roles/"
-  #       directory.
+  vars:
+    cluster_domain: "cluster.local"
+    controller_hostname: "controller1"
+    controller_ip: "10.0.0.1"
+
+    enable_ldap: true
+    ldap_backend: "openldap"   # or "389ds"
+
+    enable_slurm: true
+    enable_ood: true
+    enable_prometheus: true
+    enable_grafana: true
+
+    nfs_export_root: "/srv/nfs"
+    nfs_exports:
+      - path: "/srv/nfs/home"
+        options: "*(rw,no_root_squash)"
+      - path: "/srv/nfs/shared"
+        options: "*(rw,no_root_squash)"
 
   roles:
-    - role: trinity/prepare
-      tags: always
 
-    - role: trinity/lock-check
-      tags: always
+    # -----------------------------
+    # System preparation
+    # -----------------------------
+    - role: geerlingguy.repo-epel
+    - role: geerlingguy.firewall
+      firewall_allowed_tcp_ports:
+        - 22
+        - 111
+        - 2049
+        - 443
+        - 6817
+        - 6818
+        - 6819
+        - 3000
+        - 9090
+        - 9093
 
-    - role: trinity/yml-check
-      tags: always
+    - role: geerlingguy.chrony
 
-    - role: trinity/init
-      tags: 
-        - init
-        - authentication
+    # -----------------------------
+    # Hostname + networking
+    # -----------------------------
+    - role: geerlingguy.hostname
+      hostname: "{{ controller_hostname }}"
 
-    - role: trinity/ldap-backend-selector
-      when: enable_authentication|default(True)
-      tags: always
+    # -----------------------------
+    # LDAP / 389‑DS
+    # -----------------------------
+    - role: geerlingguy.openldap_server
+      when: enable_ldap and ldap_backend == "openldap"
 
-    - role: trinity/hostname
-      tags: hostname
+    - role: lisenet.389ds
+      when: enable_ldap and ldap_backend == "389ds"
 
-    - role: trinity/pwquality
-      tags: pwquality
+    - role: geerlingguy.sssd
+      when: enable_ldap
 
-    - role: trinity/no_proxy
-      no_proxy:
-        - ".{{ trix_domain }}"
-        - "{{ trix_ctrl_ip }}"
-        - "{{ trix_external_fqdn }}"
-        - "{{ trix_ctrl_hostname }}"
-        - "{{ trix_ctrl1_hostname }}"
-        - "{{ trix_ctrl2_hostname }}"
-        - "{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }}"
-        - "{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-      tags: noproxy
+    # -----------------------------
+    # MariaDB
+    # -----------------------------
+    - role: geerlingguy.mysql
+      mysql_databases:
+        - name: slurm_acct
+      mysql_users:
+        - name: slurm
+          password: slurm
+          priv: "slurm_acct.*:ALL"
 
-    - role: trinity/repos
-      tags: repos
+    # -----------------------------
+    # NFS server
+    # -----------------------------
+    - role: geerlingguy.nfs
+      nfs_exports: "{{ nfs_exports }}"
 
-    - role: trinity/packages
-      tags: packages
+    # -----------------------------
+    # Slurm controller
+    # -----------------------------
+    - role: galaxyproject.slurm
+      slurm_role: controller
+      slurm_controller_host: "{{ controller_hostname }}"
+      slurmdbd_enabled: true
+      when: enable_slurm
 
-    - role: OndrejHome.pcs-modules-2
-      tags: ha,pcs,pacemaker,shared-fs
-
-    - role: trinity/sync-secrets
-      sync_controller: '{{ primary_controller | default(trix_ctrl1_hostname) }}'
-      tags: ha,sync-secrets
-      when: ha | default(False)
-
-    - role: trinity/pacemaker
-      fence_ipmilan_enabled: '{{ enable_ipmilan_fencing | default(True) }}'
-      tags: ha,pcs,pacemaker
-      when: ha | default(False)
-
-    - role: trinity/shared-fs
-      drbd_shared_resource_stonith_enabled: '{{ enable_ipmilan_fencing | default(True) }}'
-      tags: ha,shared-fs
-      when: ha | default(False)
-
-    - role: trinity/trix-tree
-      tags: 
-        - trix-tree
-        - authentication
-
-    - role: trinity/rdma-centos
-      tags: rdma-centos
-
-    - role: trinity/nfs
-      nfs_rpccount: 256
-      nfs_enable_rdma: false
-      nfs_exports_path: '{{ trix_local }}/etc/exports.d'
-      nfs_exports:
-        # trinityX shared ------------------------------------------------------------------
-        - path: '{{ trix_shared }}'
-          options: '*(ro)'
-          rwhosts: '{{ all_ctrl_hostname | join(" ") }} {{ trix_ctrl_hostname if ha else "" }}'
-        # trinityX home --------------------------------------------------------------------
-        - path: '{{ trix_home }}'
-          options: '*(rw,async,no_root_squash)'
-        # sync for non-primary controllers to sync once ------------------------------------
-        - path: '{{ trix_sync }}'
-          options: '-ro,async,no_root_squash {{ all_ctrl_hostname | join(" ") }}'
-        # openhpc --------------------------------------------------------------------------
-        - path: '{{ trix_ohpc }}'
-          options: '*(ro,no_root_squash)'
-          rwhosts: '{{ all_ctrl_hostname | join(" ") }} {{ trix_ctrl_hostname if ha else "" }}'
-          disabled: '{{ False if enable_openhpc else True }}'
-        # easybuild ------------------------------------------------------------------------
-        - path: '{{ trix_easybuild }}'
-          options: '{{ "*(rw,sync,no_wdelay,no_root_squash)" if export_easybuild == "rw" else "*(ro,no_root_squash)" }}'
-          rwhosts: '{{ all_ctrl_hostname | join(" ") }} {{ trix_ctrl_hostname if ha else "" }}'
-          disabled: '{{ False if enable_easybuild else True }}'
-        # ----------------------------------------------------------------------------------
-      nfs_remote_mask: '{{ shared_fs_disks }}'
-      nfs_prefix_path: '{{ shared_fs_prefix }}'
-      # nfs_use_mask overwrites the exported path to match the actual paths for shared disks
-      nfs_use_mask: "{{ ha | default(False) }}"
-      tags: nfs,nfs-mounts
-
-    - role: trinity/nfs-mounts
-      nfs_mounts:
-        # trinityX shared ------------------------------------------------------------------
-        - path: '{{ trix_shared }}'
-          remote: '{{ trix_ctrl_hostname }}:{{ trix_shared }}'
-          options: 'defaults,nfsvers=4,rw,retrans=4,_netdev'
-        # trinityX home --------------------------------------------------------------------
-        - path: '{{ trix_home }}'
-          remote: '{{ trix_ctrl_hostname }}:{{ trix_home }}'
-          options: 'defaults,nfsvers=4,rw,retrans=4,noatime,_netdev'
-      # ----------------------------------------------------------------------------------
-      nfs_remote_mask: '{{ shared_fs_disks }}'
-      nfs_prefix_path: '{{ shared_fs_prefix }}'
-      # nfs_use_mask enforces the mounting of even non nfs shared disks/mount
-      nfs_use_mask: "{{ ha | default(False) }}"
-      # nfs_only_xmount will only mount the mounts listed in nfs_mounts that are set to be xmount
-      nfs_only_xmount: "{{ ha | default(False) }}"
-      tags: shared-fs,nfs-mounts
-
-    - role: trinity/cv_support
-      tags: cv_support
-
-    - role: trinity/tunables
-      tags: tunables
-
-    - role: trinity/firewalld
-      tags: firewalld
-
-    - role: trinity/chrony
-      tags: chrony
-
-    - role: trinity/ssh
-      tags: ssh
-
-    # -----
-    # - role: trinity/fail2ban
-    #   tags: fail2ban
-    # -----
-
-    - role: trinity/ssl-cert
-      ssl_cert_country: 'NL'
-      ssl_cert_locality: 'Amsterdam'
-      ssl_cert_organization: 'ClusterVision Solutions B.V.'
-      ssl_cert_state: 'Noord Holland'
-      ssl_cert_altname: 
-        - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
-        - '{{ ansible_fqdn }}'
-        - '{{ trix_external_fqdn }}'
-      ssl_cert_altip: 
-        - '{{ all_ctrl_ip }}'
-        - '{{ trix_ctrl_external_ip | default("") }}'
-      ssl_cert_days: '36500'
-      tags: 
-        - ssl-cert
-        - authentication  
-
-    - role: trinity/bind
-      bind_db_path: '{{ trix_local }}/var/lib/named'
-      bind_dnssec_enable: "no"
-      bind_dns_forwarders: '{{ trix_dns_forwarders }}'
-      tags: bind
-
-    - role: trinity/openldap
-      openldap_server_dir_path: "{{ trix_ha if ha else trix_local }}/var/lib/ldap"
-      openldap_server_conf_path: "{{ trix_ha if ha else trix_local }}/etc/openldap/slapd.d"
-      openldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
-      when: 
-        - enable_authentication|default(True)
-        - trix_use_openldap | default(True)
-      tags: 
-        - openldap
-        - authentication
-
-    - role: trinity/ds389
-      ds389_server_dir_path: "{{ trix_ha if ha else trix_local }}/var/lib/dirsrv/slapd-local"
-      ds389_server_conf_path: "{{ trix_ha if ha else trix_local }}/etc/dirsrv/slapd-local"
-      ds389_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
-      when: 
-        - enable_authentication|default(True)
-        - trix_use_ds389 | default(False)
-      tags: 
-        - ds389
-        - authentication
-
-    - role: trinity/obol
-      users_home_path: '{{ trix_home }}'
-      ldap_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
-      obol_use_ds389: '{{ trix_use_ds389 | default(False) }}'
-      when: enable_authentication|default(True)
-      tags: 
-        - obol
-        - authentication
-
-    - role: trinity/sssd
-      sss_allowed_groups:
-        - '{{ admin_group }}'
-      sss_ldap_hosts:
-        - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
-      sss_use_ds389: '{{ trix_use_ds389 | default(False) }}'
-      when: enable_authentication|default(True)
-      tags: sssd, authentication, config-slurm
-
-    - role: trinity/mariadb
-      mariadb_db_path: "{{ trix_ha if ha else trix_local }}/var/lib/mysql"
-      tags: mariadb
-
-    - role: trinity/environment-modules
-      envmodules_skiproot: true
-      when: not enable_openhpc
-      tags: environment-modules
-
-    - role: trinity/nfs-mounts
-      nfs_enable_rdma: false
-      nfs_mounts:
-      - path: '{{ trix_ohpc }}'
-        remote: '{{ trix_ctrl_hostname }}:{{ trix_ohpc }}'
-        options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
-      nfs_remote_mask: '{{ shared_fs_disks }}'
-      nfs_prefix_path: '{{ shared_fs_prefix }}'
-      nfs_use_mask: true
-      nfs_only_xmount: true
-      when:
-        - ha | default(False)
-        - enable_openhpc | default(False)
-      tags: nfs-mounts
-
-    - role: trinity/openhpc
-      openhpc_skiproot: true
-      genders_conf_path: '{{ trix_shared }}/etc'
-      when: enable_openhpc
-      tags: openhpc
-
-    - role: trinity/nfs-mounts
-      nfs_enable_rdma: false
-      nfs_mounts:
-      - path: '{{ trix_easybuild }}'
-        remote: '{{ trix_ctrl_hostname }}:{{ trix_easybuild }}'
-        options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
-      nfs_remote_mask: '{{ shared_fs_disks }}'
-      nfs_prefix_path: '{{ shared_fs_prefix }}'
-      nfs_use_mask: true
-      nfs_only_xmount: true
-      when:
-        - ha | default(False)
-        - enable_easybuild | default(False)
-      tags: nfs-mounts
-
-    - role: trinity/easybuild
-      easybuild_user: easybuild
-      easybuild_export: '{{ export_easybuild }}'
-      easybuild_skiproot: true
-      when: enable_easybuild
-      tags: easybuild
-
-    - role: trinity/slurm
-      slurm_ctrl: '{{ trix_ctrl_hostname }}'
-      slurm_ctrl_ip: '{{ trix_ctrl_ip }}'
-      slurm_ctrl_list: '{{ all_ctrl_hostname | join(",") }}'
-      slurm_conf_path: '{{ trix_shared }}/etc/slurm'
-      slurm_spool_path: "{{ trix_ha if ha else trix_local }}/var/spool/slurm"
-      munge_conf_path: '{{ trix_shared }}/etc/munge'
-      slurmdbd_sql_user: 'slurm_accounting'
-      slurmdbd_sql_db: 'slurm_accounting'
-      when: "'slurm' in workload_manager "
-      tags: slurm
-
-    - role: trinity/slurm-sbank
-      when: "'slurm' in workload_manager "
-      tags: slurm, sbank
-
-    - role: trinity/kubernetes
-      tags: kubernetes, k3s
-      when: "'k3s' in workload_manager"
-
-    - role: trinity/config-slurm
-      cs_admin_group: "{{ admin_group }}"
-      when: "'slurm' in workload_manager "
-      tags: slurm, config-slurm, ood-apps
-
-    - role: trinity/config-genders
-      cg_admin_group: "{{ admin_group }}"
-      tags: config-genders
-
-    - role: trinity/config-manager
-      cm_admin_group: "{{ admin_group }}"
-      tags: config-manager
-
-      # We added kea for future reference
-      # For now it's here as a reference
-    - role: trinity/kea
-      when: trix_use_kea | default(False)
-      tags: kea
-
-    - role: trinity/luna2
-      ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
-      ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-      luna2_cluster:
-        cluster:
-          domain_search: '{{ resolv_search_domains }}'
-          dns_forwarders: '{{ trix_dns_forwarders }}'
-        ha: '{{ True if ha or cloud_install else False }}'
-        nosharedip: '{{ True if cloud_install and not ha else False }}'
-        frontend_address: '{{ trix_ctrl_ip }}'
-        frontend_hostname: '{{ trix_ctrl_hostname }}'
-        controllers: 
-          hostnames: '{{ all_ctrl_hostname }}'
-          ip_addresses: '{{ all_ctrl_ip }}'
-        shadow_controllers:
-          hostnames: '{{ cloud_ctrl_hostname|default([]) }}'
-          ip_addresses: '{{ cloud_ctrl_ip|default([]) }}'
-        networks:
-        - name: '{{ trix_domain }}'
-          function: 'default'
-          ip: '{{ trix_cluster_net }}'
-          prefix: '{{ trix_cluster_netprefix }}'
-          start_ip: '{{ trix_cluster_dhcp_start }}'
-          end_ip: '{{ trix_cluster_dhcp_end }}'
-          type: 'ethernet'
-        - name: 'ipmi'
-          function: 'bmc'
-          ip: '{{ trix_bmc_net }}'
-          prefix: '{{ trix_bmc_netprefix }}'
-          type: 'ethernet'
-        - name: 'ib'
-          function: 'low-latency'
-          ip: '{{ trix_infiniband_net }}'
-          prefix: '{{ trix_infiniband_netprefix }}'
-          type: 'infiniband'
-        shadow_networks: "{{ cloud_networks|default({}) }}"
-      tags: luna
-
-    - role: trinity/resolv
-      bind_dns_forwarders: '{{ trix_dns_forwarders }}'
-      resolv_server: '{{ trix_ctrl_ip }}'
-      tags: resolv
-
-    - role: trinity/rsyslog
-      syslog_listeners:
-        - name: default
-          proto: tcp
-          port: 514
-        - name: default
-          proto: udp
-          port: 514
-      syslog_file_template_rules:
-        - name: controllers
-          type: string
-          content: '/var/log/cluster-messages/%HOSTNAME%.messages'
-          field: '$fromhost-ip'
-          criteria: startswith
-          rule: '{{ trix_cluster_net.split(".")[:trix_cluster_netprefix//8]|join(".") }}'
-      tags: rsyslog
-
-    - role: trinity/aria2c
-      tags: aria2c
-
-    - role: trinity/ood
-      ood_enable_ssl: true
-      ood_auth_provider: '{{ ood_authentication_provider if enable_authentication else "pam" }}'
-      ood_use_ds389: '{{ trix_use_ds389 | default(False) }}'
-      ood_ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
-      ood_ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-      ood_login_host: "{{ trix_external_fqdn }}"
-      ood_ldap_host: "{{ trix_ctrl_ip }}"
-      ood_admin_group: "{{ admin_group }}"
-      tags: ood, ood-core
+    # -----------------------------
+    # Open OnDemand
+    # -----------------------------
+    - role: osc.open_ondemand
+      ood_port: 443
+      ood_auth: "basic_pam"
       when: enable_ood
 
-    - role: trinity/ood-apps
-      ood_enable_ssl: true
-      ood_apps_admin_group: "{{ admin_group }}"
-      tags: ood, ood-apps
-      when: enable_ood
+    # -----------------------------
+    # Prometheus + exporters
+    # -----------------------------
+    - role: cloudalchemy.prometheus
+      when: enable_prometheus
 
-    # - role: trinity/prometheus-auth
-    #   prometheus_auth_credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
-    #   tags: prometheus-auth, prometheus, monitoring
+    - role: cloudalchemy.node_exporter
+      when: enable_prometheus
 
-    - role: trinity/prometheus-server
-      # Prometheus server
-      prometheus_server_config_dir: "{{trix_etc}}/prometheus_server"
-      prometheus_server_db_dir: "{{trix_local}}/var/lib/prometheus_server"
-      prometheus_server_additional_system_groups:
-        - "{{ssl_cert_group}}"
-      prometheus_server_additional_sd:
-        - job_name: luna_nodes
-          http_sd_configs:
-          - url: "{{ luna_protocol }}://localhost:7050/export/prometheus"
-            tls_config:
-              insecure_skip_verify: true
-      prometheus_server_alertmanagers:
-        - target: "localhost:9093"
-          tls:
-            enabled: true
-            insecure_skip_verify: true
-          basic_auth:
-            enabled: true
-            credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
-      prometheus_server_tls:
-        enabled: true
-        cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
-        key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-      tags: prometheus-server, prometheus, monitoring
+    # -----------------------------
+    # Grafana
+    # -----------------------------
+    - role: cloudalchemy.grafana
+      grafana_security:
+        admin_user: admin
+        admin_password: admin
+      grafana_datasources:
+        - name: Prometheus
+          type: prometheus
+          access: proxy
+          url: "http://localhost:9090"
+      when: enable_grafana
 
+    # -----------------------------
+    # SSH hardening
+    # -----------------------------
+    - role: devsec.hardening.ssh_hardening
 
-    - role: trinity/prometheus-alertmanager
-      # Prometheus alertmanager
-      prometheus_alertmanager_config_dir: "{{trix_etc}}/prometheus_alertmanager"
-      prometheus_alertmanager_db_dir: "{{trix_local}}/var/lib/prometheus_alertmanager"
-      prometheus_alertmanager_mail: "{{ administrator_email }}"
-      prometheus_alertmanager_additional_system_groups:
-        - "{{ssl_cert_group}}"
-      prometheus_alertmanager_cluster:
-        listen-address: "{{ ansible_fqdn }}:6783"
-        peers:
-          - "{{ trix_ctrl_hostname }}:6783"
-      prometheus_alertmanager_auth:
-        enabled: true
-        credentials_file: '/etc/trinity/passwords/prometheus/admin.txt'
-        group_access: "{{ admin_group }}"
-      prometheus_alertmanager_tls:
-        enabled: true
-        cert_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
-        key_file: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-      # below depends on the above 
-      #   role: trinity/prometheus-server -> prometheus_server_tls/enabled: true == https
-      prometheus_alertmanager_web_protocol: "https"
-      tags: prometheus-alertmanager, prometheus, monitoring
+    # -----------------------------
+    # Environment modules
+    # -----------------------------
+    - role: geerlingguy.environment-modules
 
-    - role: trinity/prometheus-node-exporter
-      # Prometheus node exporter
-      prometheus_node_exporter_config_dir: "{{trix_etc}}/prometheus_node_exporter"
-      prometheus_node_exporter_db_dir: "{{trix_local}}/var/lib/prometheus_node_exporter"
-      prometheus_node_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_node_exporter.yml"
-      prometheus_node_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
-      tags: prometheus-node-exporter, prometheus, monitoring
-
-    - role: trinity/prometheus-infiniband-exporter
-      # Prometheus infiniband exporter
-      prometheus_infiniband_exporter_system_user: root
-      prometheus_infiniband_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_infiniband_exporter.yml"
-      prometheus_infiniband_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
-      tags: prometheus-infiniband-exporter, prometheus, monitoring
-
-    - role: trinity/prometheus-slurm-exporter
-      # Prometheus slurm exporter
-      prometheus_slurm_exporter_system_user: root
-      prometheus_slurm_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_slurm_exporter.yml"
-      prometheus_slurm_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
-      tags: prometheus-slurm-exporter, prometheus, monitoring
-
-    - role: trinity/prometheus-slurm-job-exporter
-      # Prometheus slurm_job/pjs exporter
-      prometheus_slurm_job_exporter_system_user: root
-      prometheus_slurm_job_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_slurm_job_exporter.yml"
-      prometheus_slurm_job_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
-      tags: prometheus-slurm-job-exporter, prometheus, monitoring
-
-    - role: trinity/prometheus-ipmi-exporter
-      # Prometheus ipmi exporter
-      prometheus_ipmi_exporter_system_user: root
-      prometheus_ipmi_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_ipmi_exporter.yml"
-      prometheus_ipmi_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
-      tags: prometheus-ipmi-exporter, prometheus, monitoring
-
-    - role: trinity/prometheus-nvidia-exporter
-      # Prometheus nvidia gpu exporter
-      prometheus_nvidia_exporter_system_user: root
-      prometheus_nvidia_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_nvidia_exporter.yml"
-      prometheus_nvidia_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
-      tags: prometheus-nvidia-exporter, prometheus, monitoring
-
-    - role: trinity/prometheus-amd-exporter
-      # Prometheus amd gpu exporter
-      prometheus_amd_exporter_system_user: root
-      prometheus_amd_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_amd_exporter.yml"
-      prometheus_amd_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
-      tags: prometheus-amd-exporter, prometheus, monitoring
-
-    - role: trinity/prometheus-ha-exporter
-      # Prometheus ha exporter
-      prometheus_ha_exporter_system_user: root
-      prometheus_ha_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_ha_exporter.yml"
-      prometheus_ha_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
-      tags: prometheus-ha-exporter, prometheus, monitoring, ha
-      when: ha | default(False)
-
-    - role: trinity/prometheus-lshw-exporter
-      # Prometheus lshw exporter
-      prometheus_lshw_exporter_system_user: root
-      prometheus_lshw_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_lshw_exporter.yml"
-      prometheus_lshw_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
-      tags: prometheus-lshw-exporter, prometheus, monitoring, lshw
-
-    - role: trinity/prometheus-luna-exporter
-      # Prometheus luna daemon related exporter
-      prometheus_luna_exporter_system_user: root
-      prometheus_luna_exporter_sd_file: "{{trix_etc}}/prometheus_server/file_sd/trix/controllers_luna_exporter.yml"
-      prometheus_luna_exporter_targets: "{{ (all_ctrl_ip) | zip(all_ctrl_hostname, [trix_domain] * (num_ctrl | int)) }}"
-      tags: prometheus-luna-exporter, prometheus, monitoring, luna
-
-    - role: trinity/grafana
-      ldap_auth: "{{ enable_authentication|default(True) }}"
-      grafana_enable_ssl: true
-      grafana_admin_group: "{{ admin_group }}"
-      grafana_prometheus_url: "https://{{ trix_ctrl_local_ip }}:9090"
-      grafana_alertmanager_url: "https://{{ trix_ctrl_local_ip }}:9093"
-      grafana_alertmanager_basic_auth_file: '/etc/trinity/passwords/prometheus/admin.txt'
-      ssl_certificate: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
-      ssl_certificate_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
-      tags: grafana, monitoring
-
-    - role: trinity/alertx
-      alertx_drainer_enable: "{{ True if 'slurm' in workload_manager else False }}"
-      tags: monitoring, alertx
-
-    - role: trinity/logrotate
-      logrotate_additional: '{{ workload_manager }}'
-      tags: logrotate
-
-    - role: trinity/osconfig
-      tags: osconfig
-
-    - role: trinity/environment
-      tags: environment
-
-    - role: trinity/cleanup-legacy
-      tags: cleanup-legacy
-
-      # wrapup role contains a mix bag of things to be run to conclude the setup.
-      # expect the unexpected!
-    - role: trinity/wrapup
-      fence_ipmilan_enabled: '{{ enable_ipmilan_fencing | default(True) }}'
-      tags: wrapup
-
-  environment:
-    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-
-- import_playbook: imports/cloud.yml
-  when: 
-    - cloud_install | default(False)
-    - not in_cloud | default(False)
-    - primary
-  tags: cloud
-
-  # below is when the controller is solo in the cloud where we just
-  # need to create the network, image and storage for the nodes to boot
-- import_playbook: imports/cloud-primary-controller.yml
-  when: 
-    - in_cloud | default(False)
-    - primary
-  tags: cloud
-
+    # -----------------------------
+    # Cleanup
+    # -----------------------------
+    - name: Remove unused packages
+      package:
+        name:
+          - telnet
+          - rsh
+        state: absent

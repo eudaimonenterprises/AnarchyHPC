@@ -9,7 +9,7 @@
       image_name: "ubuntu-image"
     tags: always
 
-- import_playbook: imports/trinity-ubuntu-image-create.yml
+- import_playbook: imports/anarchy-ubuntu-image-create.yml
   vars:
     image_name: "{{ hostvars['localhost']['image_name'] }}"
     # The password to set up for the root user in the image.
@@ -25,7 +25,7 @@
     #alternative_image_source: 'base'
 
 
-- import_playbook: imports/trinity-ubuntu-image-setup.yml
+- import_playbook: imports/anarchy-ubuntu-image-setup.yml
   vars:
     hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
 
@@ -35,7 +35,7 @@
 
     # Not supported on Ubuntu
 
-    # - role: trinity/slurm
+    # - role: anarchy/slurm
     #   slurm_conf_path: '{{ trix_shared }}/etc/slurm'
     #   slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
     #   munge_conf_path: '{{ trix_shared }}/etc/munge'

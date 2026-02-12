@@ -2,8 +2,8 @@ from pyanaconda.installclasses.centos import RHELBaseInstallClass
 from pyanaconda.product import productName
 
 
-class TrinityXBaseInstallClass(RHELBaseInstallClass):
-    name = "TrinityX"
+class AnarchyHPCBaseInstallClass(RHELBaseInstallClass):
+    name = "AnarchyHPC"
     sortPriority = 30000
     if not productName.startswith("CentOS"):
         hidden = True

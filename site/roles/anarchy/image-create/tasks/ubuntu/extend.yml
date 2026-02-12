@@ -1,0 +1,21 @@
+---
+- name: Include password tasks
+  include_role:
+    name: anarchy/password
+
+- name: Include ssh tasks
+  include_role: 
+    name: anarchy/ssh
+  vars:
+    extend_image: true
+
+- name: Include luna2 tasks
+  include_role: 
+    name: anarchy/luna2
+  vars:
+    extend_image: true
+
+- name: Configuring resolv.conf
+  copy:
+    dest: "{{ image_path }}/etc/resolv.conf"
+    content: "nameserver {{ trix_ctrl_ip }}"

@@ -1,0 +1,100 @@
+#!/bin/bash
+
+# Ensure firewalld is running and open the OOD port
+systemctl enable firewalld
+systemctl start firewalld
+firewall-cmd --add-port={{ ood_port }}/tcp --permanent
+firewall-cmd --reload
+
+HOST_FQDN=$(hostname --long)
+HOST_SHORT=$(hostname --short)
+SERIAL=$(date +%s)
+
+# Directory where temporary cert files are created
+WORKDIR="{{ ood_cert_workdir }}"
+mkdir -p "$WORKDIR"
+cd "$WORKDIR"
+
+# Generate SAN configuration
+cat << EOF > san.conf
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions     = req_ext
+
+[ req_distinguished_name ]
+countryName         = Country Name (2 letter code)
+stateOrProvinceName = State or Province Name (full name)
+localityName        = Locality Name (eg, city)
+organizationName    = Organization Name (eg, company)
+commonName          = Common Name (e.g. server FQDN)
+
+[ req_ext ]
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = ${HOST_FQDN}
+DNS.2 = ${HOST_SHORT}
+IP.1  = {{ ood_ip | default('127.0.0.1') }}
+EOF
+
+# Add all system IPs to SAN
+LAST_IP=$(grep -w IP san.conf | sort -n | tail -n1 | awk -F'[.= ]' '{print $NF}' || echo 1)
+LAST_IP=$((LAST_IP+1))
+
+for IP in $(ip -o -4 addr show | awk '{print $4}' | cut -d/ -f1); do
+    echo "IP.${LAST_IP} = ${IP}" >> san.conf
+    LAST_IP=$((LAST_IP+1))
+done
+
+# Remove old certs
+rm -f ood-${HOST_FQDN}.*
+
+# Generate key + CSR
+openssl req -new -nodes -sha512 \
+    -subj "/C={{ ssl_country }}/ST={{ ssl_state }}/L={{ ssl_city }}/O={{ ssl_org }}/CN=${HOST_FQDN}" \
+    -out "ood-${HOST_FQDN}.csr" \
+    -keyout "ood-${HOST_FQDN}.key" \
+    -config san.conf
+
+# Sign certificate (self-signed or CA-signed)
+{% if ood_use_ca %}
+openssl x509 -req \
+    -days {{ ood_cert_days }} \
+    -in "ood-${HOST_FQDN}.csr" \
+    -CA "{{ ood_ca_cert }}" \
+    -CAkey "{{ ood_ca_key }}" \
+    -out "ood-${HOST_FQDN}.crt" \
+    -extensions req_ext \
+    -extfile san.conf \
+    -set_serial $SERIAL
+{% else %}
+openssl x509 -req \
+    -days {{ ood_cert_days }} \
+    -in "ood-${HOST_FQDN}.csr" \
+    -signkey "ood-${HOST_FQDN}.key" \
+    -out "ood-${HOST_FQDN}.crt" \
+    -extensions req_ext \
+    -extfile san.conf \
+    -set_serial $SERIAL
+{% endif %}
+
+# Install certificate
+install -m 640 -g {{ ood_cert_group }} "ood-${HOST_FQDN}.key" "{{ ood_ssl_dir }}/"
+install -m 644 "ood-${HOST_FQDN}.crt" "{{ ood_ssl_dir }}/"
+
+# Update OOD portal config
+sed -i '/ssl:/,/^$/d' /etc/ood/config/ood_portal.yml
+
+cat << EOF >> /etc/ood/config/ood_portal.yml
+
+ssl:
+  - 'SSLCertificateFile "{{ ood_ssl_dir }}/ood-${HOST_FQDN}.crt"'
+  - 'SSLCertificateKeyFile "{{ ood_ssl_dir }}/ood-${HOST_FQDN}.key"'
+
+EOF
+
+# Update cluster config
+sed -i "s/{{ ood_hostname_placeholder }}/${HOST_FQDN}/g" /etc/ood/config/clusters.d/{{ ood_cluster_name }}.yml
+
+# Regenerate OOD portal
+/opt/ood/ood-portal-generator/sbin/update_ood_portal

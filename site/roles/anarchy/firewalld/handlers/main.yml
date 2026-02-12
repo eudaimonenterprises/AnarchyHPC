@@ -1,0 +1,18 @@
+---
+
+- name: reload firewalld
+  service:
+    name: firewalld
+    state: reloaded
+
+- name: reload NetworkManager
+  service:
+    name: NetworkManager
+    state: restarted
+  listen: reload firewalld
+
+- name: fix firewall zones
+  shell: /tmp/fix-firewalld-zones.sh
+  ignore_errors: true
+  listen: reload firewalld
+

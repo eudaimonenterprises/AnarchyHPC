@@ -1,0 +1,29 @@
+---
+
+
+# simple check to see if we have group_vars/all.yml (forward) compatibility
+
+- name: Get group_vars/all.yml
+  shell: >
+    (grep -w "yml check" group_vars/all.yml || echo "yml check: 0") | awk -F'yml check: ' '{ print $2 }'
+  ignore_errors: true
+  register: yml_check_version
+
+# Note that when running Ansible from here on remote hosts, the below is needed
+#    (grep -w "yml check" group_vars/all.yml || grep -w "yml check" all.yml  || echo "yml check: 0") | awk -F'yml check: ' '{ print $2 }'
+
+- debug:
+    msg: 'yaml version in all.yml {{ yml_check_version.stdout }} >= {{ yml_minimum_version }}'
+
+- name: Verifying if group_vars/all.yml is compatible with current AnarchyHPC release
+  fail:
+    msg: "Existing group_vars/all.yml is not compatible with the current AnarchyHPC release. Please copy group_vars/all.yml.example to group_vars/all.yml and review the configuration first"
+  when:
+    - yml_check_version.stdout is defined
+    - yml_check_version.stdout|int < yml_minimum_version
+
+- name: Verify that workload_manager doesn't contain 'slurm' and 'pbspro' at the same time
+  fail:
+    msg: "workload_manager cannot contain both 'slurm' and 'pbspro' at the same time"
+  when: "'slurm' in workload_manager and 'pbspro' in workload_manager"
+

@@ -1,5 +1,5 @@
 ---
-# Enable the Azure CLI Support for the TrinityX Installation.
+# Enable the Azure CLI Support for the AnarchyHPC Installation.
 
 - name: Check if azure-cli is already Installed
   shell: "az -h"
