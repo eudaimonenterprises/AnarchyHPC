@@ -34,7 +34,7 @@
         - {{ target_ip }}:{{ prometheus_ipmi_exporter_web_listen_port }}
         labels:
           exporter: ipmi
-          luna_group: controller
+          group: controller
           hostname: {{ target_hostname }}.{{ target_domain }}
       {% endfor %}
     marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_ipmi_exporter)"

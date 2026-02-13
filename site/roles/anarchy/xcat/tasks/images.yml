@@ -1,0 +1,14 @@
+---
+- name: Define OS images in xCAT
+  ansible.builtin.command: >
+    mkdef -t osimage -o {{ item.name }}
+    osvers={{ item.osvers }}
+    arch={{ item.arch }}
+    profile={{ item.profile }}
+    provmethod={{ item.provmethod }}
+  loop: "{{ xcat_os_images }}"
+
+- name: Pack netboot/root images where applicable
+  ansible.builtin.command: packimage {{ item.name }}
+  loop: "{{ xcat_os_images }}"
+  when: item.provmethod in ['netboot', 'statelite']

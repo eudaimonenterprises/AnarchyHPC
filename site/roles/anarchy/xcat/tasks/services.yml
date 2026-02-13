@@ -1,0 +1,22 @@
+---
+- name: Configure DNS via xCAT
+  ansible.builtin.command: makedns -n
+  when: xcat_manage_dns
+
+- name: Configure DHCP via xCAT
+  ansible.builtin.command: makedhcp -n
+  when: xcat_manage_dhcp
+
+- name: Ensure TFTP is enabled
+  ansible.builtin.service:
+    name: tftp
+    enabled: true
+    state: started
+  when: xcat_manage_tftp
+
+- name: Ensure HTTP is enabled
+  ansible.builtin.service:
+    name: httpd
+    enabled: true
+    state: started
+  when: xcat_manage_http

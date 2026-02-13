@@ -1,31 +1,31 @@
 ---
 - hosts: localhost
   pre_tasks:
-  #
-  # the image name can be set in the below fact.
-  #
-  - name: Set image name
-    set_fact:
-      image_name: "login"
-    tags: always
-
-  - name: Verify if luna secret vault exists
-    stat:
-      path: "/anarchy/local/etc/ssl/secret.key"
-    register: stat_secret_key
-    tags: always
-
-  - block:
-    - name: Import luna secret key
-      slurp:
-        src: "/anarchy/local/etc/ssl/secret.key"
-      register: luna_secret_key_b64
-
-    - name: Set Luna secret key
+    #
+    # the image name can be set in the below fact.
+    #
+    - name: Set image name
       set_fact:
-        luna_secret_key: "{{ luna_secret_key_b64['content'] | b64decode }}"
-    when: stat_secret_key.stat.exists
-    tags: always
+        image_name: "login"
+      tags: always
+
+    - name: Verify if secret vault exists
+      stat:
+        path: "/anarchy/local/etc/ssl/secret.key"
+      register: stat_secret_key
+      tags: always
+
+    - block:
+        - name: Import secret key
+          slurp:
+            src: "/anarchy/local/etc/ssl/secret.key"
+          register: secret_key_b64
+
+        - name: Set secret key fact
+          set_fact:
+            secret_key: "{{ secret_key_b64['content'] | b64decode }}"
+      when: stat_secret_key.stat.exists
+      tags: always
 
 
 - import_playbook: imports/anarchy-redhat-image-create.yml
@@ -33,35 +33,37 @@
     image_name: "{{ hostvars['localhost']['image_name'] }}"
     # The password to set up for the root user in the image.
     # If empty, it will be generated at random.
-    #
     image_password:
     #
     # Alternative distribution build. Supported are Rocky + Centos, version 8, 9, 8.9, 9.3
     # or any docker image, e.g. rockylinux:8
     #alternative_distribution: Rocky-9.3
-    # 
+    #
     # The alternative source can be 'base' or 'docker'
     #alternative_image_source: 'base'
 
+
 - import_playbook: imports/anarchy-redhat-login-setup.yml
   vars:
-    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages"
     in_login_image: true
-    luna_secret_key: "{{ hostvars['localhost']['luna_secret_key'] }}"
+    secret_key: "{{ hostvars['localhost']['secret_key'] }}"
+
 
 #- hosts:
-#    - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+#    - "{{ hostvars['localhost']['image_name'] }}.osimages"
 #  roles:
 #    - role: anarchy/slurm
-#      slurm_conf_path: '{{ trix_shared }}/etc/slurm'
-#      slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
-#      munge_conf_path: '{{ trix_shared }}/etc/munge'
+#      slurm_conf_path: '{{ shared_data }}/etc/slurm'
+#      slurm_spool_path: '{{ shared_data }}/var/spool/slurm'
+#      munge_conf_path: '{{ shared_data }}/etc/munge'
 #      tags: slurm
-#
+
+
 - hosts: controllers
   roles:
-    - role: luna/osimage-pack
+    - role: anarchy/pack-images
       vars:
-         params:
-            image_name: "{{ hostvars['localhost']['image_name'] }}"
+        params:
+          image_name: "{{ hostvars['localhost']['image_name'] }}"
       tags: pack-images

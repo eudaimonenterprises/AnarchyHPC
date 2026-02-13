@@ -1,0 +1,46 @@
+---
+# Create the shared directory tree
+
+- name: Register shared directory facts
+  set_fact:
+    "{{ item.name }}": "{{ item.path }}"
+  loop: "{{ shared_tree_dirs }}"
+  tags: always
+
+- name: Create base shared directory structure
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{ shared_root }}"
+    - "{{ shared_local }}"
+    - "{{ shared_data }}"
+  when: item != ""
+
+- name: Apply SELinux context to shared_local
+  file:
+    path: "{{ shared_local }}"
+    state: directory
+    setype: home_root_t
+    seuser: system_u
+  when: ansible_selinux.status == "enabled"
+
+- name: Create controller-specific directory structure
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{ shared_sync }}"
+    - "{{ shared_etc }}"
+    - "{{ shared_sbin }}"
+    - "{{ shared_ondemand }}"
+    - "{{ shared_ssl }}"
+  when: in_login_image | default(false) or ansible_connection not in 'chroot'
+
+- name: Create high-availability directory
+  file:
+    path: "{{ shared_ha }}"
+    state: directory
+  when:
+    - ha
+    - shared_ha is defined

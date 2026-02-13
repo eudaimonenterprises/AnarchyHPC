@@ -1,0 +1,21 @@
+---
+- name: Configure xCAT site table
+  ansible.builtin.command: >
+    chdef -t site -o clustersite
+    domain={{ xcat_site.domain }}
+    master={{ xcat_site.master }}
+    dhcpinterfaces={{ xcat_site.dhcpinterfaces }}
+    useNmapfornodeset={{ xcat_site.useNmapfornodeset }}
+
+- name: Define xCAT networks
+  ansible.builtin.command: >
+    chdef -t network -o {{ item.name }}
+    net={{ item.net }}
+    mask={{ item.mask }}
+    mgtifname={{ item.mgtifname }}
+    dhcp={{ item.dhcp | default('yes') }}
+    dynamicrange={{ item.dynamicrange | default('') }}
+  loop: "{{ xcat_networks }}"
+
+- name: Run makenetworks
+  ansible.builtin.command: makenetworks -a

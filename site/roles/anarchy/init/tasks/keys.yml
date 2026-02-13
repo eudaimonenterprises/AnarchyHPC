@@ -1,28 +1,28 @@
-
+---
 - block:
-  - name: Verify if luna secret vault exists
+  - name: Verify if secret vault exists
     stat:
-      path: "{{ trix_ssl }}/secret.key"
+      path: "{{ ssl_dir }}/secret.key"
     register: stat_secret_key
 
   - block:
-    - name: Generate Luna Secret Key
+    - name: Generate secret key
       set_fact:
         luna_secret_key: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
 
-    - name: Write luna secret key to vault
+    - name: Write secret key to vault
       copy:
-        dest: "{{ trix_ssl }}/secret.key"
+        dest: "{{ ssl_dir }}/secret.key"
         content: "{{ luna_secret_key }}"
     when: not stat_secret_key.stat.exists
 
   - block:
-    - name: Import luna secret key
+    - name: Import secret key
       slurp:
-        src: "{{ trix_ssl }}/secret.key"
+        src: "{{ ssl_dir }}/secret.key"
       register: luna_secret_key_b64
 
-    - name: Set Luna secret key
+    - name: Set secret key
       set_fact:
         luna_secret_key: "{{ luna_secret_key_b64['content'] | b64decode }}"
     when: stat_secret_key.stat.exists
@@ -31,24 +31,24 @@
 - block:
   - name: Verify if omapi vault exists
     stat:
-      path: "{{ trix_ssl }}/omapi.key"
+      path: "{{ ssl_dir }}/omapi.key"
     register: stat_omapi_key
 
   - block:
-    - name: Generate omapi Key
+    - name: Generate omapi key
       set_fact:
         omapi_key: "{{ lookup('password', '/dev/null length=32 chars=abcdef0123456789') }}"
 
     - name: Write omapi key to vault
       copy:
-        dest: "{{ trix_ssl }}/omapi.key"
+        dest: "{{ ssl_dir }}/omapi.key"
         content: "{{ omapi_key }}"
     when: not stat_omapi_key.stat.exists
 
   - block:
     - name: Import omapi key
       slurp:
-        src: "{{ trix_ssl }}/omapi.key"
+        src: "{{ ssl_dir }}/omapi.key"
       register: omapi_key_b64
 
     - name: Set omapi key
@@ -60,28 +60,28 @@
 - block:
   - name: Verify if TSIG vault exists
     stat:
-      path: "{{ trix_ssl }}/tsig.key"
+      path: "{{ ssl_dir }}/tsig.key"
     register: stat_tsig_key
 
   - block:
-    - name: Generate TSIG Key
+    - name: Generate TSIG key
       shell: tsig-keygen -a hmac-sha256 tsig-key
       register: raw_tsig_key
 
-    - name: Set TSIG Key
+    - name: Set TSIG key
       set_fact:
         tsig_key: "{{ raw_tsig_key.stdout }}"
 
     - name: Write TSIG key to vault
       copy:
-        dest: "{{ trix_ssl }}/tsig.key"
+        dest: "{{ ssl_dir }}/tsig.key"
         content: "{{ tsig_key }}"
     when: not stat_tsig_key.stat.exists
 
   - block:
     - name: Import TSIG key
       slurp:
-        src: "{{ trix_ssl }}/tsig.key"
+        src: "{{ ssl_dir }}/tsig.key"
       register: tsig_key_b64
 
     - name: Set TSIG key
@@ -99,4 +99,3 @@
   when:
     - ansible_facts['os_family'] == "RedHat"
     - ansible_facts['distribution_major_version']|int > 8
-

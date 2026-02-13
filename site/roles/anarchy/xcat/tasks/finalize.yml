@@ -1,0 +1,14 @@
+---
+- name: Regenerate DHCP configuration
+  ansible.builtin.command: makedhcp -n
+  when: xcat_manage_dhcp
+  notify: restart dhcpd
+
+- name: Regenerate DNS configuration
+  ansible.builtin.command: makedns -n
+  when: xcat_manage_dns
+  notify: restart named
+
+- name: Restart xCAT daemon
+  ansible.builtin.command: restartxcatd
+  notify: restart xcatd

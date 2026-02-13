@@ -1,44 +1,35 @@
 ---
 - hosts: localhost
   pre_tasks:
-  #
-  # the image name can be set in the below fact.
-  #
-  - name: Set image name
-    set_fact:
-      image_name: "alma-image"
-    tags: always
+    - name: Set image name
+      set_fact:
+        image_name: "alma-image"
+      tags: always
 
 - import_playbook: imports/anarchy-redhat-image-create.yml
   vars:
     image_name: "{{ hostvars['localhost']['image_name'] }}"
-    # The password to set up for the root user in the image.
-    # If empty, it will be generated at random.
-    #
     image_password:
-    #
-    # https://hub.docker.com/_/almalinux/tags
     alternative_distribution: almalinux:latest
     alternative_image_source: 'docker'
     alternative_image_distr: 'almalinux'
 
 - import_playbook: imports/anarchy-redhat-image-setup.yml
   vars:
-    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.xcat"
 
 - hosts:
-    - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    - "{{ hostvars['localhost']['image_name'] }}.osimages.xcat"
   roles:
     - role: anarchy/slurm
-      slurm_conf_path: '{{ trix_shared }}/etc/slurm'
-      slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
-      munge_conf_path: '{{ trix_shared }}/etc/munge'
+      slurm_conf_path: '{{ shared_storage_path }}/etc/slurm'
+      slurm_spool_path: '{{ shared_storage_path }}/var/spool/slurm'
+      munge_conf_path: '{{ shared_storage_path }}/etc/munge'
       tags: slurm
 
 - hosts: controllers
   roles:
-    - role: luna/osimage-pack
+    - role: anarchy/osimage-pack   # NEW ROLE replacing luna/osimage-pack
       vars:
-         params:
-            image_name: "{{ hostvars['localhost']['image_name'] }}"
+        image_name: "{{ hostvars['localhost']['image_name'] }}"
       tags: pack-images

@@ -1,20 +1,17 @@
 ---
-# Whether the config-manager functionality is enabled
-config_manager_enabled: true
+# vars file for bind
 
-# Files that should contain managed blocks
-config_manager_managed_files:
-  - /etc/genders
-  - /etc/slurm/slurm-nodes.conf
-  - /etc/slurm/slurm-partitions.conf
+bind_packages:
+  - bind
 
-# Managed block markers (vendor-neutral)
-config_manager_block_comment1: "# Managed by Ansible inside the defined block."
-config_manager_block_comment2: "# Remove the block to disable automatic management."
-config_manager_block_start_delimiter: "#### Managed block start ####"
-config_manager_block_end_delimiter:   "#### Managed block end   ####"
-config_manager_block_start_regex:     "#### Managed block start ####"
-config_manager_block_end_regex:       "#### Managed block end   ####"
+bind_dns_forwarders:
+  - '8.8.8.8'
+  - '8.8.4.4'
 
-# Admin group for write permissions
-config_manager_admin_group: 'admins'
+bind_dnssec_enable: 'no'
+bind_db_path: '/var/named'
+
+resolv_server: '127.0.0.1'
+resolv_search_domains: 'cluster ipmi'
+
+config_manager_local_dir: ""

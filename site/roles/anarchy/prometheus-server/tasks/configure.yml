@@ -2,9 +2,9 @@
 - name: Alerting rules file
   ansible.builtin.template:
     src: "generic.rules.j2"
-    dest: "{{ prometheus_server_config_dir }}/rules/trix.generic.rules"
+    dest: "{{ prometheus_server_config_dir }}/rules/generic.rules"
     owner: root
-    group: "{{prometheus_server_system_group}}"
+    group: "{{ prometheus_server_system_group }}"
     mode: 0640
     validate: "{{ _prometheus_server_binary_install_dir }}/promtool check rules %s"
   when:
@@ -15,9 +15,9 @@
 - name: Alerting rules file
   ansible.builtin.template:
     src: "service.rules.j2"
-    dest: "{{ prometheus_server_config_dir }}/rules/trix.service.rules"
+    dest: "{{ prometheus_server_config_dir }}/rules/service.rules"
     owner: root
-    group: "{{prometheus_server_system_group}}"
+    group: "{{ prometheus_server_system_group }}"
     mode: 0640
     validate: "{{ _prometheus_server_binary_install_dir }}/promtool check rules %s"
   when:
@@ -28,9 +28,9 @@
 - name: Recording rules file
   ansible.builtin.template:
     src: "recording.rules.j2"
-    dest: "{{ prometheus_server_config_dir }}/rules/trix.recording.rules"
+    dest: "{{ prometheus_server_config_dir }}/rules/recording.rules"
     owner: root
-    group: "{{prometheus_server_system_group}}"
+    group: "{{ prometheus_server_system_group }}"
     mode: 0640
     validate: "{{ _prometheus_server_binary_install_dir }}/promtool check rules %s"
   when:
@@ -43,7 +43,7 @@
     src: "{{ item }}"
     dest: "{{ prometheus_server_config_dir }}/rules/"
     owner: root
-    group: "{{prometheus_server_system_group}}"
+    group: "{{ prometheus_server_system_group }}"
     mode: 0640
     validate: "{{ _prometheus_server_binary_install_dir }}/promtool check rules %s"
   with_fileglob: "{{ prometheus_server_alert_rules_files }}"
@@ -58,7 +58,7 @@
     dest: "{{ prometheus_server_config_dir }}/prometheus.yml"
     force: true
     owner: root
-    group: "{{prometheus_server_system_group}}"
+    group: "{{ prometheus_server_system_group }}"
     mode: 0640
     validate: "{{ _prometheus_server_binary_install_dir }}/promtool check config %s"
   notify:
@@ -70,7 +70,7 @@
     dest: "{{ prometheus_server_config_dir }}/prometheus.web.yml"
     force: true
     owner: root
-    group: "{{prometheus_server_system_group}}"
+    group: "{{ prometheus_server_system_group }}"
     validate: "{{ _prometheus_server_binary_install_dir }}/promtool check web-config %s"
     mode: 0640
 
@@ -82,8 +82,8 @@
 #         - {{ ansible_fqdn }}:{{ prometheus_server_web_listen_port }}
 #         labels:
 #           exporter: prometheus
-#       {% if ansible_hostname in (all_ctrl_hostnames|default([trix_ctrl_hostname])) %}
-#           luna_group: controller
+#       {% if ansible_hostname in (all_ctrl_hostnames|default([controller_hostname])) %}
+#           group: controller
 #       {% endif %}
 #     marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_server_exporter)"
 #   when:
@@ -95,5 +95,3 @@
     port: "{{ prometheus_server_web_listen_port }}/tcp"
     permanent: "yes"
     immediate: "yes"
-
-

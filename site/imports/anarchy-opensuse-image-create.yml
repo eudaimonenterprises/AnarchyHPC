@@ -1,5 +1,5 @@
 ---
-  # below is needed to enforce gathering facts
+# below is needed to enforce gathering facts
 - hosts: controllers, localhost
   tasks:
     - debug:
@@ -9,143 +9,136 @@
 
 - hosts: controllers
   pre_tasks:
-  - fail:
-      msg: "This playbook should only be run on the active controller"
-    when:
-      - ha | default(False)
-      - not primary | default(False)
+    - fail:
+        msg: "This playbook should only be run on the active controller"
+      when:
+        - ha | default(False)
+        - not primary | default(False)
 
-  - name: Filter image name
-    set_fact:
-      regex_image_name: "{{ image_name | regex_search('^[a-zA-Z0-9\\ \\-\\_\\.]+$') }}"
+    - name: Filter image name
+      set_fact:
+        regex_image_name: "{{ image_name | regex_search('^[a-zA-Z0-9\\ \\-\\_\\.]+$') }}"
 
-  - name: Verify image name compliancy
-    fail:
-      msg: "Image name {{ image_name }} is not compliant. Supported is a-z A-Z 0-9 'space' '-' '_' '.'"
-    when: regex_image_name != image_name
+    - name: Verify image name compliancy
+      fail:
+        msg: "Image name {{ image_name }} is not compliant. Supported is a-z A-Z 0-9 'space' '-' '_' '.'"
+      when: regex_image_name != image_name
 
-  - name: Determining controller Distribution
-    set_fact:
-      controller_distribution: "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}"
+    - name: Determining controller Distribution
+      set_fact:
+        controller_distribution: "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}"
 
-  - name: Determining if we need to create or download the base image
-    set_fact:
-      download_base_image: true
-      image_create_minimal: false
-    when: 
-      - alternative_distribution is defined
-      - alternative_distribution != controller_distribution
-      - alternative_image_source is defined
-      - alternative_image_source != 'osgrab'
+    - name: Determining if we need to create or download the base image
+      set_fact:
+        download_base_image: true
+        image_create_minimal: false
+      when:
+        - alternative_distribution is defined
+        - alternative_distribution != controller_distribution
+        - alternative_image_source is defined
+        - alternative_image_source != 'osgrab'
 
-  - name:
-    debug:
-      msg: "Downloading for {{ alternative_distribution }} using {{ alternative_image_source|default('base') }}"
-    when: download_base_image is defined
+    - name:
+      debug:
+        msg: "Downloading for {{ alternative_distribution }} using {{ alternative_image_source|default('base') }}"
+      when: download_base_image is defined
 
   roles:
-  - role: anarchy/lock-check
-    tags: always
+    - role: anarchy/lock-check
+      tags: always
 
-  - role: anarchy/init
-    tags: always
+    - role: anarchy/init
+      tags: always
 
-  - role: anarchy/ldap-backend-selector
-    when: enable_authentication|default(True)
-    tags: always
+    - role: anarchy/ldap-backend-selector
+      when: enable_authentication|default(True)
+      tags: always
 
-  - role: anarchy/image-download
-    image_download_distribution: "{{ alternative_distribution }}"
-    image_download_source: "{{ alternative_image_source|default('base') }}"
-    tags: image-create
-    when:
-      - primary
-      - download_base_image is defined
+    - role: anarchy/image-download
+      image_download_distribution: "{{ alternative_distribution }}"
+      image_download_source: "{{ alternative_image_source|default('base') }}"
+      tags: image-create
+      when:
+        - primary
+        - download_base_image is defined
 
-  - role: ansible/write_facts
-    tags: always
+    - role: ansible/write_facts
+      tags: always
 
-  - role: anarchy/image-create
-    image_create_distribution: 'opensuse'
-    tags: image-create
-    when: primary
-
-  - role: luna/osimage-create
-    luna_image_path: "{{ trix_images }}/{{ image_name }}"
-    luna_image_name: "{{ image_name }}"
-    luna_image_distribution: OpenSuse
-    tags: image-create
+    - role: anarchy/image-create
+      image_create_distribution: 'opensuse'
+      tags: image-create
+      when: primary
 
   environment:
-    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    no_proxy: ".{{ cluster_domain }},{{ controller_floating_ip }},{{ external_fqdn }},{{ controller_hostname }},{{ controller_primary_hostname }},{{ controller_secondary_hostname }}"
+    NO_PROXY: ".{{ cluster_domain }},{{ controller_floating_ip }},{{ external_fqdn }},{{ controller_hostname }},{{ controller_primary_hostname }},{{ controller_secondary_hostname }}"
   tags: image-create-ctrl
 
 
-  # below is needed to enforce gathering facts
-- hosts: "{{ image_name }}.osimages.luna"
+# below is needed to enforce gathering facts
+- hosts: "{{ image_name }}.osimages.xcat"
   tasks:
     - debug:
         msg: "Initializing {{ image_name }} run..."
   tags: always
 
 
-- hosts: "{{ image_name }}.osimages.luna"
+- hosts: "{{ image_name }}.osimages.xcat"
   pre_tasks:
-  - set_fact:
-      in_image: true
-      on_controller: false
-      primary: false
-    tags: always
+    - set_fact:
+        in_image: true
+        on_controller: false
+        primary: false
+      tags: always
 
-  - name: Ensuring to extend the docker image
-    set_fact:
-      image_extend_docker: true
-    when: 
-      - alternative_image_source is defined
-      - alternative_image_source == 'docker'
+    - name: Ensuring to extend the docker image
+      set_fact:
+        image_extend_docker: true
+      when:
+        - alternative_image_source is defined
+        - alternative_image_source == 'docker'
 
-  - name: Ensuring to extend the osgrabbed image
-    set_fact:
-      image_extend_osgrab: true
-    when:
-      - alternative_image_source is defined
-      - alternative_image_source == 'osgrab'
+    - name: Ensuring to extend the osgrabbed image
+      set_fact:
+        image_extend_osgrab: true
+      when:
+        - alternative_image_source is defined
+        - alternative_image_source == 'osgrab'
 
-  - name: Ensuring to extend the New image
-    set_fact:
-      image_extend_scratch: true
-    when:
-      - not image_extend_docker|default(False)
-      - not image_extend_osgrab|default(False)
+    - name: Ensuring to extend the New image
+      set_fact:
+        image_extend_scratch: true
+      when:
+        - not image_extend_docker|default(False)
+        - not image_extend_osgrab|default(False)
 
   roles:
-  - role: ansible/read_facts
-    read_facts_cleanup: false
-    tags: always
+    - role: ansible/read_facts
+      read_facts_cleanup: false
+      tags: always
 
-  - role: anarchy/image-create
-    image_create_distribution: 'opensuse'
-    tags: image-create
+    - role: anarchy/image-create
+      image_create_distribution: 'opensuse'
+      tags: image-create
 
   environment:
-    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    no_proxy: ".{{ cluster_domain }},{{ controller_floating_ip }},{{ external_fqdn }},{{ controller_hostname }},{{ controller_primary_hostname }},{{ controller_secondary_hostname }}"
+    NO_PROXY: ".{{ cluster_domain }},{{ controller_floating_ip }},{{ external_fqdn }},{{ controller_hostname }},{{ controller_primary_hostname }},{{ controller_secondary_hostname }}"
   tags: image-create-chroot
 
 
 - hosts: controllers
   roles:
-  - role: luna/osimage-create
-    luna_image_path: "{{ trix_images }}/{{ image_name }}"
-    luna_image_name: "{{ image_name }}"
-    luna_image_distribution: OpenSuse
+    - role: anarchy/osimage-pack
+      vars:
+        image_name: "{{ image_name }}"
 
-  - role: luna/group-create
-    luna_image_name: "{{ image_name }}"
-    luna_image_distribution: OpenSuse
+    - role: anarchy/group-create
+      vars:
+        image_name: "{{ image_name }}"
+        image_distribution: "opensuse"
 
   environment:
-    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-
+    no_proxy: ".{{ cluster_domain }},{{ controller_floating_ip }},{{ external_fqdn }},{{ controller_hostname }},{{ controller_primary_hostname }},{{ controller_secondary_hostname }}"
+    NO_PROXY: ".{{ cluster_domain }},{{ controller_floating_ip }},{{ external_fqdn }},{{ controller_hostname }},{{ controller_primary_hostname }},{{ controller_secondary_hostname }}"

@@ -1,0 +1,20 @@
+---
+# Base directory for cluster-local data
+shared_root: '/opt/cluster'
+
+# Directory definitions used by other roles
+shared_tree_dirs:
+  - name: shared_local
+    path: '{{ shared_root }}'
+  - name: shared_sync
+    path: '{{ shared_root }}/sync'
+  - name: shared_data
+    path: '{{ shared_root }}/data'
+  - name: shared_etc
+    path: '{{ shared_root }}/etc'
+  - name: shared_sbin
+    path: '{{ shared_root }}/sbin'
+  - name: shared_ondemand
+    path: '{{ shared_root }}/ondemand'
+  - name: shared_ssl
+    path: '{{ shared_root }}/etc/ssl'

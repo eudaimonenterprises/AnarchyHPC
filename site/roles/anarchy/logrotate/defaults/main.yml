@@ -1,7 +1,5 @@
-
 logrotate_files:
   - anarchyhpc
-  - luna
   - aria2c
   - prometheus
   - alertx
@@ -10,4 +8,3 @@ logrotate_additional: []
 
 logrotate_packages:
   - logrotate
-

@@ -1,5 +1,5 @@
 ---
-# vars file for luna
+# vars file for slurm
 enable_openhpc: true
 
 slurm_packages:

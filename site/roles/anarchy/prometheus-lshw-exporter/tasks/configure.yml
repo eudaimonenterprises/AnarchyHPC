@@ -34,7 +34,7 @@
         - {{ target_ip }}:{{ prometheus_lshw_exporter_web_listen_port }}
         labels:
           exporter: lshw
-          luna_group: controller
+          group: controller
           hostname: {{ target_hostname }}.{{ target_domain }}
       {% endfor %}
     marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_lshw_exporter)"

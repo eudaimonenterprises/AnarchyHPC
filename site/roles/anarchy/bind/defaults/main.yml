@@ -4,8 +4,6 @@
 bind_packages:
   - bind
 
-# luna handles the forwarders - Antoine
-# the below will only go into resolv.conf
 bind_dns_forwarders:
   - '8.8.8.8'
   - '8.8.4.4'
@@ -16,4 +14,4 @@ bind_db_path: '/var/named'
 resolv_server: '127.0.0.1'
 resolv_search_domains: 'cluster ipmi'
 
-trix_local: ""
+bind_local_dir: ""

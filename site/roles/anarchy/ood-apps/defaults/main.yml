@@ -1,6 +1,6 @@
 ---
-ood_luna_apps_version: ""
-ood_luna_apps_url: ""
+ood_apps_version: ""
+ood_apps_url: ""
 
 ood_apps_admin_group: admins
 ood_apps_path: /var/www/ood/apps/sys/
@@ -44,10 +44,7 @@ ood_apps:
         enablerepo: crb
     tasks: ["desktop.yml"]
 
- # TrinityX management apps disabled
- # (These depended on vendor tooling that no longer exists)
-  # You can re-enable selectively later if needed.
-
+  # Disabled legacy vendor apps (kept commented)
   # - name: bmcsetup
   # - name: cluster
   # - name: group

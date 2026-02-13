@@ -8,9 +8,9 @@
 - name: Mend repos
   include_tasks: replacebaseurl.yml
   vars:
-    name: "{{ item.name }}"
-    filter_url: "{{ item.filter_url }}"
-    replace_url: "{{ item.replace_url }}"
+    name: "{{ inner_loop_var.name }}"
+    filter_url: "{{ inner_loop_var.filter_url }}"
+    replace_url: "{{ inner_loop_var.replace_url }}"
   with_items: "{{ replace_baseurls }}"
   loop_control:
     loop_var: inner_loop_var
@@ -20,5 +20,5 @@
   include_tasks: usebaseurl.yml
   with_items: "{{ use_baseurl_repositories }}"
   loop_control:
-      loop_var: outer_loop_var
+    loop_var: outer_loop_var
   when: use_baseurl_repositories is defined

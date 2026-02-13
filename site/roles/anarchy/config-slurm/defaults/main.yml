@@ -1,15 +1,12 @@
 # defaults file for config-slurm
 
 # Optional Python packages required by config-slurm tooling.
-# Previously used 'luna2-python' (vendor-specific). Now empty by default.
-luna2_packages: []
+config_slurm_python_packages: []
 
 # Repository for retrieving config-slurm Python wheels.
-# Replace with your own internal repository or leave empty to disable.
 config_slurm_noarch_pip_repository: ""
 
 # Names of the wheels used by config-slurm.
-# Replace with your own package names or versioning scheme.
 config_slurm_wheel: ""
 config_blocks_wheel: ""
 

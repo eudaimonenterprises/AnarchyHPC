@@ -1,22 +1,15 @@
 ---
 - block:
-  - name: Cleanup the image
+  - name: Clean package manager caches (RedHat)
     command: yum clean all
     when: ansible_facts['os_family'] == "RedHat"
 
-  - name: Cleanup the image
+  - name: Clean package manager caches (Debian)
     command: apt-get clean
     when: ansible_facts['os_family'] == "Debian"
 
   - name: Cleanup /tmp
     command: rm -f /tmp/*
-
-# cannot be done from within image - Antoine
-# - block:
-#  - name: Pack the image
-#     run_once: true
-#     ansible.builtin.shell:
-#       cmd: "luna osimage pack {{ image_name }}"
 
   when: in_image
   tags: always

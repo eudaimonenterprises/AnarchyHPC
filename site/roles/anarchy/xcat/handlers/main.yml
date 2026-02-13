@@ -1,5 +1,5 @@
 ---
-# handler file for luna
+# handler file for xcat
 
 - name: restart xinetd
   service:
@@ -21,10 +21,7 @@
     name: named
     state: restarted
 
-- name: restart luna2-daemon
-  service:
-    name: luna2-daemon
-    state: restarted
+# Removed vendor-specific luna2-daemon handler
 
 - name: reload firewalld
   service:

@@ -1,0 +1,21 @@
+---
+- name: Add xCAT repo (RHEL-like)
+  ansible.builtin.yum:
+    name: "http://xcat.org/files/xcat/repos/yum/latest/xcat-core/xcat-core.repo"
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Install xCAT packages
+  ansible.builtin.package:
+    name:
+      - xcat-core
+      - xcat-dep
+      - conserver-xcat
+      - ipmitool
+    state: present
+
+- name: Enable and start xCAT services
+  ansible.builtin.service:
+    name: xcatd
+    enabled: true
+    state: started

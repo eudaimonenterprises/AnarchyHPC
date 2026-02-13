@@ -1,8 +1,5 @@
 ---
 # No vendor-specific packages
-luna2_packages: []
-
-# No vendor pip repository or wheels
 config_genders_noarch_pip_repository: ""
 config_genders_wheel: ""
 config_blocks_wheel: ""

@@ -43,11 +43,3 @@
   with_items: "{{ image_core_packages }}"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
-
-- name: Download luna2-client package
-  get_url:
-    url: "{{ luna2_client_package }}"
-    dest: "/tmp/{{ luna2_client_package | split('/') | last }}"
-
-- name: Install luna2-client package
-  shell: "dpkg --force-architecture -i /tmp/{{ luna2_client_package | split('/') | last }}"

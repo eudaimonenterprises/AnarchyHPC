@@ -1,29 +1,45 @@
 ---
-# Provisioning role defaults (xCAT version)
+###############################################################################
+# Core provisioning toggle
+###############################################################################
 
 provisioning_enabled: true
 
-# xCAT packages (Ubuntu example)
+
+###############################################################################
+# xCAT package installation
+###############################################################################
+
+# Packages required for xCAT (auto‑selected per OS family)
 provisioning_required_packages:
   - xcat-server
   - xcat-client
   - xcat-genesis-scripts-x86_64
   - xcat-genesis-base-x86_64
 
-# Services xCAT actually uses
+# Services xCAT manages
 provisioning_enable_services:
   - xcatd
 
 provisioning_start_services:
   - xcatd
 
-# xCAT configuration directories
+
+###############################################################################
+# xCAT directory layout
+###############################################################################
+
 xcat_install_dir: "/opt/xcat"
 xcat_config_dir: "/etc/xcat"
 xcat_bin: "/opt/xcat/bin"
 xcat_sbin: "/opt/xcat/sbin"
 
-# Network definition (xCAT uses this for networks table)
+
+###############################################################################
+# Network configuration (used for xCAT networks table)
+###############################################################################
+
+# Default cluster network (overridden by AnarchyHPC variables)
 provisioning_network:
   device: "eth0"
   ipaddr: "10.141.255.254"
@@ -31,7 +47,84 @@ provisioning_network:
   network: "10.141.0.0"
   broadcast: "10.141.255.255"
 
-# xCAT-specific objects
+# Full xCAT network definitions (auto‑generated from AnarchyHPC vars)
+xcat_networks:
+  - name: "cluster"
+    net: "{{ anarchy_cluster_net | default('10.141.0.0') }}"
+    mask: "{{ anarchy_cluster_netprefix | default('16') }}"
+    mgtifname: "xcatmn"
+    dhcp: "yes"
+    dynamicrange: "{{ anarchy_cluster_dhcp_start | default('10.141.1.1') }}-{{ anarchy_cluster_dhcp_end | default('10.141.254.254') }}"
+
+  - name: "bmc"
+    net: "{{ anarchy_bmc_net | default('10.142.0.0') }}"
+    mask: "{{ anarchy_bmc_netprefix | default('16') }}"
+    mgtifname: "bmc"
+    dhcp: "no"
+
+
+###############################################################################
+# OS image definitions (ALL OSes you selected)
+###############################################################################
+
+xcat_osimages:
+
+  # Rocky Linux
+  - { name: "rocky8-x86_64-install",    osvers: "rocky8",    arch: "x86_64", profile: "compute", provmethod: "install" }
+  - { name: "rocky9-x86_64-install",    osvers: "rocky9",    arch: "x86_64", profile: "compute", provmethod: "install" }
+  - { name: "rocky10-x86_64-install",   osvers: "rocky10",   arch: "x86_64", profile: "compute", provmethod: "install" }
+
+  # AlmaLinux
+  - { name: "alma8-x86_64-install",     osvers: "alma8",     arch: "x86_64", profile: "compute", provmethod: "install" }
+  - { name: "alma9-x86_64-install",     osvers: "alma9",     arch: "x86_64", profile: "compute", provmethod: "install" }
+  - { name: "alma10-x86_64-install",    osvers: "alma10",    arch: "x86_64", profile: "compute", provmethod: "install" }
+
+  # CentOS Stream
+  - { name: "cs8-x86_64-install",       osvers: "centos8-stream", arch: "x86_64", profile: "compute", provmethod: "install" }
+  - { name: "cs9-x86_64-install",       osvers: "centos9-stream", arch: "x86_64", profile: "compute", provmethod: "install" }
+
+  # Debian
+  - { name: "debian11-x86_64-install",  osvers: "debian11",  arch: "x86_64", profile: "compute", provmethod: "install" }
+  - { name: "debian12-x86_64-install",  osvers: "debian12",  arch: "x86_64", profile: "compute", provmethod: "install" }
+  - { name: "debian13-x86_64-install",  osvers: "debian13",  arch: "x86_64", profile: "compute", provmethod: "install" }
+
+  # Ubuntu
+  - { name: "ubuntu2004-x86_64-install", osvers: "ubuntu20.04", arch: "x86_64", profile: "compute", provmethod: "install" }
+  - { name: "ubuntu2204-x86_64-install", osvers: "ubuntu22.04", arch: "x86_64", profile: "compute", provmethod: "install" }
+  - { name: "ubuntu2404-x86_64-install", osvers: "ubuntu24.04", arch: "x86_64", profile: "compute", provmethod: "install" }
+
+  # openSUSE Leap
+  - { name: "leap155-x86_64-install",   osvers: "opensuse15.5", arch: "x86_64", profile: "compute", provmethod: "install" }
+  - { name: "leap156-x86_64-install",   osvers: "opensuse15.6", arch: "x86_64", profile: "compute", provmethod: "install" }
+  - { name: "leap160-x86_64-install",   osvers: "opensuse16.0", arch: "x86_64", profile: "compute", provmethod: "install" }
+
+  # AnarchyHPC-built images
+  - { name: "anarchy-image-x86_64-netboot", osvers: "anarchy", arch: "x86_64", profile: "compute", provmethod: "netboot" }
+
+
+###############################################################################
+# Node definitions (empty by default)
+###############################################################################
+
 xcat_nodes: []
-xcat_osimages: []
+# Example:
+# xcat_nodes:
+#   - name: "node001"
+#     ip: "10.141.1.11"
+#     mac: "aa:bb:cc:dd:ee:ff"
+#     bmc_ip: "10.142.1.11"
+#     bmc_user: "admin"
+#     bmc_pass: "password"
+#     groups: ["compute"]
+#     osimage: "rocky9-x86_64-install"
+
+
+###############################################################################
+# Group definitions (optional)
+###############################################################################
+
 xcat_groups: []
+# Example:
+# xcat_groups:
+#   - name: "compute"
+#     members: ["node001", "node002"]

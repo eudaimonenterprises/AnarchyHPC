@@ -1,5 +1,5 @@
 ---
-- name: Copy the amd Exporter systemd service file
+- name: Copy the AMD Exporter systemd service file
   template:
     src: prometheus-amd-exporter.service.j2
     dest: /etc/systemd/system/prometheus-amd-exporter.service
@@ -8,7 +8,7 @@
     mode: 0644
   notify: restart prometheus-amd-exporter
 
-- name: Allow amd Exporter port in SELinux on RedHat OS family
+- name: Allow AMD Exporter port in SELinux on RedHat OS family
   seport:
     ports: "{{ prometheus_amd_exporter_web_listen_port }}"
     proto: tcp
@@ -34,7 +34,7 @@
         - {{ target_ip }}:{{ prometheus_amd_exporter_web_listen_port }}
         labels:
           exporter: amd
-          luna_group: controller
+          group: controller
           hostname: {{ target_hostname }}.{{ target_domain }}
       {% endfor %}
     marker: "### {mark} ANSIBLE MANAGED BLOCK ({{ ansible_fqdn }}.prometheus_amd_exporter)"

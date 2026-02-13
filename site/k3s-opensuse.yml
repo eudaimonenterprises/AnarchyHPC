@@ -1,20 +1,20 @@
 ---
 - hosts: localhost
   pre_tasks:
-  #
-  # the image name can be set in the below fact.
-  #
-  - name: Set image name
-    set_fact:
-      image_name: "k3s-opensuse-image"
-    tags: always
+    #
+    # the image name can be set in the below fact.
+    #
+    - name: Set image name
+      set_fact:
+        image_name: "k3s-opensuse-image"
+      tags: always
+
 
 - import_playbook: imports/anarchy-opensuse-image-create.yml
   vars:
     image_name: "{{ hostvars['localhost']['image_name'] }}"
     # The password to set up for the root user in the image.
     # If empty, it will be generated at random.
-    #
     image_password:
     #
     # If supplied, the below release will be used. 
@@ -25,17 +25,18 @@
     # Alternative distribution build. Supported are opensuse, version 15.6, 16 pending
     # or any docker image, e.g. opensuse:rolling
     #alternative_distribution: Opensuse-15
-    # 
+    #
     # The alternative source can be 'base' or 'docker'
     #alternative_image_source: 'base'
 
 
 - import_playbook: imports/anarchy-opensuse-image-setup.yml
   vars:
-    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    hostlist: "{{ hostvars['localhost']['image_name'] }}.osimages"
+
 
 - hosts:
-    - "{{ hostvars['localhost']['image_name'] }}.osimages.luna"
+    - "{{ hostvars['localhost']['image_name'] }}.osimages"
   roles:
 
     - role: anarchy/kubernetes
@@ -44,10 +45,11 @@
     - role: anarchy/wrapup-images
       tags: wrapup-images
 
+
 - hosts: controllers
   roles:
     - role: anarchy/pack-images
       vars:
-         params:
-            image_name: "{{ hostvars['localhost']['image_name'] }}"
+        params:
+          image_name: "{{ hostvars['localhost']['image_name'] }}"
       tags: pack-images
