@@ -24,8 +24,8 @@ Variables
     # cat roles/drbd/defaults/main.yml
     ---
     
-    drbd_ctrl1_ip: '{{ trix_ctrl1_ip }}'
-    drbd_ctrl2_ip: '{{ trix_ctrl2_ip }}'
+    drbd_ctrl1_ip: '{{ anarchy_ctrl1_ip }}'
+    drbd_ctrl2_ip: '{{ anarchy_ctrl2_ip }}'
     drbd_ctrl1_device: /dev/drbd1
     drbd_ctrl2_device: '{{ drbd_ctrl1_device }}'
     <...>

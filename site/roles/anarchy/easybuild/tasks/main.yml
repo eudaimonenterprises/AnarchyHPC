@@ -37,7 +37,7 @@
 - block:
   - name: Ensure EasyBuild shared directory exists
     file:
-      path: '{{ trix_easybuild }}'
+      path: '{{ anarchy_easybuild }}'
       state: directory
       owner: '{{ easybuild_user }}'
       mode: 0755
@@ -45,7 +45,7 @@
 
   - name: Create link so easybuild ends up on /anarchy filesystem
     file:
-      src: '{{ trix_easybuild }}'
+      src: '{{ anarchy_easybuild }}'
       path: '{{ easybuild_home }}'
       state: link
 
@@ -98,13 +98,13 @@
 
   - name: Ensure EasyBuild shared directory exists
     file:
-      path: '{{ trix_easybuild }}'
+      path: '{{ anarchy_easybuild }}'
       state: directory
     tags: easybuild-prepare
 
   - name: Create link so easybuild ends up on /anarchy filesystem
     file:
-      src: '{{ trix_easybuild }}'
+      src: '{{ anarchy_easybuild }}'
       path: '{{ easybuild_home }}'
       state: link
 

@@ -106,13 +106,13 @@
 
 # - name: Check if the directory exists
 #  stat:
-#    path: "{{ trix_local }}/etc/dhcp"
+#    path: "{{ anarchy_local }}/etc/dhcp"
 #  register: dhcp_directory
 
 # - name: Ensure directory
 #  file:
 #    state: directory
-#    path: "{{ trix_local }}/etc/dhcp"
+#    path: "{{ anarchy_local }}/etc/dhcp"
 #  when: not dhcp_directory.stat.exists
 
 - name: Preserve resolv.conf from being overwritten

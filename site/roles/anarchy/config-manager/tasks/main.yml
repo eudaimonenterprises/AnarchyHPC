@@ -2,13 +2,13 @@
 - name: Install config_manager pip package
   ansible.builtin.pip:
     name: "{{ config_manager_noarch_pip_repository }}/config-manager/{{ config_manager_wheel }}"
-    virtualenv: "{{ shared_local }}/python"
+    virtualenv: "{{ anarchy_local }}/python"
     extra_args: "--upgrade"
 
-- name: Symlink '{{ shared_local }}/python/bin/trix-config-manager' to '{{ shared_local }}/sbin/trix-config-manager'
+- name: Symlink '{{ anarchy_local }}/python/bin/trix-config-manager' to '{{ anarchy_local }}/sbin/trix-config-manager'
   ansible.builtin.file:
-    src: "{{ shared_local }}/python/bin/trix-config-manager"
-    dest: "{{ shared_local }}/sbin/trix-config-manager"
+    src: "{{ anarchy_local }}/python/bin/trix-config-manager"
+    dest: "{{ anarchy_local }}/sbin/trix-config-manager"
     state: link
 
 

@@ -138,7 +138,7 @@ class Parser(object):
 
         return set(filtered_list)
 
-    def get_trix_repos_packages(self, task):
+    def get_anarchy_repos_packages(self, task):
         repo_set = set()
         try:
             role_params = self.templar.template(task['role']['_role_params'])
@@ -161,8 +161,8 @@ class Parser(object):
             if ser['action'] == 'yum':
                 packages.update(self.get_yum_packages(ser))
 
-            if ser['action'] == 'trix_repos':
-                packages.update(self.get_trix_repos_packages(ser))
+            if ser['action'] == 'anarchy_repos':
+                packages.update(self.get_anarchy_repos_packages(ser))
 
         packages = list(packages)
         packages.sort()

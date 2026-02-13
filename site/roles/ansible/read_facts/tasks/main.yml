@@ -11,7 +11,7 @@
 
   - name: Load generic cluster facts
     set_fact:
-      controller_hostname: "{{ data.controller_hostname }}"
+      anarchy_ctrl_hostname: "{{ data.anarchy_ctrl_hostname }}"
       controller_ip: "{{ data.controller_ip }}"
       domain: "{{ data.domain }}"
       login_fqdn: "{{ data.login_fqdn }}"

@@ -19,9 +19,9 @@
     - "{{ hostvars['localhost']['image_name'] }}.osimages.xcat"
   roles:
     - role: anarchy/slurm
-      slurm_conf_path: "{{ shared_storage_path }}/etc/slurm"
-      slurm_spool_path: "{{ shared_storage_path }}/var/spool/slurm"
-      munge_conf_path: "{{ shared_storage_path }}/etc/munge"
+      slurm_conf_path: "{{ anarchy_shared }}/etc/slurm"
+      slurm_spool_path: "{{ anarchy_shared }}/var/spool/slurm"
+      munge_conf_path: "{{ anarchy_shared }}/etc/munge"
       tags: slurm
 
 - hosts: controllers

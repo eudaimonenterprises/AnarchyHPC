@@ -12,14 +12,14 @@
     path: "{{ item }}"
     state: directory
   loop:
-    - "{{ shared_root }}"
-    - "{{ shared_local }}"
-    - "{{ shared_data }}"
+    - "{{ anarchy_root }}"
+    - "{{ anarchy_local }}"
+    - "{{ anarchy_data }}"
   when: item != ""
 
-- name: Apply SELinux context to shared_local
+- name: Apply SELinux context to 
   file:
-    path: "{{ shared_local }}"
+    path: "{{ anarchy_local }}"
     state: directory
     setype: home_root_t
     seuser: system_u
@@ -30,17 +30,17 @@
     path: "{{ item }}"
     state: directory
   loop:
-    - "{{ shared_sync }}"
-    - "{{ shared_etc }}"
-    - "{{ shared_sbin }}"
-    - "{{ shared_ondemand }}"
-    - "{{ shared_ssl }}"
+    - "{{ anarchy_sync }}"
+    - "{{ anarchy_etc }}"
+    - "{{ anarchy_sbin }}"
+    - "{{ anarchy_ondemand }}"
+    - "{{ anarchy_ssl }}"
   when: in_login_image | default(false) or ansible_connection not in 'chroot'
 
 - name: Create high-availability directory
   file:
-    path: "{{ shared_ha }}"
+    path: "{{ anarchy_ha }}"
     state: directory
   when:
     - ha
-    - shared_ha is defined
+    - anarchy_ha is defined

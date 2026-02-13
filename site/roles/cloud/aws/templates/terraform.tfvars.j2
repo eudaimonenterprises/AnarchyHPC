@@ -331,10 +331,10 @@ aws_vpn_gateway_name  = "TinityX-VPG"
 aws_vpn_name                      = "AnarchyHPC-VPN"
 aws_vpn_connection_type           = "ipsec.1"
 aws_vpn_static_routes_only        = true
-aws_vpn_local_ipv4_network_cidr   = "{{ trix_cluster_net }}/{{ trix_cluster_netprefix }}"
+aws_vpn_local_ipv4_network_cidr   = "{{ anarchy_cluster_net }}/{{ anarchy_cluster_netprefix }}"
 aws_vpn_remote_ipv4_network_cidr  = "{{ aws_cluster_net }}/{{ aws_cluster_netprefix }}"
 
-aws_vpn_connection_route_cidr_block = "{{ trix_cluster_net }}/{{ trix_cluster_netprefix }}"
+aws_vpn_connection_route_cidr_block = "{{ anarchy_cluster_net }}/{{ anarchy_cluster_netprefix }}"
 
 # AWS S3
 aws_s3_bucket_prefix            = "anarchyhpc"
@@ -351,7 +351,7 @@ aws_s3_restrict_public_buckets  = true
 
 # AWS Image
 aws_s3_object_key_path      = "images/{{ vhd_name }}.vhd"
-aws_s3_object_source        = "{{ trix_images }}/{{ vhd_name }}.vhd"
+aws_s3_object_source        = "{{ anarchy_images }}/{{ vhd_name }}.vhd"
 aws_s3_object_content_type  = "application/octet-stream"
 aws_s3_object_encryption    = "AES256"
 

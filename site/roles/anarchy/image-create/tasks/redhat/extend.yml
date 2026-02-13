@@ -12,12 +12,12 @@
 - name: Configuring resolv.conf
   copy:
     dest: "{{ image_path }}/etc/resolv.conf"
-    content: "nameserver {{ trix_ctrl_ip }}"
+    content: "nameserver {{ anarchy_ctrl_ip }}"
 
 - name: Use the controller as default gateway
   lineinfile:
     path: /etc/sysconfig/network
-    line: "GATEWAY={{ trix_ctrl_ip }}"
+    line: "GATEWAY={{ anarchy_ctrl_ip }}"
     state: present
     create: true
 

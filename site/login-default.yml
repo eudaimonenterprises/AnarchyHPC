@@ -54,9 +54,9 @@
 #    - "{{ hostvars['localhost']['image_name'] }}.osimages"
 #  roles:
 #    - role: anarchy/slurm
-#      slurm_conf_path: '{{ shared_data }}/etc/slurm'
-#      slurm_spool_path: '{{ shared_data }}/var/spool/slurm'
-#      munge_conf_path: '{{ shared_data }}/etc/munge'
+#      slurm_conf_path: '{{ anarchy_data }}/etc/slurm'
+#      slurm_spool_path: '{{ anarchy_data }}/var/spool/slurm'
+#      munge_conf_path: '{{ anarchy_data }}/etc/munge'
 #      tags: slurm
 
 

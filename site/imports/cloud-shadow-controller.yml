@@ -8,7 +8,7 @@
       - controller1
       - controller2
     cluster_name: "hpc-ha"
-    dns_forwarders:
+    anarchy_dns_forwarders:
       - 8.8.8.8
       - 1.1.1.1
 
@@ -50,7 +50,7 @@
 
     # Optional DNS server
     - role: geerlingguy.bind
-      bind_forwarders: "{{ dns_forwarders }}"
+      bind_forwarders: "{{ anarchy_dns_forwarders }}"
       bind_listen_ipv4:
         - "any"
       tags: bind

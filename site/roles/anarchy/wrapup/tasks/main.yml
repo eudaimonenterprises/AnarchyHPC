@@ -50,18 +50,18 @@
     dest: /etc/anarchy/controller.done
     force: false
 
-- name: Backup /etc/anarchy to {{ trix_local }}/backup/anarchy
+- name: Backup /etc/anarchy to {{ anarchy_local }}/backup/anarchy
   synchronize:
     delete: yes
     src: /etc/anarchy
-    dest: "{{ trix_local }}/backup/"
+    dest: "{{ anarchy_local }}/backup/"
     recursive: yes
   delegate_to: "{{ inventory_hostname }}"
 
-- name: Backup group_vars to {{ trix_local }}/backup/group_vars
+- name: Backup group_vars to {{ anarchy_local }}/backup/group_vars
   copy:
     src: group_vars/all.yml
-    dest: "{{ trix_local }}/backup/group_vars/"
+    dest: "{{ anarchy_local }}/backup/group_vars/"
     mode: 0600
     owner: root
     group: root

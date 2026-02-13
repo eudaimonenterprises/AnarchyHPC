@@ -336,7 +336,7 @@
     when: ds389_ca_cert.rc|int != 0
 
   - name: Verify whether we have to remove the default cert name
-    shell: 'certutil -L -d "/etc/dirsrv/slapd-local" -n Server-Cert | grep "{{ trix_ctrl_hostname }}"'
+    shell: 'certutil -L -d "/etc/dirsrv/slapd-local" -n Server-Cert | grep "{{ anarchy_ctrl_hostname }}"'
     register: ds389_default_cert
     ignore_errors: true
 

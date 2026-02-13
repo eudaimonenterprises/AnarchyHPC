@@ -90,43 +90,43 @@
       loop: "{{ vars.cloud_support }}"
       when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
 
-    - name: Reconfiguring resolv_search_domains
+    - name: Reconfiguring anarchy_resolv_search_domains
       set_fact: 
-        resolv_search_domains:
-          "{{ resolv_search_domains | replace('__CLOUD__', vars[item + '_domain'] | default() + ' __CLOUD__') }}"
+        anarchy_resolv_search_domains:
+          "{{ anarchy_resolv_search_domains | replace('__CLOUD__', vars[item + '_domain'] | default() + ' __CLOUD__') }}"
       loop: "{{ vars.cloud_support }}"
       when:
-        - '"__CLOUD__" in resolv_search_domains'
+        - '"__CLOUD__" in anarchy_resolv_search_domains'
         - vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
     when: cloud_install
       
-  - name: Cleaning up resolv_search_domains
+  - name: Cleaning up anarchy_resolv_search_domains
     set_fact:
-      resolv_search_domains:
-        "{{ resolv_search_domains | replace('__CLOUD__','') }}"
-    when: '"__CLOUD__" in resolv_search_domains'
+      anarchy_resolv_search_domains:
+        "{{ anarchy_resolv_search_domains | replace('__CLOUD__','') }}"
+    when: '"__CLOUD__" in anarchy_resolv_search_domains'
 
   - block:
     - name: Update controller variables in case of non-HA setup
       set_fact:
-        controller_floating_hostname: '{{ controller_primary_hostname }}'
-        controller_floating_ip: '{{ controller_primary_ip }}'
-        controller_secondary_hostname: ''
-        controller_secondary_ip: ''
+        anarchy_ctrl_hostname: '{{ anarchy_ctrl1_hostname }}'
+        anarchy_ctrl_ip: '{{ anarchy_ctrl1_ip }}'
+        anarchy_ctrl2_hostname: ''
+        anarchy_ctrl2_ip: ''
 
     - name: Standard controller host list
       set_fact:
          all_ctrl_hostname:
-           - '{{ controller_primary_hostname }}'
+           - '{{ anarchy_ctrl1_hostname }}'
 
     - name: Standard controller ip list
       set_fact:
         all_ctrl_ip:
-          - '{{ controller_primary_ip }}'
+          - '{{ anarchy_ctrl1_ip }}'
     when: not ha | default(False)
 
   - debug:
-      msg: "controller_floating_hostname: {{ controller_floating_hostname }}, controller_floating_ip: {{ controller_floating_ip }}"
+      msg: "anarchy_ctrl_hostname: {{ anarchy_ctrl_hostname }}, anarchy_ctrl_ip: {{ anarchy_ctrl_ip }}"
     # we HAVE to make sure we determine who is primary, else a re-run of the playbook
     # at a later stage WILL cause trouble if there was a failover.
   - name: Check with pacemaker who is the primary controller
@@ -154,8 +154,8 @@
   - name: Check if this node is the primary controller based on ip or hostname
     set_fact:
       primary: >-
-        {{ True if controller_primary_ip in ansible_all_ipv4_addresses
-           or controller_primary_hostname == ansible_hostname
+        {{ True if anarchy_ctrl1_ip in ansible_all_ipv4_addresses
+           or anarchy_ctrl1_hostname == ansible_hostname
            else False }}
     when:
       - on_controller
@@ -224,11 +224,11 @@
   - name: Verify controller hostname is configured
     fail:
       msg: "Current controller hostname does not match any configured controller hostname. Please set the hostname to match what is configured"
-    when: this_controller_hostname is not defined or this_controller_hostname == ""
+    when: this_anarchy_ctrl_hostname is not defined or this_anarchy_ctrl_hostname == ""
 
   - debug:
-      msg: 'Using {{ this_controller_hostname }} as configured hostname'
-    when: this_controller_hostname is defined
+      msg: 'Using {{ this_anarchy_ctrl_hostname }} as configured hostname'
+    when: this_anarchy_ctrl_hostname is defined
   when: ha | default(False)
   tags: always,ha,verify-ip
 
@@ -237,7 +237,7 @@
     msg: "Current controller hostname does not match configured primary controller hostname. Please set the hostname to match what is configured"
   when:
     - not ha | default(False)
-    - controller_floating_hostname != ansible_hostname
+    - anarchy_ctrl_hostname != ansible_hostname
 - block:
   - name: Adding cloud controllers hostnames
     set_fact:
@@ -290,19 +290,19 @@
 
   - name: Verifying controller IP addresses with network
     ansible.builtin.shell:
-      cmd: "/tmp/verify-ip.sh {{ item }} {{ cluster_network }}/{{ cluster_netprefix }}"
+      cmd: "/tmp/verify-ip.sh {{ item }} {{ anarchy_cluster_net }}/{{ anarchy_cluster_netprefix }}"
     with_items: "{{ all_ctrl_ip }}"
 
   - name: Verifying DHCP addresses with network
     ansible.builtin.shell:
-      cmd: "/tmp/verify-ip.sh {{ item }} {{ cluster_network }}/{{ cluster_netprefix }}"
+      cmd: "/tmp/verify-ip.sh {{ item }} {{ anarchy_cluster_net }}/{{ anarchy_cluster_netprefix }}"
     with_items:
-      - "{{ cluster_dhcp_start }}"
-      - "{{ cluster_dhcp_end }}"
+      - "{{ anarchy_cluster_dhcp_start }}"
+      - "{{ anarchy_cluster_dhcp_end }}"
 
   - name: Verifying BMC IP addresses with network
     ansible.builtin.shell:
-      cmd: "/tmp/verify-ip.sh {{ item }} {{ bmc_network }}/{{ bmc_netprefix }}"
+      cmd: "/tmp/verify-ip.sh {{ item }} {{ anarchy_bmc_net }}/{{ bmc_netprefix }}"
     with_items: "{{ all_ctrl_bmcip }}"
     when: all_ctrl_bmcip is defined
   tags: verify-ip
@@ -330,15 +330,15 @@
       with_items: "{{ all_ctrl_ip + cloud_ctrl_ip|default([]) }}"
       loop_control:
         loop_var: inner_loop_var
-    when: controller_interface is not defined or controller_interface == ""
+    when: anarchy_ctrl_interface is not defined or anarchy_ctrl_interface == ""
 
   - debug:
-      msg: "controller_interface: {{ controller_interface|default('Undefined') }}"
+      msg: "anarchy_ctrl_interface: {{ anarchy_ctrl_interface|default('Undefined') }}"
 
   - name: Verify internal controller interface is configured
     fail:
-      msg: "Interface with config set in primary controller IP ({{ controller_primary_ip }}) or secondary controller IP not found. Please make sure the interface is configured and up"
-    when: controller_interface is not defined or controller_interface == ""
+      msg: "Interface with config set in primary controller IP ({{ anarchy_ctrl1_ip }}) or secondary controller IP not found. Please make sure the interface is configured and up"
+    when: anarchy_ctrl_interface is not defined or anarchy_ctrl_interface == ""
 
   - set_fact:
       controller_local_ip: '{{ item.1 }}'
@@ -348,7 +348,7 @@
     when: item.0 == ansible_hostname
 
   - set_fact:
-      controller_local_ip: '{{ controller_floating_ip }}'
+      controller_local_ip: '{{ anarchy_ctrl_ip }}'
     when: controller_local_ip is not defined
 
   - debug:
@@ -367,20 +367,20 @@
       ignore_errors: true
       register: init_ctrl_external_nic
 
-    - name: Set controller_external_nic
+    - name: Set anarchy_ctrl_external_nic
       set_fact:
-        controller_external_nic: "{{ init_ctrl_external_nic.stdout }}"
+        anarchy_ctrl_external_nic: "{{ init_ctrl_external_nic.stdout }}"
       when: init_ctrl_external_nic.rc | int == 0
 
     - debug:
-        msg: "controller_external_nic: {{ controller_external_nic }}"
-    when: controller_external_nic is not defined
+        msg: "anarchy_ctrl_external_nic: {{ anarchy_ctrl_external_nic }}"
+    when: anarchy_ctrl_external_nic is not defined
 
   - block:
     - block:
       - name: Store external nic address information
         set_fact:
-          init_ctrl_external_network_info: "{{ hostvars[inventory_hostname]['ansible_'+controller_external_nic]['ipv4'] }}"
+          init_ctrl_external_network_info: "{{ hostvars[inventory_hostname]['ansible_'+anarchy_ctrl_external_nic]['ipv4'] }}"
 
       - name: Resolving external interface ip address
         set_fact:
@@ -394,10 +394,10 @@
 
       - name: Resolving external interface netprefix address
         set_fact:
-          controller_external_netprefix: "{{ init_ctrl_external_network_info['prefix'] }}"
-        when: controller_external_netprefix is not defined or controller_external_netprefix == "" 
-      when: hostvars[inventory_hostname]['ansible_'+controller_external_nic]['ipv4'] is defined
-    when: controller_external_nic is defined
+          anarchy_external_netprefix: "{{ init_ctrl_external_network_info['prefix'] }}"
+        when: anarchy_external_netprefix is not defined or anarchy_external_netprefix == "" 
+      when: hostvars[inventory_hostname]['ansible_'+anarchy_ctrl_external_nic]['ipv4'] is defined
+    when: anarchy_ctrl_external_nic is defined
 
   - debug:
       msg: "controller_external_ip: {{ controller_external_ip }}, controller_external_network: {{ controller_external_network }}"
@@ -415,41 +415,41 @@
       dest: '/tmp/resolve.sh'
       mode: 0755
 
-  - name: Resolving external_fqdn
-    command: "/tmp/resolve.sh {{ controller_external_ip }} {{ dns_forwarders | default([]) | first }}"
+  - name: Resolving anarchy_external_fqdn
+    command: "/tmp/resolve.sh {{ controller_external_ip }} {{ anarchy_dns_forwarders | default([]) | first }}"
     register: resolved_host_fqdn
     ignore_errors: true
     when: controller_external_ip is defined
 
-  - name: Setting external_fqdn
+  - name: Setting anarchy_external_fqdn
     set_fact:
-      external_fqdn: "{{ resolved_host_fqdn.stdout }}"
+      anarchy_external_fqdn: "{{ resolved_host_fqdn.stdout }}"
     when:
-      - (external_fqdn is not defined) or external_fqdn==""
+      - (anarchy_external_fqdn is not defined) or anarchy_external_fqdn==""
       - resolved_host_fqdn is defined
 
   - block:
     - fail: 
-        msg: 'external_fqdn is not configured and it could not be resolved. OpenOndemand will not work properly. This check can be skipped by "-e skip_fqdn=true"'
+        msg: 'anarchy_external_fqdn is not configured and it could not be resolved. OpenOndemand will not work properly. This check can be skipped by "-e skip_fqdn=true"'
       ignore_errors: "{{ skip_fqdn | default(False) }}"
       when: enable_ood
 
-    - name: Setting external_fqdn
+    - name: Setting anarchy_external_fqdn
       set_fact:
-        external_fqdn: '{{ ansible_fqdn }}'
+        anarchy_external_fqdn: '{{ ansible_fqdn }}'
       ignore_errors: true
-      when: (external_fqdn is not defined) or external_fqdn==""
+      when: (anarchy_external_fqdn is not defined) or anarchy_external_fqdn==""
   tags: always
   when:
     - on_controller
-    - (external_fqdn is not defined) or external_fqdn==""
+    - (anarchy_external_fqdn is not defined) or anarchy_external_fqdn==""
 
 - block:
   - debug:
-      msg: "external_fqdn: {{ external_fqdn }}"
+      msg: "anarchy_external_fqdn: {{ anarchy_external_fqdn }}"
     when:
       - on_controller
-      - external_fqdn is defined
+      - anarchy_external_fqdn is defined
 
   - name: Using replacable name for login_fqdn
     set_fact:

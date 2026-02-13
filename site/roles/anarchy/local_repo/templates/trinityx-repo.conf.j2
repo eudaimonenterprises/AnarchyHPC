@@ -4,8 +4,8 @@ server {
     listen       {{ repos_port }} default_server;
     server_name  _;
 
-    location /{{ trix_repos|basename() }} {
-        root {{ trix_repos|regex_replace('/[^/]*$','') }};
+    location /{{ anarchy_repos|basename() }} {
+        root {{ anarchy_repos|regex_replace('/[^/]*$','') }};
         autoindex on;
     }
 

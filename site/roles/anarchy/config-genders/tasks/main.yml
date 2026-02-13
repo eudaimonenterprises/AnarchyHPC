@@ -2,13 +2,13 @@
 - name: Install config_blocks pip package
   ansible.builtin.pip:
     name: "{{ config_genders_noarch_pip_repository }}/config-blocks/{{ config_blocks_wheel }}"
-    virtualenv: "{{ shared_local }}/python"
+    virtualenv: "{{ anarchy_local }}/python"
     extra_args: "--upgrade"
 
 - name: Install config_genders pip package
   ansible.builtin.pip:
     name: "{{ config_genders_noarch_pip_repository }}/config-genders/{{ config_genders_wheel }}"
-    virtualenv: "{{ shared_local }}/python"
+    virtualenv: "{{ anarchy_local }}/python"
     extra_args: "--upgrade"
 
 - name: Fix structure of managed files

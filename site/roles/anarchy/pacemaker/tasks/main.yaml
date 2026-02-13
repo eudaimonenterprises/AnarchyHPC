@@ -45,14 +45,14 @@
 - block:
   - name: Ensure corosync sync directory exists
     file:
-      path: '{{ shared_sync }}/corosync'
+      path: '{{ anarchy_sync }}/corosync'
       state: directory
 
   - name: Copy corosync key to sync
     copy:
       remote_src: true
       src: '/etc/corosync/authkey'
-      dest: '{{ shared_sync }}/corosync/'
+      dest: '{{ anarchy_sync }}/corosync/'
       mode: 0640
       owner: root
       group: root
@@ -62,7 +62,7 @@
 - name: Copy corosync key from sync
   copy:
     remote_src: true
-    src: '{{ shared_sync }}/corosync/authkey'
+    src: '{{ anarchy_sync }}/corosync/authkey'
     dest: '/etc/corosync/'
     mode: 0640
     owner: root
@@ -88,7 +88,7 @@
 # TODO: better way than below
 - name: Install PCS
   ansible.builtin.shell: |
-    source {{ shared_local }}/python/bin/activate
+    source {{ anarchy_local }}/python/bin/activate
     pip3 install --upgrade {{ pcs_noarch_pip_repository }}/{{ pcs_pip }}
     exit $?
   args:
@@ -98,7 +98,7 @@
 # TODO: better way than below
 - name: Install PCS
   ansible.builtin.shell: |
-    source {{ shared_local }}/python/bin/activate
+    source {{ anarchy_local }}/python/bin/activate
     pip3 install --upgrade -i {{ pcs_noarch_pip_repository }}/ pcs
     exit $?
   args:
@@ -106,7 +106,7 @@
   when: pcs_pip is not defined
 
 - name: Get python libdir
-  shell: "echo {{ shared_local }}/python/lib/python*"
+  shell: "echo {{ anarchy_local }}/python/lib/python*"
   register: python_runtime_dir
   changed_when: false
 
@@ -192,22 +192,22 @@
     pcs_resource:
       name: 'anarchy-ip'
       resource_type: 'ocf:heartbeat:IPaddr2'
-      options: 'ip={{ controller_floating_ip }} nic={{ controller_interface }} cidr_netmask={{ cluster_netprefix }} op monitor interval=29s --group Anarchy'
+      options: 'ip={{ anarchy_ctrl_ip }} nic={{ anarchy_ctrl_interface }} cidr_netmask={{ anarchy_cluster_netprefix }} op monitor interval=29s --group Anarchy'
       state: present
 
   - name: Add external floating IP resource
     pcs_resource:
       name: 'anarchy-ip-external'
       resource_type: 'ocf:heartbeat:IPaddr2'
-      options: 'ip={{ controller_external_floating_ip }} nic={{ controller_external_nic }} cidr_netmask={{ controller_external_netprefix }} op monitor interval=29s --group Anarchy'
+      options: 'ip={{ anarchy_ctrl_external_floating_ip }} nic={{ anarchy_ctrl_external_nic }} cidr_netmask={{ anarchy_external_netprefix }} op monitor interval=29s --group Anarchy'
       state: present
     when:
-      - controller_external_floating_ip is defined
-      - controller_external_floating_ip != ''
-      - controller_external_netprefix is defined
-      - controller_external_netprefix != ''
-      - controller_external_nic is defined
-      - controller_external_nic != ''
+      - anarchy_ctrl_external_floating_ip is defined
+      - anarchy_ctrl_external_floating_ip != ''
+      - anarchy_external_netprefix is defined
+      - anarchy_external_netprefix != ''
+      - anarchy_ctrl_external_nic is defined
+      - anarchy_ctrl_external_nic != ''
   when: primary
 
 # --------------------- fencing ----------------------------

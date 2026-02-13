@@ -2,7 +2,7 @@
 
 - name: Get image path
   set_fact:
-    image_path: "{{ trix_images }}/{{ image_name }}"
+    image_path: "{{ anarchy_images }}/{{ image_name }}"
 
 - name: Verifying if dir for compute image exists
   stat:
@@ -11,7 +11,7 @@
 
 - name: Create temporary dir for downloading base image
   file:
-    name: "{{ trix_root }}/downloads"
+    name: "{{ anarchy_root }}/downloads"
     state: directory
 
 - name: Create dir for compute image
@@ -30,11 +30,11 @@
   - name: Downloading base image
     get_url:
       url: "{{ image_download_repo }}/{{ image_architecture }}/base-image-{{ image_download_distribution }}.tgz"
-      dest: "{{ trix_root }}/downloads/base-image-{{ image_download_distribution }}.tgz"
+      dest: "{{ anarchy_root }}/downloads/base-image-{{ image_download_distribution }}.tgz"
 
   - name: Extracting base image
     unarchive:
-      src: "{{ trix_root }}/downloads/base-image-{{ image_download_distribution }}.tgz"
+      src: "{{ anarchy_root }}/downloads/base-image-{{ image_download_distribution }}.tgz"
       dest: "{{ image_path }}"
   when:
     - image_download_source == 'base'
@@ -56,11 +56,11 @@
     register: docker_container_id
 
   - name: Creating docker image tarball
-    shell: "docker export {{ docker_container_id.stdout }} > {{ trix_root }}/downloads/docker-image-{{ image_download_distribution }}.tar"
+    shell: "docker export {{ docker_container_id.stdout }} > {{ anarchy_root }}/downloads/docker-image-{{ image_download_distribution }}.tar"
 
   - name: Extracting docker image
     unarchive:
-      src: "{{ trix_root }}/downloads/docker-image-{{ image_download_distribution }}.tar"
+      src: "{{ anarchy_root }}/downloads/docker-image-{{ image_download_distribution }}.tar"
       dest: "{{ image_path }}"
 
   - name: Deleting placeholder container

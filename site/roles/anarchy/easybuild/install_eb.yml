@@ -2,4 +2,4 @@
   hosts: localhost
   become: true
   roles:
-    - trix_easybuild
+    - anarchy_easybuild

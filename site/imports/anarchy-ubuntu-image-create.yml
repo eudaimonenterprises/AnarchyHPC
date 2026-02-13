@@ -68,8 +68,8 @@
       tags: image-create
 
   environment:
-    no_proxy: ".{{ cluster_domain }},{{ controller_floating_ip }},{{ external_fqdn }},{{ controller_hostname }},{{ controller_primary_hostname }},{{ controller_secondary_hostname }}"
-    NO_PROXY: ".{{ cluster_domain }},{{ controller_floating_ip }},{{ external_fqdn }},{{ controller_hostname }},{{ controller_primary_hostname }},{{ controller_secondary_hostname }}"
+    no_proxy: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }}"
+    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }}"
   tags: image-create-ctrl
 
 
@@ -126,8 +126,8 @@
       tags: image-create
 
   environment:
-    no_proxy: ".{{ cluster_domain }},{{ controller_floating_ip }},{{ external_fqdn }},{{ controller_hostname }},{{ controller_primary_hostname }},{{ controller_secondary_hostname }}"
-    NO_PROXY: ".{{ cluster_domain }},{{ controller_floating_ip }},{{ external_fqdn }},{{ controller_hostname }},{{ controller_primary_hostname }},{{ controller_secondary_hostname }}"
+    no_proxy: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }}"
+    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }}"
   tags: image-create-chroot
 
 
@@ -143,5 +143,5 @@
         image_distribution: "ubuntu"
 
   environment:
-    no_proxy: ".{{ cluster_domain }},{{ controller_floating_ip }},{{ external_fqdn }},{{ controller_hostname }},{{ controller_primary_hostname }},{{ controller_secondary_hostname }}"
-    NO_PROXY: ".{{ cluster_domain }},{{ controller_floating_ip }},{{ external_fqdn }},{{ controller_hostname }},{{ controller_primary_hostname }},{{ controller_secondary_hostname }}"
+    no_proxy: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }}"
+    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }}"

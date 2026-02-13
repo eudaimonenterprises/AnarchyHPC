@@ -3,9 +3,9 @@
   become: true
 
   vars:
-    controller_hostname: "controller1"
+    anarchy_ctrl_hostname: "controller1"
     controller_ip: "10.0.0.1"
-    cluster_domain: "cluster.local"
+    anarchy_domain: "cluster.local"
 
     nfs_home: "/home"
     nfs_shared: "/shared"
@@ -41,7 +41,7 @@
 
     - role: geerlingguy.chrony
       chrony_ntp_servers:
-        - "{{ controller_ip }}"
+        - "{{ anarchy_ctrl_ip }}"
       tags: chrony
 
     - role: devsec.hardening.ssh_hardening
@@ -69,7 +69,7 @@
     - role: geerlingguy.sssd
       sssd_domains:
         - name: "LDAP"
-          ldap_uri: "ldap://{{ controller_hostname }}.{{ cluster_domain }}"
+          ldap_uri: "ldap://{{ anarchy_ctrl_hostname }}.{{ anarchy_domain }}"
           ldap_search_base: "dc=example,dc=com"
       tags: sssd
 
@@ -78,11 +78,11 @@
       nfs_client: true
       nfs_mounts:
         - mount: "{{ nfs_home }}"
-          src: "{{ controller_hostname }}:{{ nfs_home }}"
+          src: "{{ anarchy_ctrl_hostname }}:{{ nfs_home }}"
           opts: "defaults,nfsvers=4,rw,retrans=4,noatime,_netdev"
           state: mounted
         - mount: "{{ nfs_shared }}"
-          src: "{{ controller_hostname }}:{{ nfs_shared }}"
+          src: "{{ anarchy_ctrl_hostname }}:{{ nfs_shared }}"
           opts: "defaults,nfsvers=4,ro,retrans=4,_netdev"
           state: mounted
       tags: nfs-mounts
@@ -94,7 +94,7 @@
     # Slurm client on login node
     - role: galaxyproject.slurm
       slurm_role: client
-      slurm_controller_host: "{{ controller_hostname }}"
+      slurm_controller_host: "{{ anarchy_ctrl_hostname }}"
       when: true
       tags: slurm
 
@@ -104,7 +104,7 @@
         path: /etc/rsyslog.d/10-controller.conf
         create: yes
         block: |
-          *.* @@{{ controller_ip }}:514
+          *.* @@{{ anarchy_ctrl_ip }}:514
       notify: Restart rsyslog
       tags: rsyslog
 
@@ -154,6 +154,6 @@
         state: restarted
 
   environment:
-    no_proxy: ".{{ cluster_domain }},{{ controller_ip }}"
-    NO_PROXY: ".{{ cluster_domain }},{{ controller_ip }}"
+    no_proxy: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }}"
+    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }}"
   tags: image-setup

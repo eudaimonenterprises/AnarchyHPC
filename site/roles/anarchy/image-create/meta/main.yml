@@ -1,6 +1,6 @@
 ---
 #dependencies:
 #  - role: repos
-#    repos_reposdir: "{{ trix_images }}/{{ image_name }}/etc/yum.repos.d"
+#    repos_reposdir: "{{ anarchy_images }}/{{ image_name }}/etc/yum.repos.d"
 #    repos: "{{ anarchyhpc_repositories }}"
 #    when: on_controller|default(True)

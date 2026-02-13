@@ -59,7 +59,7 @@ done
 
 if [[ -n "$OS_IMAGE"  ]]; then
     if [[ ! -n "$OS_PATH"  ]]; then
-        OS_PATH="{{ trix_images }}/${OS_IMAGE}"
+        OS_PATH="{{ anarchy_images }}/${OS_IMAGE}"
     fi
     wait_till_ok "${OS_PATH}"
     sudo -i /usr/sbin/lchroot $OS_IMAGE

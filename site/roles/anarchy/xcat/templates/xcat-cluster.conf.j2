@@ -3,9 +3,9 @@
 
 [CLUSTER]
 NAME = {{ cluster_name }}
-DOMAIN = {{ cluster_domain }}
+DOMAIN = {{ anarchy_domain }}
 SEARCH_DOMAINS = {{ cluster_search_domains | join(',') }}
-DNS_FORWARDERS = {{ cluster_dns_forwarders | join(',') }}
+anarchy_dns_forwarders = {{ cluster_dns_forwarders | join(',') }}
 
 [CONTROLLERS]
 PRIMARY = {{ controller.hostname }}:{{ controller.ip }}

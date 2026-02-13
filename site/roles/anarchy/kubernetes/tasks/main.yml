@@ -9,9 +9,9 @@
       state: directory
       mode: "0750"
 
-  - name: "Create {{ trix_shared }}/etc/k3s directory"
+  - name: "Create {{ anarchy_shared }}/etc/k3s directory"
     ansible.builtin.file:
-      path: "{{ trix_shared }}/etc/k3s"
+      path: "{{ anarchy_shared }}/etc/k3s"
       state: directory
       mode: '0755'
 

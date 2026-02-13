@@ -72,7 +72,7 @@
           include_role:
             name: "cloud/{{ cloud_name }}"
           vars:
-            terraform_files: "{{ trix_local }}/terraform/{{ cloud_name }}"
+            terraform_files: "{{ anarchy_local }}/terraform/{{ cloud_name }}"
             include_ipxe_efi_build: true
 
         # -------------------------------------------------------------
@@ -82,7 +82,7 @@
             name: "cloud/terraform"
           vars:
             cloudname: "{{ cloud_name }}"
-            terraform_files: "{{ trix_local }}/terraform/{{ cloud_name }}"
+            terraform_files: "{{ anarchy_local }}/terraform/{{ cloud_name }}"
           when: terraform_installer
 
         # -------------------------------------------------------------
@@ -107,8 +107,8 @@
             rawhostlist: "{{ vars[cloud_name + '_nodes'] | default('') }}"
             cloudname: "{{ cloud_name }}"
             cloudtype: "{{ cloud_name }}"
-            network: "{{ vars['trix_cluster_net'] + '/' + vars['trix_cluster_netprefix'] | string }}"
-            dhcprange: "{{ vars['trix_cluster_dhcp_start'] | default('') + '-' + vars['trix_cluster_dhcp_end'] | default('') }}"
+            network: "{{ vars['anarchy_cluster_net'] + '/' + vars['anarchy_cluster_netprefix'] | string }}"
+            dhcprange: "{{ vars['anarchy_cluster_dhcp_start'] | default('') + '-' + vars['anarchy_cluster_dhcp_end'] | default('') }}"
 
         - name: Signing cloud phase two off
           copy:
@@ -118,6 +118,6 @@
       when: cloud_condition
     
   environment:
-    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    no_proxy: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(anarchy_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(anarchy_ctrl2_hostname) }}"
+    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(anarchy_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(anarchy_ctrl2_hostname) }}"
     

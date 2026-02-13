@@ -13,13 +13,13 @@
 
 - name: Verifying if clones repo already exists
   stat:
-    path: "{{ trix_local }}/gitrepos/anarchyhpc-terraform"
+    path: "{{ anarchy_local }}/gitrepos/anarchyhpc-terraform"
   register: terraform_cloned_repo_dir
   
 - name: Clone TerraForm repository
   git:
     repo: "{{ cloud_terraform_repository }}"
-    dest: "{{ trix_local }}/gitrepos/anarchyhpc-terraform"
+    dest: "{{ anarchy_local }}/gitrepos/anarchyhpc-terraform"
   environment:
     - GIT_SSL_NO_VERIFY: "true"
   when: not terraform_cloned_repo_dir.stat.exists
@@ -27,7 +27,7 @@
 - name: Update TerraForm repository
   git:
     repo: "{{ cloud_terraform_repository }}"
-    dest: "{{ trix_local }}/gitrepos/anarchyhpc-terraform"
+    dest: "{{ anarchy_local }}/gitrepos/anarchyhpc-terraform"
     clone: false
     update: true
     force: true
@@ -45,7 +45,7 @@
 
   - name: Set shorter path variable
     set_fact:
-      terraform_path: "{{ trix_local }}/gitrepos/anarchyhpc-terraform/{{ cloudname }}"
+      terraform_path: "{{ anarchy_local }}/gitrepos/anarchyhpc-terraform/{{ cloudname }}"
 
   - block:
     - name: Copy Terraform tfvars into correct place

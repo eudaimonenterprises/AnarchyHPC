@@ -22,7 +22,7 @@
 
 - name: Create anarchy/ohpc dir for opt link to point at
   file:
-    path: '{{ trix_ohpc }}'
+    path: '{{ anarchy_ohpc }}'
     owner: root
     group: root
     state: directory
@@ -30,7 +30,7 @@
 
 - name: Create link so openhpc ends up on /anarchy filesystem
   file:
-    src: '{{ trix_ohpc }}'
+    src: '{{ anarchy_ohpc }}'
     path: '{{ openhpc_home }}'
     owner: root
     group: root

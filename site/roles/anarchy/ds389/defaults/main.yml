@@ -33,12 +33,12 @@ ssl_cert_path: '/etc/ssl/certs'
 ssl_cert_group: '{{ ds389_default_user }}'
 
 ds389_tls_cacrt: '{{ ssl_ca_cert }}'
-ds389_tls_crt: '{{ ssl_cert_path }}/{{ trix_ctrl_hostname if ha else ansible_fqdn }}.crt'
-ds389_tls_key: '{{ ssl_cert_path }}/{{ trix_ctrl_hostname if ha else ansible_fqdn }}.key'
+ds389_tls_crt: '{{ ssl_cert_path }}/{{ anarchy_ctrl_hostname if ha else ansible_fqdn }}.crt'
+ds389_tls_key: '{{ ssl_cert_path }}/{{ anarchy_ctrl_hostname if ha else ansible_fqdn }}.key'
 
 
 
 
-  #      ds389_server_dir_path: "{{ trix_ha if ha else trix_local }}/var/lib/dirsrv"
-  #      ds389_server_conf_path: "{{ trix_ha if ha else trix_local }}/etc/dirsrv/slapd.d"
-  #      ds389_host: '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+  #      ds389_server_dir_path: "{{ anarchy_ha if ha else anarchy_local }}/var/lib/dirsrv"
+  #      ds389_server_conf_path: "{{ anarchy_ha if ha else anarchy_local }}/etc/dirsrv/slapd.d"
+  #      ds389_host: '{{ anarchy_ctrl_hostname }}.{{ anarchy_domain }}'

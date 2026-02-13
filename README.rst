@@ -84,7 +84,7 @@ Steps to install AnarchyHPC
 
    In case of a single controller (default), we now assume that the shared IP address is also available on the controller node, this is to ease future expansion.
 
-   If applicable, configure the dns forwarders in trix_dns_forwarders when the defaults, 8.8.8.8 and 8.8.4.4 are unreachable.
+   If applicable, configure the dns forwarders in anarchy_dns_forwarders when the defaults, 8.8.8.8 and 8.8.4.4 are unreachable.
 
 4.3. Configure ``hosts`` file to allow ansible to address controllers.
 
@@ -144,11 +144,11 @@ HA or High Availability
 
 To make HA work properly, services need to understand the HA concept. Many services do, however not all. To still support HA for these services, a shared disk is required, where the active controller has access to this disk and start those services. The disk can be DRBD (default), but also iSCSI, a DAS or NAS, or combinations of. The configuration or combinations of need to provide at least the following volumes:
 
-* {{ trix_ha }}
-* {{ trix_home }}
-* {{ trix_shared }}
-* {{ trix_ohpc }} (if OpenHPC is enabled)
-* {{ trix_easybuild }} (if Easybuild is enabled)
+* {{ anarchy_ha }}
+* {{ anarchy_home }}
+* {{ anarchy_shared }}
+* {{ anarchy_ohpc }} (if OpenHPC is enabled)
+* {{ anarchy_easybuild }} (if Easybuild is enabled)
 
 LVM and ZFS are supported, where partitions can be made on top of the shared disk. On top of these partitions all regular filesystems, like xfs and ext4 are supported.
 

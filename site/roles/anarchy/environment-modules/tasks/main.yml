@@ -20,7 +20,7 @@
 - name: Install dummy module
   template:
     src: dummy-module.lua.j2
-    dest: "{{ trix_modulefiles }}/dummy-module.lua"
+    dest: "{{ anarchy_modulefiles }}/dummy-module.lua"
   when:
     - on_controller
     - primary | default(True)

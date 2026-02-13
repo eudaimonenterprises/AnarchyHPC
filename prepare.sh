@@ -214,7 +214,7 @@ fi
 if [ ! -f site/group_vars/all.yml ]; then
     add_message "Please modify the site/group_vars/all.yml.example and save it as site/group_vars/all.yml"
 else
-  if ! grep -q "^trix_ctrl1_hostname:\s*$(hostname -s)\s*$" site/group_vars/all.yml; then
+  if ! grep -q "^anarchy_ctrl1_hostname:\s*$(hostname -s)\s*$" site/group_vars/all.yml; then
     add_message "Please note the hostnames are not matching (see site/group_vars/all.yml)."
   fi
 fi

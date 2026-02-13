@@ -1,12 +1,12 @@
 # Please read the corosync.conf.5 manual page
 totem {
         version: 2
-{% if trix_ctrl1_heartbeat_ip is defined %}
+{% if anarchy_ctrl1_heartbeat_ip is defined %}
         rrp_mode: passive
 {% endif %}
 
         # Set name of the cluster
-        cluster_name: {{ trix_domain }}
+        cluster_name: {{ anarchy_domain }}
 
         # crypto_cipher and crypto_hash: Used for mutual node authentication.
         # If you choose to enable this, then do remember to create a shared
@@ -20,15 +20,15 @@ totem {
         transport: knet
         interface {
             ringnumber: 0
-            bindnetaddr: {{ trix_cluster_net | replace(".0", ".*") }}
+            bindnetaddr: {{ anarchy_cluster_net | replace(".0", ".*") }}
             broadcast: yes
             mcastaddr: 226.96.1.1
             mcastport: 5405
         }
-{% if trix_ctrl1_heartbeat_ip is defined %}
+{% if anarchy_ctrl1_heartbeat_ip is defined %}
         interface {
             ringnumber: 1
-            bindnetaddr: {{ trix_ctrl1_heartbeat_ip.split('.')[:2] | join('.') }}.*.*
+            bindnetaddr: {{ anarchy_ctrl1_heartbeat_ip.split('.')[:2] | join('.') }}.*.*
             broadcast: yes
             mcastaddr: 226.96.2.1
             mcastport: 5405
@@ -71,24 +71,24 @@ nodelist {
 
         node {
                 # Hostname of the node
-                name: {{ trix_ctrl1_hostname }}
+                name: {{ anarchy_ctrl1_hostname }}
                 # Cluster membership node identifier
                 nodeid: 1
                 # Address of first link
-                ring0_addr: {{ trix_ctrl1_ip }}
-                {% if trix_ctrl1_heartbeat_ip is defined -%}
-                ring1_addr: {{ trix_ctrl1_heartbeat_ip }}
+                ring0_addr: {{ anarchy_ctrl1_ip }}
+                {% if anarchy_ctrl1_heartbeat_ip is defined -%}
+                ring1_addr: {{ anarchy_ctrl1_heartbeat_ip }}
                 {% endif -%}
         }
         node {
                 # Hostname of the node
-                name: {{ trix_ctrl2_hostname }}
+                name: {{ anarchy_ctrl2_hostname }}
                 # Cluster membership node identifier
                 nodeid: 2
                 # Address of first link
-                ring0_addr: {{ trix_ctrl2_ip }}
-                {% if trix_ctrl1_heartbeat_ip is defined and trix_ctrl2_heartbeat_ip is defined -%}
-                ring1_addr: {{ trix_ctrl2_heartbeat_ip }}
+                ring0_addr: {{ anarchy_ctrl2_ip }}
+                {% if anarchy_ctrl1_heartbeat_ip is defined and anarchy_ctrl2_heartbeat_ip is defined -%}
+                ring1_addr: {{ anarchy_ctrl2_heartbeat_ip }}
                 {% endif -%}
         }
 {% if trix_ctrl3_hostname is defined %}
@@ -99,7 +99,7 @@ nodelist {
                 nodeid: 3
                 # Address of first link
                 ring0_addr: {{ trix_ctrl3_ip }}
-                {% if trix_ctrl1_heartbeat_ip is defined and trix_ctrl3_heartbeat_ip is defined -%}
+                {% if anarchy_ctrl1_heartbeat_ip is defined and trix_ctrl3_heartbeat_ip is defined -%}
                 ring1_addr: {{ trix_ctrl3_heartbeat_ip }}
                 {% endif -%}
         }
@@ -112,7 +112,7 @@ nodelist {
                 nodeid: 4
                 # Address of first link
                 ring0_addr: {{ trix_ctrl4_ip }}
-                {% if trix_ctrl1_heartbeat_ip is defined  and trix_ctrl4_heartbeat_ip is defined -%}
+                {% if anarchy_ctrl1_heartbeat_ip is defined  and trix_ctrl4_heartbeat_ip is defined -%}
                 ring1_addr: {{ trix_ctrl4_heartbeat_ip }}
                 {% endif -%}
         }

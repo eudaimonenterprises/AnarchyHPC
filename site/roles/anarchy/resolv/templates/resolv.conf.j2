@@ -1,7 +1,7 @@
 {{ ansible_managed | comment }}
 
 {% if ansible_dns['nameservers'] is defined or bind_dns_forwarders %}
-search {{ resolv_search_domains }}
+search {{ anarchy_resolv_search_domains }}
 nameserver {{ resolv_server }}
 {% if bind_dns_forwarders %}
 {% for f in bind_dns_forwarders %}

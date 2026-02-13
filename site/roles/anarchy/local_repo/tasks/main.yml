@@ -118,7 +118,7 @@
 
   - name: Get interface for temporary floating IP
     shell: >
-      ip -o -br -4 addr | awk '/{{ trix_ctrl1_ip }}/{print $1}'
+      ip -o -br -4 addr | awk '/{{ anarchy_ctrl1_ip }}/{print $1}'
     changed_when: false
     register: interface_to_assign
 
@@ -129,14 +129,14 @@
 
   - name: Is floating IP already assigned
     shell: >
-      ip -o -br -4 addr | awk '/{{ trix_ctrl_ip }}/{print $1}'
+      ip -o -br -4 addr | awk '/{{ anarchy_ctrl_ip }}/{print $1}'
     changed_when: false
     register: interface_w_floating_ip
 
   - name: Assign floating IP
     shell: |
-      MASK=$(ip -o -br -4 addr | awk -F/ '/{{ trix_ctrl1_ip }}/{print $NF}')
-      ip a add {{ trix_ctrl_ip }}/${MASK} dev {{ interface_to_assign.stdout }}
+      MASK=$(ip -o -br -4 addr | awk -F/ '/{{ anarchy_ctrl1_ip }}/{print $NF}')
+      ip a add {{ anarchy_ctrl_ip }}/${MASK} dev {{ interface_to_assign.stdout }}
     when: interface_w_floating_ip.stdout_lines|length == 0
 
   - name: Assign interfaces to the trusted zone

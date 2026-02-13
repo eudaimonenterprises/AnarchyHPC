@@ -65,8 +65,8 @@
       tags: image-create
 
   environment:
-    no_proxy: ".{{ domain }},{{ controller_ip }},{{ external_fqdn }},{{ controller_hostname }}"
-    NO_PROXY: ".{{ domain }},{{ controller_ip }},{{ external_fqdn }},{{ controller_hostname }}"
+    no_proxy: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }}"
+    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }}"
   tags: image-create-ctrl
 
 
@@ -103,6 +103,6 @@
       tags: image-create
 
   environment:
-    no_proxy: ".{{ domain }},{{ controller_ip }},{{ external_fqdn }},{{ controller_hostname }}"
-    NO_PROXY: ".{{ domain }},{{ controller_ip }},{{ external_fqdn }},{{ controller_hostname }}"
+    no_proxy: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }}"
+    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }}"
   tags: image-create-chroot

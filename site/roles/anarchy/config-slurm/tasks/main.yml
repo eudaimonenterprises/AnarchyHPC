@@ -3,21 +3,21 @@
 - name: Install config_blocks pip package
   ansible.builtin.pip:
     name: "{{ config_slurm_noarch_pip_repository }}/config-blocks/{{ config_blocks_wheel }}"
-    virtualenv: "{{ shared_local }}/python"
+    virtualenv: "{{ anarchy_local }}/python"
     extra_args: "--upgrade"
 
 # Install config_slurm pip package inside the shared virtualenv
 - name: Install config_slurm pip package
   ansible.builtin.pip:
     name: "{{ config_slurm_noarch_pip_repository }}/config-slurm/{{ config_slurm_wheel }}"
-    virtualenv: "{{ shared_local }}/python"
+    virtualenv: "{{ anarchy_local }}/python"
     extra_args: "--upgrade"
 
-# Symlink '{{ shared_local }}/python/bin/config-slurm' to '{{ shared_local }}/sbin/config-slurm'
-- name: Symlink '{{ shared_local }}/python/bin/config-slurm' to '{{ shared_local }}/sbin/config-slurm'
+# Symlink '{{ anarchy_local }}/python/bin/config-slurm' to '{{ anarchy_local }}/sbin/config-slurm'
+- name: Symlink '{{ anarchy_local }}/python/bin/config-slurm' to '{{ anarchy_local }}/sbin/config-slurm'
   ansible.builtin.file:
-    src: "{{ shared_local }}/python/bin/config-slurm"
-    dest: "{{ shared_local }}/sbin/config-slurm"
+    src: "{{ anarchy_local }}/python/bin/config-slurm"
+    dest: "{{ anarchy_local }}/sbin/config-slurm"
     state: link
 
 # Add the managed block to the managed files

@@ -94,14 +94,14 @@
     - name: Render module file for app {{ app.name }}
       ansible.builtin.template:
         src: "{{ app.name }}/module.lua.j2"
-        dest: "{{ trix_shared }}/modulefiles/ood-{{ app.name }}.lua"
+        dest: "{{ anarchy_shared }}/modulefiles/ood-{{ app.name }}.lua"
         mode: "0644"
         owner: root
         group: root
       notify: Run update_ood
       when: 
         # - "('templates/' + app.name + '/module.lua.j2') is exists "
-        - app.get('override') | default(override, true) | default((trix_shared + '/modulefiles/ood-' + app.name + '.lua') is not exists, true)
+        - app.get('override') | default(override, true) | default((anarchy_shared + '/modulefiles/ood-' + app.name + '.lua') is not exists, true)
       failed_when: false
     
     - name: Include additional tasks for app {{ app.name }}

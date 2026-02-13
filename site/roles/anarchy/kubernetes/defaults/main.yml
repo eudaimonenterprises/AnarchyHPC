@@ -6,7 +6,7 @@ kubernetes_k3s_url:
     url: "https://github.com/k3s-io/k3s/releases/download/{{ kubernetes_k3s_version }}/k3s"
   - arch: aa64
     url: "https://github.com/k3s-io/k3s/releases/download/{{ kubernetes_k3s_version }}/k3s-arm64"
-kubernetes_k3s_agent_token_dir: "{{ trix_shared }}/etc/k3s"
+kubernetes_k3s_agent_token_dir: "{{ anarchy_shared }}/etc/k3s"
 
 kubernetes_helm_version: "v3.15.3"
 kubernetes_helm_url: 

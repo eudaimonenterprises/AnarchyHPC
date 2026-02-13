@@ -7,7 +7,7 @@
 
     - name: Get image path
       set_fact:
-        image_path: "{{ trix_images }}/{{ image_name }}"
+        image_path: "{{ anarchy_images }}/{{ image_name }}"
 
     - name: Create dir for compute image
       file:

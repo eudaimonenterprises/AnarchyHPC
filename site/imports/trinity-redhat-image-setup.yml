@@ -37,7 +37,7 @@
 
     - role: anarchy/chrony
       chrony_upstream_servers:
-        - "{{ controller_ip }}"
+        - "{{ anarchy_ctrl_ip }}"
       tags: chrony
 
     - role: anarchy/rdma-centos
@@ -47,7 +47,7 @@
       sss_allowed_groups:
         - "{{ admin_group }}"
       sss_ldap_hosts:
-        - "{{ controller_hostname }}.{{ domain }}"
+        - "{{ anarchy_ctrl_hostname }}.{{ anarchy_domain }}"
       sss_filter_enabled: "{{ not enable_slurm_pam }}"
       sss_use_ds389: "{{ use_ds389 | default(false) }}"
       tags: sssd
@@ -55,11 +55,11 @@
     - role: anarchy/nfs-mounts
       nfs_enable_rdma: false
       nfs_mounts:
-        - path: "{{ shared_data }}"
-          remote: "{{ controller_hostname }}:{{ shared_data }}"
+        - path: "{{ anarchy_data }}"
+          remote: "{{ anarchy_ctrl_hostname }}:{{ anarchy_data }}"
           options: "defaults,nfsvers=4,ro,retrans=4,_netdev"
         - path: "{{ shared_home }}"
-          remote: "{{ controller_hostname }}:{{ shared_home }}"
+          remote: "{{ anarchy_ctrl_hostname }}:{{ shared_home }}"
           options: "defaults,nfsvers=4,rw,retrans=4,noatime,_netdev"
       nfs_remote_mask: "{{ shared_fs_disks }}"
       nfs_prefix_path: "{{ shared_fs_prefix }}"
@@ -80,7 +80,7 @@
       nfs_enable_rdma: false
       nfs_mounts:
         - path: "{{ shared_ohpc }}"
-          remote: "{{ controller_hostname }}:{{ shared_ohpc }}"
+          remote: "{{ anarchy_ctrl_hostname }}:{{ shared_ohpc }}"
           options: "nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev"
       nfs_remote_mask: "{{ shared_fs_disks }}"
       nfs_prefix_path: "{{ shared_fs_prefix }}"
@@ -98,7 +98,7 @@
       nfs_enable_rdma: false
       nfs_mounts:
         - path: "{{ shared_easybuild }}"
-          remote: "{{ controller_hostname }}:{{ shared_easybuild }}"
+          remote: "{{ anarchy_ctrl_hostname }}:{{ shared_easybuild }}"
           options: "{{ 'ro,' if export_easybuild != 'rw' else '' }}nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev"
       nfs_remote_mask: "{{ shared_fs_disks }}"
       nfs_prefix_path: "{{ shared_fs_prefix }}"
@@ -111,7 +111,7 @@
         - name: default
           proto: tcp
           port: 514
-          host: "{{ controller_ip }}"
+          host: "{{ anarchy_ctrl_ip }}"
           facility: "*"
           level: "*"
       tags: rsyslog
@@ -124,7 +124,7 @@
       tags: ood, ood-apps
 
     - role: anarchy/target
-      default_target: "{{ image_default_target | default('multi-user') }}"
+      default_target: "{{ anarchy_image_default_target | default('multi-user') }}"
       tags: target
 
     - role: anarchy/prometheus-node-exporter
@@ -168,6 +168,6 @@
       tags: wrapup-images
 
   environment:
-    no_proxy: ".{{ domain }},{{ controller_ip }},{{ external_fqdn }},{{ controller_hostname }}"
-    NO_PROXY: ".{{ domain }},{{ controller_ip }},{{ external_fqdn }},{{ controller_hostname }}"
+    no_proxy: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }}"
+    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }}"
   tags: image-setup

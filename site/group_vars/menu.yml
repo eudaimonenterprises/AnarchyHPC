@@ -7,62 +7,62 @@
 ## (description) can be an additional entry for all entries: Adds a description text before each field
 ## Restrictions: 
 ## 1- One element (and one element only) has to be a network. The network must be present. Has to be of type Network
-## 2- The element trix_cluster_netprefix has to be present as well. Has to be of type subnet
-## 3- Do not attempt to add el8_openhpc_repositories
+## 2- The element anarchy_cluster_netprefix has to be present as well. Has to be of type subnet
+## 3- Do not attempt to add anarchy_el8_openhpc_repositories
 ## 4- The "High Availability" menu has to remain being called "High Availability".
 ## Note:
 ## The SharedFSDisk will only show up if the "High Availability" menu is there
 ---
 Cluster config:
-  cluster_domain:
+  anarchy_domain:
     type: text
     big_seperator: true
     description: "The internal domain used for cluster nodes and controllers"
 
-  cluster_network:
+  anarchy_cluster_net:
     type: network
     description: "Cluster's internal network"
 
-  cluster_netmask:
+  anarchy_cluster_netprefix:
     type: subnet
     seperator: true
 
-  cluster_dhcp_start:
+  anarchy_cluster_dhcp_start:
     type: ip
     check_network: true
 
-  cluster_dhcp_end:
+  anarchy_cluster_dhcp_end:
     type: ip
     check_network: true
     big_seperator: true
 
-  controller_primary_ip:
+  anarchy_ctrl1_ip:
     description: (First) controller
     type: ip
     check_network: true
 
-  controller_primary_hostname:
+  anarchy_ctrl1_hostname:
     type: text
     seperator: true
 
-  controller_secondary_ip:
+  anarchy_ctrl2_ip:
     description: Second controller
     type: ip
     ha: true
     check_network: true
 
-  controller_secondary_hostname:
+  anarchy_ctrl2_hostname:
     type: text
     ha: true
     seperator: true
 
-  controller_floating_ip:
+  anarchy_ctrl_ip:
     description: Controller floating/shared IP for HA
     type: ip
     check_network: true
     ha: true
 
-  controller_floating_hostname:
+  anarchy_ctrl_hostname:
     type: text
     ha: true
 
@@ -71,11 +71,11 @@ High Availability:
   enable_ipmilan_fencing:
     type: bool
 
-  controller_primary_bmcip:
+  anarchy_ctrl1_bmcip:
     type: ip
     enable_ipmilan_fencing: true
 
-  controller_secondary_bmcip:
+  anarchy_ctrl2_bmcip:
     type: ip
     enable_ipmilan_fencing: true
 
@@ -89,11 +89,11 @@ High Availability:
   enable_heartbeat_link:
     type: bool
 
-  controller_primary_heartbeat_ip:
+  anarchy_ctrl1_heartbeat_ip:
     type: ip
     enable_heartbeat_link: true
 
-  controller_secondary_heartbeat_ip:
+  anarchy_ctrl2_heartbeat_ip:
     type: ip
     enable_heartbeat_link: true
     seperator: true
@@ -103,30 +103,30 @@ High Availability:
 
 
 Additional Networks:
-  infiniband_network:
+  anarchy_infiniband_net:
     type: ip
 
-  infiniband_netmask:
+  anarchy_infiniband_netprefix:
     type: text
     seperator: true
 
-  bmc_network:
+  anarchy_bmc_net:
     type: ip
 
-  bmc_netmask:
+  anarchy_bmc_netprefix:
     type: text
 
 
 Network general config:
-  external_fqdn:
+  anarchy_external_fqdn:
     description: "External hostname of the controller. If undefined, uses controller FQDN."
     type: text
 
-  dns_forwarders:
+  anarchy_dns_forwarders:
     type: list
     seperator: true
 
-  resolv_search_domains:
+  anarchy_resolv_search_domains:
     type: text
     seperator: true
 
@@ -196,7 +196,7 @@ Open Ondemand:
 
 
 Misc:
-  image_default_target:
+  anarchy_image_default_target:
     type: dropdown
     choices: ["multi-user", "graphical"]
 

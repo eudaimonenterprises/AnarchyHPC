@@ -46,12 +46,12 @@ resource {{ disk.name | replace("/","_") }} {
         unfence-peer "/usr/lib/drbd/crm-unfence-peer.9.sh";
     }
 
-    on "{{ trix_ctrl1_hostname }}" {
+    on "{{ anarchy_ctrl1_hostname }}" {
         node-id   0;
         address   {{ drbd_ctrl1_ip }}:{{ port[0] }};
     }
 
-    on "{{ trix_ctrl2_hostname }}" {
+    on "{{ anarchy_ctrl2_hostname }}" {
         node-id   1;
         address   {{ drbd_ctrl2_ip }}:{{ port[0] }};
     }
@@ -71,7 +71,7 @@ resource {{ disk.name | replace("/","_") }} {
 {% endif %}
 
     connection-mesh {
-        hosts     "{{ trix_ctrl1_hostname }}" "{{ trix_ctrl2_hostname }}"
+        hosts     "{{ anarchy_ctrl1_hostname }}" "{{ anarchy_ctrl2_hostname }}"
 {%- if trix_ctrl3_hostname is defined %}
  "{{ trix_ctrl3_hostname }}" 
 {%- endif -%}

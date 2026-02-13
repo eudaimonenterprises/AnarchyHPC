@@ -1,2 +1,2 @@
 local_install: false
-anarchyhpc_iso_repo: "{{ trix_repos }}/anarchyhpc"
+anarchyhpc_iso_repo: "{{ anarchy_repos }}/anarchyhpc"

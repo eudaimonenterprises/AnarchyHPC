@@ -6,29 +6,29 @@
     - name: Create File to embed Next Server IP with iPXE
       template:
         src: embed.ipxe.j2
-        dest: {{ trix_images }}/ipxe/src/embed.ipxe
+        dest: {{ anarchy_images }}/ipxe/src/embed.ipxe
 
     - name: Enable NTFS support
       lineinfile:
-        path: {{ trix_images }}/ipxe/src/config/general.h
+        path: {{ anarchy_images }}/ipxe/src/config/general.h
         regexp: '^#undef\s+DOWNLOAD_PROTO_NFS'
         line: '#define DOWNLOAD_PROTO_NFS'
 
     - name: Enable PING support
       replace:
-        path: {{ trix_images }}/ipxe/src/config/general.h
+        path: {{ anarchy_images }}/ipxe/src/config/general.h
         regexp: '^\/\/#define\ (PING_CMD|IPSTAT_CMD|REBOOT_CMD|POWEROFF)'
         replace: '#define \1'
 
     - name: Build iPXE
       command: make bin-x86_64-efi/ipxe.efi EMBED=embed.ipxe
       args:
-        chdir: {{ trix_images }}/ipxe/src
+        chdir: {{ anarchy_images }}/ipxe/src
     when: include_ipxe_efi_build is defined and include_ipxe_efi_build
 
   - name: Get VHD path
     set_fact:
-      vhd_path: "{{ trix_images }}/{{ vhd_name }}"
+      vhd_path: "{{ anarchy_images }}/{{ vhd_name }}"
 
   - name: Install Dependency qemu-img
     dnf:
@@ -111,7 +111,7 @@
       src: "{{ ipxe_file.src }}"
       dest: "{{ ipxe_file.dest }}"
     with_items:
-      - { src: "{{ trix_images }}/ipxe/src/bin-x86_64-efi/ipxe.efi", dest: "{{ vhd_path }}/boot/efi/EFI/rocky/ipxe.efi" }
+      - { src: "{{ anarchy_images }}/ipxe/src/bin-x86_64-efi/ipxe.efi", dest: "{{ vhd_path }}/boot/efi/EFI/rocky/ipxe.efi" }
       - { src: "/usr/share/grub/unicode.pf2", dest: "{{ vhd_path }}/boot/efi/EFI/rocky/fonts/" }
     loop_control:
       loop_var: ipxe_file
@@ -227,10 +227,10 @@
       loop_var: umount_dir
 
   - name: Create Empty Linux disk
-    shell: "qemu-img create -f raw {{ trix_images }}/{{ vhd_name }}.img 5G"
+    shell: "qemu-img create -f raw {{ anarchy_images }}/{{ vhd_name }}.img 5G"
   
   - name: Get the Loop Device
-    shell: "losetup -Pf --show {{ trix_images }}/{{ vhd_name }}.img"
+    shell: "losetup -Pf --show {{ anarchy_images }}/{{ vhd_name }}.img"
     register: loop_device
     changed_when: false
 
@@ -339,7 +339,7 @@
       loop_var: clean_up
 
   - name: Convert LINUX Image to VHD
-    shell: "qemu-img convert -f raw -o subformat=fixed,force_size -O vpc {{ trix_images }}/{{ vhd_name }}.img {{ trix_images }}/{{ vhd_name }}.vhd"
+    shell: "qemu-img convert -f raw -o subformat=fixed,force_size -O vpc {{ anarchy_images }}/{{ vhd_name }}.img {{ anarchy_images }}/{{ vhd_name }}.vhd"
   when: vars.azure_vhd_type == 'RedHat'
 
 - block:

@@ -19,7 +19,7 @@
 
 - block:
   - debug:
-      msg: "Going to configure an interface using this config: {{ use_this_interface + ' :: ' + use_this_ip + '/' + trix_cluster_netprefix|string }}"
+      msg: "Going to configure an interface using this config: {{ use_this_interface + ' :: ' + use_this_ip + '/' + anarchy_cluster_netprefix|string }}"
 
   - name: Install needed network manager libs
     ansible.builtin.package:
@@ -34,7 +34,7 @@
       conn_name: 'anarchy-{{ use_this_interface }}'
       ifname: '{{ use_this_interface }}'
       type: ethernet
-      ip4: '{{ use_this_ip }}/{{ trix_cluster_netprefix }}'
+      ip4: '{{ use_this_ip }}/{{ anarchy_cluster_netprefix }}'
       state: present
     ignore_errors: true
 
@@ -45,5 +45,5 @@
   when:
     - use_this_interface is defined
     - use_this_ip is defined
-    - trix_cluster_netprefix is defined
+    - anarchy_cluster_netprefix is defined
 

@@ -11,9 +11,9 @@
 - name: Set facts
   set_fact:
     data:
-      controller_hostname: "{{ controller_hostname }}"
-      controller_ip: "{{ controller_ip }}"
-      domain: "{{ domain }}"
+      anarchy_ctrl_hostname: "{{ anarchy_ctrl_hostname }}"
+      controller_ip: "{{ anarchy_ctrl_ip }}"
+      domain: "{{ anarchy_domain }}"
       login_fqdn: "{{ login_fqdn }}"
       admin_group: "{{ admin_group | default('admins') }}"
       system_arch: "{{ system_arch }}"

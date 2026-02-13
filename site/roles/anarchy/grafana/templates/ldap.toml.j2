@@ -4,7 +4,7 @@
 
 [[servers]]
 # Ldap server host (specify multiple hosts space separated)
-host = "{{ trix_ctrl_ip }}"
+host = "{{ anarchy_ctrl_ip }}"
 # Default port is 389 or 636 if use_ssl = true
 {% if grafana_enable_ssl | bool %}
 port = 636

@@ -51,7 +51,7 @@
 
   # - role: trinity/chrony
   #   chrony_upstream_servers:
-  #   - '{{ trix_ctrl_ip }}'
+  #   - '{{ anarchy_ctrl_ip }}'
   #   tags: chrony
 
   # - role: trinity/rdma-centos
@@ -61,7 +61,7 @@
     sss_allowed_groups:
     - '{{ admin_group }}'
     sss_ldap_hosts:
-    - '{{ trix_ctrl_hostname }}.{{ trix_domain }}'
+    - '{{ anarchy_ctrl_hostname }}.{{ anarchy_domain }}'
     sss_filter_enabled: '{{ not enable_slurm_pam }}'
     sss_use_ds389: '{{ trix_use_ds389 | default(False) }}'
     tags: sssd
@@ -69,11 +69,11 @@
   - role: trinity/nfs-mounts
     nfs_enable_rdma: false
     nfs_mounts:
-    - path: '{{ trix_shared }}'
-      remote: '{{ trix_ctrl_hostname }}:{{ trix_shared }}'
+    - path: '{{ anarchy_shared }}'
+      remote: '{{ anarchy_ctrl_hostname }}:{{ anarchy_shared }}'
       options: 'defaults,nfsvers=4,ro,retrans=4,_netdev'
-    - path: '{{ trix_home }}'
-      remote: '{{ trix_ctrl_hostname }}:{{ trix_home }}'
+    - path: '{{ anarchy_home }}'
+      remote: '{{ anarchy_ctrl_hostname }}:{{ anarchy_home }}'
       options: 'defaults,nfsvers=4,rw,retrans=4,noatime,_netdev'
     nfs_remote_mask: '{{ shared_fs_disks }}'
     nfs_prefix_path: '{{ shared_fs_prefix }}'
@@ -93,8 +93,8 @@
 #  - role: trinity/nfs-mounts
 #    nfs_enable_rdma: false
 #    nfs_mounts:
-#    - path: '{{ trix_ohpc }}'
-#      remote: '{{ trix_ctrl_hostname }}:{{ trix_ohpc }}'
+#    - path: '{{ anarchy_ohpc }}'
+#      remote: '{{ anarchy_ctrl_hostname }}:{{ anarchy_ohpc }}'
 #      options: 'nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
 #    nfs_remote_mask: '{{ shared_fs_disks }}'
 #    nfs_prefix_path: '{{ shared_fs_prefix }}'
@@ -111,8 +111,8 @@
   - role: trinity/nfs-mounts
     nfs_enable_rdma: false
     nfs_mounts:
-    - path: '{{ trix_easybuild }}'
-      remote: '{{ trix_ctrl_hostname }}:{{ trix_easybuild }}'
+    - path: '{{ anarchy_easybuild }}'
+      remote: '{{ anarchy_ctrl_hostname }}:{{ anarchy_easybuild }}'
       options: '{{ "ro," if export_easybuild!="rw" else "" }}nfsvers=4.0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev'
     nfs_remote_mask: '{{ shared_fs_disks }}'
     nfs_prefix_path: '{{ shared_fs_prefix }}'
@@ -121,9 +121,9 @@
     tags: nfs-mounts
 
   # - role: trinity/slurm
-  #   slurm_conf_path: '{{ trix_shared }}/etc/slurm'
-  #   slurm_spool_path: '{{ trix_shared }}/var/spool/slurm'
-  #   munge_conf_path: '{{ trix_shared }}/etc/munge'
+  #   slurm_conf_path: '{{ anarchy_shared }}/etc/slurm'
+  #   slurm_spool_path: '{{ anarchy_shared }}/var/spool/slurm'
+  #   munge_conf_path: '{{ anarchy_shared }}/etc/munge'
   #   tags: slurm
   #   when:  "{{ 'slurm' in workload_manager }}" 
 
@@ -132,7 +132,7 @@
     - name: default
       proto: 'tcp'
       port: 514
-      host: '{{ trix_ctrl_ip }}'
+      host: '{{ anarchy_ctrl_ip }}'
       facility: '*'
       level: '*'
     tags: syslog-ng
@@ -149,7 +149,7 @@
     when: enable_ood
 
   - role: trinity/target
-    default_target: "{{ image_default_target | default('multi-user') }}"
+    default_target: "{{ anarchy_image_default_target | default('multi-user') }}"
     tags: target
 
   - role: trinity/prometheus-node-exporter
@@ -198,6 +198,6 @@
     tags: wrapup-images
 
   environment:
-    no_proxy: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
-    NO_PROXY: ".{{ trix_domain }},{{ trix_ctrl_ip }},{{ trix_external_fqdn }},{{ trix_ctrl_hostname }},{{ trix_ctrl1_hostname }},{{ trix_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(trix_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(trix_ctrl2_hostname) }}"
+    no_proxy: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(anarchy_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(anarchy_ctrl2_hostname) }}"
+    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(anarchy_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(anarchy_ctrl2_hostname) }}"
   tags: image-setup

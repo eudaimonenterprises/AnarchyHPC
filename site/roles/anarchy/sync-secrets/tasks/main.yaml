@@ -36,7 +36,7 @@
 
     - name: Use second controller as sync controller
       set_fact:
-        sync_remote: '{{ trix_ctrl2_ip }}'
+        sync_remote: '{{ anarchy_ctrl2_ip }}'
       when: sync_controller == ansible_hostname
     when:
       - sync_controller is defined

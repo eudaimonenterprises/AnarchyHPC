@@ -4,4 +4,4 @@ sync_secrets_packages:
   - nfs-utils
   - libnfs
 
-sync_remote: '{{ trix_ctrl1_ip }}'
+sync_remote: '{{ anarchy_ctrl1_ip }}'

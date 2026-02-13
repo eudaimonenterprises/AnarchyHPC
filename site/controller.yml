@@ -4,8 +4,8 @@
   serial: 1
 
   vars:
-    cluster_domain: "cluster.local"
-    controller_hostname: "controller1"
+    anarchy_domain: "cluster.local"
+    anarchy_ctrl_hostname: "controller1"
     controller_ip: "10.0.0.1"
 
     enable_ldap: true
@@ -48,7 +48,7 @@
     # Hostname + networking
     # -----------------------------
     - role: geerlingguy.hostname
-      hostname: "{{ controller_hostname }}"
+      hostname: "{{ anarchy_ctrl_hostname }}"
 
     # -----------------------------
     # LDAP / 389‑DS
@@ -84,7 +84,7 @@
     # -----------------------------
     - role: galaxyproject.slurm
       slurm_role: controller
-      slurm_controller_host: "{{ controller_hostname }}"
+      slurm_controller_host: "{{ anarchy_ctrl_hostname }}"
       slurmdbd_enabled: true
       when: enable_slurm
 
