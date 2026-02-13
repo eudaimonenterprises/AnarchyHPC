@@ -1,5 +1,0 @@
----
-# handler file for tunables
-
-- name: activate sysctls
-  command: sysctl --system

@@ -1,8 +1,0 @@
----
-# handler file for sssd
-
-- name: restart sssd
-  service:
-    name: sssd
-    state: restarted
-  when: not in_image

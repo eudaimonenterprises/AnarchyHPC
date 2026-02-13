@@ -1,5 +1,5 @@
 ---
-image_core_packages:                                                                                                                                                                         
+image_core_packages:
   - "selinux-policy"
   - "selinux-policy-minimum"
   - "selinux-policy-targeted"
@@ -21,7 +21,6 @@ image_core_packages:
   - "aria2"
   - "tpm2-tools"
   - "dmidecode"
-  - "luna2-client"
   - "passwd"
   - "elfutils-libs"
 
@@ -37,7 +36,7 @@ dracut_extras:
   - "/usr/sbin/mkdosfs"
   - "/usr/sbin/dosfslabel"
   - "/usr/sbin/fatlabel"
-  - "/etc/mke2fs.conf" # https://bugzilla.redhat.com/show_bug.cgi?id=1893750
+  - "/etc/mke2fs.conf"
   - "/usr/sbin/mdadm"
   - "/usr/bin/top"
   - "/usr/sbin/fdisk"
@@ -52,4 +51,3 @@ dracut_extras:
   - "/usr/sbin/parted"
   - "/usr/bin/mount"
   - "/usr/sbin/dmidecode"
-

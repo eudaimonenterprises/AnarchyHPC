@@ -1,0 +1,48 @@
+---
+# Red Hat Enterprise Linux 9 defaults for xCAT-based provisioning
+
+# -----------------------------
+# Packages required for xCAT
+# -----------------------------
+provisioning_required_packages:
+  - xcat-server
+  - xcat-client
+  - xcat-genesis-base-x86_64
+  - xcat-genesis-scripts-x86_64
+
+# -----------------------------
+# Services xCAT manages
+# -----------------------------
+provisioning_enable_services:
+  - xcatd
+
+provisioning_start_services:
+  - xcatd
+
+# -----------------------------
+# xCAT directory layout
+# -----------------------------
+xcat_install_dir: "/opt/xcat"
+xcat_config_dir: "/etc/xcat"
+xcat_bin: "/opt/xcat/bin"
+xcat_sbin: "/opt/xcat/sbin"
+
+# -----------------------------
+# Provisioning network definition
+# (replace with your actual values)
+# -----------------------------
+provisioning_network:
+  name: "provnet"
+  device: "eth0"
+  ipaddr: "10.141.255.254"
+  netmask: "255.255.0.0"
+  network: "10.141.0.0"
+  broadcast: "10.141.255.255"
+  gateway: ""
+
+# -----------------------------
+# xCAT object placeholders
+# -----------------------------
+xcat_nodes: []
+xcat_osimages: []
+xcat_groups: []

@@ -4,14 +4,8 @@
     name: anarchy/password
 
 - name: Include ssh tasks
-  include_role: 
+  include_role:
     name: anarchy/ssh
-  vars:
-    extend_image: true
-
-- name: Include luna2 tasks
-  include_role: 
-    name: anarchy/luna2
   vars:
     extend_image: true
 
@@ -22,14 +16,14 @@
 
 - name: Use the controller as default gateway
   lineinfile:
-    path: "/etc/sysconfig/network"
+    path: /etc/sysconfig/network
     line: "GATEWAY={{ trix_ctrl_ip }}"
     state: present
     create: true
 
 - name: Get the controller's timezone
   stat:
-    path: "/etc/localtime"
+    path: /etc/localtime
   register: tz
 
 - name: Set the image/node's timezone
@@ -38,38 +32,34 @@
     dest: "{{ image_path }}/etc/localtime"
     state: link
 
-
 - block:
-  - synchronize:
-      src: "/etc/yum.repos.d/redhat.repo"
-      dest: "{{ image_path }}/etc/yum.repos.d/redhat.repo"
-    ignore_errors: true
+    - synchronize:
+        src: /etc/yum.repos.d/redhat.repo
+        dest: "{{ image_path }}/etc/yum.repos.d/redhat.repo"
+      ignore_errors: true
 
-  - name: Ensure Certificate path exists
-    file:
-      path: "{{ image_path }}/etc/rhsm/ca/"
-      state: directory
+    - name: Ensure Certificate path exists
+      file:
+        path: "{{ image_path }}/etc/rhsm/ca/"
+        state: directory
 
-  - name: Sync RHEL subscription certificates
-    copy:
-      src: /etc/rhsm/ca/redhat-uep.pem
-      dest: "{{ image_path }}/etc/rhsm/ca/redhat-uep.pem"
-    ignore_errors: true
+    - name: Sync RHEL subscription certificates
+      copy:
+        src: /etc/rhsm/ca/redhat-uep.pem
+        dest: "{{ image_path }}/etc/rhsm/ca/redhat-uep.pem"
+      ignore_errors: true
 
-  #- name: Sync RHEL subscription and entitlements
-  #  shell: "rsync --delete -arv /etc/pki/entitlement/ {{ image_path }}/etc/pki/entitlement/ && rsync --delete -arv /var/lib/rhsm/ {{ image_path }}/var/lib/rhsm/"
-  #  ignore_errors: true
+    - synchronize:
+        src: /etc/pki/
+        dest: "{{ image_path }}/etc/pki/"
+      ignore_errors: true
 
-  - synchronize:
-      src: "/etc/pki/"
-      dest: "{{ image_path }}/etc/pki/"
-    ignore_errors: true
+    - name: Fix Certificate locations in repo
+      replace:
+        path: "{{ image_path }}/etc/yum.repos.d/redhat.repo"
+        regexp: '/anarchy/images/compute-image'
+        replace: ''
+      ignore_errors: true
 
-  - name: Fix Certificate locations in repo
-    replace:
-      path: "{{ image_path }}/etc/yum.repos.d/redhat.repo"
-      regexp: '/anarchy/images/compute-image'
-      replace: ''
-    ignore_errors: true
   when: ansible_distribution == "RedHat"
   tags: subscription

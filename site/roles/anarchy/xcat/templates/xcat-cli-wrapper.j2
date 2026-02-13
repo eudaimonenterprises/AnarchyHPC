@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import sys
+import requests
+
+API_URL = "http://127.0.0.1:7050"
+
+def usage():
+    print("xcat-cli: simple wrapper for the xCAT Controller API")
+    print("Usage:")
+    print("  xcat-cli nodes")
+    print("  xcat-cli node <name>")
+    print("  xcat-cli set <name> <attribute> <value>")
+    print("  xcat-cli netboot <name> <method>")
+    sys.exit(1)
+
+def main():
+    if len(sys.argv) < 2:
+        usage()
+
+    cmd = sys.argv[1]
+
+    if cmd == "nodes":
+        r = requests.get(f"{API_URL}/nodes")
+        print(r.text)
+        return
+
+    if cmd == "node" and len(sys.argv) == 3:
+        name = sys.argv[2]
+        r = requests.get(f"{API_URL}/nodes/{name}")
+        print(r.text)
+        return
+
+    if cmd == "set" and len(sys.argv) == 5:
+        name = sys.argv[2]
+        attr = sys.argv[3]
+        value = sys.argv[4]
+        r = requests.post(f"{API_URL}/nodes/{name}/set/{attr}/{value}")
+        print(r.text)
+        return
+
+    if cmd == "netboot" and len(sys.argv) == 4:
+        name = sys.argv[2]
+        method = sys.argv[3]
+        r = requests.post(f"{API_URL}/nodes/{name}/netboot/{method}")
+        print(r.text)
+        return
+
+    usage()
+
+if __name__ == "__main__":
+    main()

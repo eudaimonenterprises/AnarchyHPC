@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+
+"""
+Gunicorn configuration for the xCAT controller API service.
+"""
+
+# Bind address for the API service
+bind = "0.0.0.0:7050"
+
+# Worker processes (2n+1 rule)
+workers = 4
+
+# Request timeout
+timeout = 600
+
+# Auto-reload on code changes
+reload_engine = "auto"
+
+# SSL support (optional)
+{% if api_protocol == "https" -%}
+certfile = "{{ ssl_certificate }}"
+keyfile = "{{ ssl_certificate_key }}"
+cert_reqs = 0
+{% endif %}

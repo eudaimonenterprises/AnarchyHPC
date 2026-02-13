@@ -1,5 +1,5 @@
 ---
-- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+- name: Load OS‑specific variables
   include_vars: "{{ package_arch }}/image-{{ image_create_distribution }}.yaml"
   no_log: true
   ignore_errors: true
@@ -16,22 +16,21 @@
 
 - name: Collecting repo names for next task
   set_fact:
-    _repos_inside_image_remove: "{{ _repos_inside_image_remove|default([]) + [ 'zypper rr '+item.name ] }}"
-    _repos_inside_image_add: "{{ _repos_inside_image_add|default([]) + [ 'zypper ar /etc/yum.repos.d/'+item.name+'.repo' ] }}"
+    _repos_inside_image_remove: "{{ _repos_inside_image_remove|default([]) + [ 'zypper rr ' + item.name ] }}"
+    _repos_inside_image_add: "{{ _repos_inside_image_add|default([]) + [ 'zypper ar /etc/yum.repos.d/' + item.name + '.repo' ] }}"
   with_items: "{{ anarchyhpc_repositories }}"
   when: item.name is defined
 
 - name: Prepare zypper to work
   block:
-  - name: Running shell commands inside image
-    shell: "{{ item }}"
-    with_items:
-      - "{{ _repos_inside_image_remove|default([]) }}"
-      - "{{ _repos_inside_image_add|default([]) }}"
-      - zypper --gpg-auto-import-keys refresh
-      #- zypper up --replacefiles --no-confirm
+    - name: Running shell commands inside image
+      shell: "{{ item }}"
+      with_items:
+        - "{{ _repos_inside_image_remove|default([]) }}"
+        - "{{ _repos_inside_image_add|default([]) }}"
+        - zypper --gpg-auto-import-keys refresh
 
-- name: Install core packages - @core, kernel and grub2
+- name: Install core packages
   ansible.builtin.zypper:
     name: "{{ item }}"
   with_items: "{{ image_core_packages }}"
@@ -46,4 +45,3 @@
     - NetworkManager
     - sshd
   ignore_errors: true
-

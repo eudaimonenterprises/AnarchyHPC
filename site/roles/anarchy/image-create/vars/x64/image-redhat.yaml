@@ -18,7 +18,6 @@ image_core_packages:
   - "aria2"
   - "tpm2-tools"
   - "dmidecode"
-  - "luna2-client"
 
 dracut_extras:
   - "/usr/sbin/mkswap"

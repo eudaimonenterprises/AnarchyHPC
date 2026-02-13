@@ -1,6 +1,0 @@
----
-
-required_packages:
-  - "dnf-utils"
-  - "distribution-gpg-keys"
-                                                                                                                                                                                             

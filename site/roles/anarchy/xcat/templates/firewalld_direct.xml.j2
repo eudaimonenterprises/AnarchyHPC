@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<direct>
+  <rule priority="0" table="nat" ipv="ipv4" chain="POSTROUTING">
+    -p udp -o {{ provisioning_network.device }}
+    -m iprange --dst-range {{ provisioning_network.start_ip }}-{{ provisioning_network.end_ip }}
+    -j SNAT --to {{ provisioning_network.ipaddr }}
+  </rule>
+</direct>

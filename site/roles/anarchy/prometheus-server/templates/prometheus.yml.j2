@@ -1,6 +1,5 @@
 #jinja2: trim_blocks: True, lstrip_blocks: True
 {{ ansible_managed | comment }}
-# http://prometheus.io/docs/operating/configuration/
 
 global:
   {{ prometheus_server_global | to_nice_yaml(indent=2,sort_keys=False) | indent(2, False) }}
@@ -13,7 +12,6 @@ rule_files:
 {% if prometheus_server_alertmanagers | length > 0 %}
 alerting:
   alert_relabel_configs:
-    # Drop the "replica" label.
     - action: labeldrop
       regex: "instance"
 
@@ -38,23 +36,46 @@ alerting:
 {% endif %}
 
 scrape_configs:
-  - job_name: luna_controllers
-    file_sd_configs:
-    - files:
-      - {{prometheus_server_config_dir}}/file_sd/trix/*.yml
-    metric_relabel_configs:
-      # Step 1: Check if the `hostname_override` label exists and override `hostname`
-      - source_labels: ['hostname_override']
-        target_label: 'hostname'
-        action: replace
-        regex: '(.+)'
-        replacement: '$1'
 
-      # Step 2: Drop the `hostname_override` label after overriding
-      - action: labeldrop
-        regex: 'hostname_override'
-  - job_name: other_nodes
-    file_sd_configs:
-    - files:
-      - {{prometheus_server_config_dir}}/file_sd/other/*.yml
+  # -------------------------
+  # Node Exporter (all nodes)
+  # -------------------------
+  - job_name: node_exporter
+    static_configs:
+      - targets:
+{% for host in groups['all'] %}
+        - {{ hostvars[host]['ansible_host'] }}:9100
+{% endfor %}
+
+  # -------------------------
+  # IPMI Exporter (optional)
+  # -------------------------
+  - job_name: ipmi_exporter
+    static_configs:
+      - targets:
+{% for host in groups['compute'] %}
+        - {{ hostvars[host]['ansible_host'] }}:9290
+{% endfor %}
+
+  # -------------------------
+  # Slurm Exporter (optional)
+  # -------------------------
+  - job_name: slurm_exporter
+    static_configs:
+      - targets:
+        - {{ slurmctld_host }}:8080
+
+  # -------------------------
+  # NVIDIA GPU Exporter (optional)
+  # -------------------------
+  - job_name: nvidia_exporter
+    static_configs:
+      - targets:
+{% for host in groups['gpu'] | default([]) %}
+        - {{ hostvars[host]['ansible_host'] }}:9400
+{% endfor %}
+
+  # -------------------------
+  # Additional SD (if needed)
+  # -------------------------
 {{ prometheus_server_additional_sd | default([]) | to_nice_yaml(indent=2,sort_keys=False) | indent(2, True) }}

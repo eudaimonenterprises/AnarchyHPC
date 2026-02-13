@@ -1,0 +1,45 @@
+---
+# tasks file for xCAT node configuration
+
+# ----------------- image-side configuration -----------------
+
+- block:
+    - name: Ensure node image config directory exists
+      file:
+        path: "{{ image_path }}/etc/hpc/"
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+
+    - name: Deploy HPC node configuration into image
+      template:
+        src: "hpc-node.conf.j2"
+        dest: "{{ image_path }}/etc/hpc/node.conf"
+        owner: root
+        group: root
+        mode: 0644
+  when:
+    - image_path is defined
+    - on_controller | default(False)
+
+# ----------------- live node configuration -----------------
+
+- block:
+    - name: Ensure HPC config directory exists on node
+      file:
+        path: "/etc/hpc/"
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+
+    - name: Deploy HPC node configuration
+      template:
+        src: "hpc-node.conf.j2"
+        dest: "/etc/hpc/node.conf"
+        owner: root
+        group: root
+        mode: 0644
+  when:
+    - in_image | default(False) or on_node | default(False)

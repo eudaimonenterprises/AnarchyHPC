@@ -1,0 +1,125 @@
+---
+# tasks file for xCAT controller
+
+- name: Load OS-specific vars (if any)
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version }}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version }}.yaml"
+  no_log: true
+  ignore_errors: true
+
+# ----------------- base packages / repos -----------------
+
+- name: Ensure xCAT repo is configured (RedHat family example)
+  template:
+    src: xcat.repo.j2
+    dest: /etc/yum.repos.d/xcat.repo
+    owner: root
+    group: root
+    mode: 0644
+  when: ansible_os_family == "RedHat"
+
+- name: Install xCAT server and client packages
+  package:
+    name: "{{ provisioning_required_packages | default(['xcat-server','xcat-client','xcat-genesis-scripts-x86_64','xcat-genesis-base-x86_64']) }}"
+    state: present
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Ensure xCAT directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  loop:
+    - "{{ xcat_install_dir | default('/opt/xcat') }}"
+    - "{{ xcat_config_dir | default('/etc/xcat') }}"
+
+# ----------------- xCAT core services -----------------
+
+- name: Enable and start xcatd
+  service:
+    name: xcatd
+    state: started
+    enabled: true
+
+# ----------------- networking / provisioning -----------------
+
+- name: Configure xCAT networks table for provisioning network
+  command: >
+    tabedit networks
+  args:
+    creates: "{{ xcat_config_dir | default('/etc/xcat') }}/networks"
+  changed_when: false
+
+# You’ll likely want to manage networks via templates/commands instead of raw tabedit.
+# Example using command tasks:
+
+- name: Define provisioning network in xCAT (idempotent-ish)
+  command: >
+    chdef -t network -o {{ provisioning_network.name | default('provnet') }}
+    net={{ provisioning_network.network }}
+    mask={{ provisioning_network.netmask }}
+    mgtifname={{ provisioning_network.device }}
+    gateway={{ provisioning_network.gateway | default('') }}
+  when: provisioning_network is defined
+
+# ----------------- DHCP / TFTP / HTTP via xCAT -----------------
+
+- name: Configure DHCP via xCAT
+  command: makedhcp -n
+  register: makedhcp_out
+  changed_when: "'Error' not in makedhcp_out.stderr"
+
+- name: Configure TFTP/boot resources via xCAT
+  command: makedhcp -a
+  register: makedhcp_add
+  changed_when: "'Error' not in makedhcp_add.stderr
+
+- name: Generate PXE boot configuration
+  command: makedhcp -q
+  changed_when: false
+
+# ----------------- OS images -----------------
+
+- name: Create xCAT osimage definitions (placeholder)
+  command: >
+    mkdef -t osimage -o {{ item.name }}
+    osvers={{ item.osvers }}
+    osarch={{ item.osarch | default('x86_64') }}
+    profile={{ item.profile | default('compute') }}
+    provmethod={{ item.provmethod | default('install') }}
+  loop: "{{ xcat_osimages | default([]) }}"
+  when: xcat_osimages is defined
+
+# ----------------- nodes / groups -----------------
+
+- name: Create xCAT node groups
+  command: >
+    mkdef -t group -o {{ item.name }} members={{ item.members | join(',') }}
+  loop: "{{ xcat_groups | default([]) }}"
+  when: xcat_groups is defined
+
+- name: Create xCAT node definitions
+  command: >
+    mkdef -t node -o {{ item.name }}
+    groups={{ item.groups | join(',') }}
+    ip={{ item.ip }}
+    mac={{ item.mac }}
+    netboot={{ item.netboot | default('pxe') }}
+    os={{ item.os }}
+  loop: "{{ xcat_nodes | default([]) }}"
+  when: xcat_nodes is defined
+
+# ----------------- post-setup sanity -----------------
+
+- name: Refresh xCAT services
+  command: service xcatd restart
+  changed_when: false
+
+- name: Wait a bit for xcatd to settle
+  wait_for:
+    timeout: 10

@@ -1,4 +1,0 @@
----
-- name: Export NFS
-  shell: exportfs -ar
-  changed_when: false

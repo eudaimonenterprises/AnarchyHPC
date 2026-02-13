@@ -1,5 +1,0 @@
----
-- name: restart pbs
-  systemd:
-    name: pbs
-    state: restarted

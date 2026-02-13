@@ -1,6 +1,0 @@
----
-- name: Reload and restart prometheus-ha-exporter
-  listen: "restart prometheus-ha-exporter"
-  systemd:
-    name: prometheus-ha-exporter
-    state: restarted

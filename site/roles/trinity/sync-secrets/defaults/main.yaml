@@ -1,7 +1,0 @@
----
-
-sync_secrets_packages:
-  - nfs-utils
-  - libnfs
-
-sync_remote: '{{ trix_ctrl1_ip }}'

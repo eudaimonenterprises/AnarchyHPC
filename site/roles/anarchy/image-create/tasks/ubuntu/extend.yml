@@ -4,14 +4,8 @@
     name: anarchy/password
 
 - name: Include ssh tasks
-  include_role: 
+  include_role:
     name: anarchy/ssh
-  vars:
-    extend_image: true
-
-- name: Include luna2 tasks
-  include_role: 
-    name: anarchy/luna2
   vars:
     extend_image: true
 

@@ -1,0 +1,18 @@
+[Unit]
+Description=xCAT Controller API Service
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/xcat-api
+ExecStart=/usr/bin/gunicorn -c /opt/xcat-api/gunicorn.py app:app
+Restart=always
+RestartSec=3
+User=root
+Group=root
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

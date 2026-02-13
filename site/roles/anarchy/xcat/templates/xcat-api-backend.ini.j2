@@ -1,0 +1,34 @@
+; xCAT Controller API backend configuration
+
+[LOGGER]
+LEVEL = info
+LOGFILE = /var/log/xcat-api/api.log
+
+[API]
+USERNAME = {{ api_username }}
+PASSWORD = {{ api_password }}
+EXPIRY = 1h
+SECRET_KEY = {{ api_secret_key }}
+ENDPOINT = {{ ansible_hostname }}:7050
+PROTOCOL = {{ api_protocol }}
+VERIFY_CERTIFICATE = {{ api_verify_certificate }}
+
+[XCAT]
+BIN_PATH = /opt/xcat/bin
+SBIN_PATH = /opt/xcat/sbin
+TABLES_PATH = /etc/xcat
+
+[FILES]
+IMAGE_DIRECTORY = /install
+TMP_DIRECTORY = /opt/xcat-api/tmp
+
+[SSL]
+CERTFILE = {{ ssl_certificate | default("") }}
+KEYFILE = {{ ssl_certificate_key | default("") }}
+
+[PLUGINS]
+PLUGINS_DIRECTORY = /opt/xcat-api/plugins
+ALLOWED_PLUGINS = prometheus, zabbix
+
+[EXTRA]
+VAR1 = value
