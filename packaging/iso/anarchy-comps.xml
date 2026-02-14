@@ -1,25 +1,29 @@
 <comps>
   <group>
-    <id>anarchy</id>
-    <name>TriniyX</name>
-    <description>All AnarchyHPC packages will be installed</description>
-    <default>false</default>
+    <id>anarchyhpc</id>
+    <name>AnarchyHPC</name>
+    <description>Core AnarchyHPC packages</description>
+    <default>true</default>
     <uservisible>false</uservisible>
     <packagelist>
       <packagereq type="mandatory">anarchyhpc</packagereq>
-      <packagereq type="mandatory">luna-ansible</packagereq>
-      <packagereq type="mandatory">userspace-repo-tr17.10</packagereq>
+      <!-- Optional xCAT components -->
+      <packagereq type="optional">xcat-server</packagereq>
+      <packagereq type="optional">xcat-client</packagereq>
+      <!-- Optional DHCP server if not using xCAT DHCP -->
+      <packagereq type="optional">kea-dhcp</packagereq>
     </packagelist>
   </group>
+
   <environment>
     <id>anarchyhpc</id>
     <name>AnarchyHPC</name>
-    <description>Basic packages and TriniyX</description>
+    <description>Base environment for AnarchyHPC clusters</description>
     <display_order>3</display_order>
     <grouplist>
       <groupid>core</groupid>
       <groupid>base</groupid>
-      <groupid>anarchy</groupid>
+      <groupid>anarchyhpc</groupid>
     </grouplist>
     <optionlist>
       <groupid>debugging</groupid>

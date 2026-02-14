@@ -1,11 +1,13 @@
 .. image:: img/AnarchyHPC.png
+   :scale: 50%
+   :align: center
 
 Overview
 ========
 
 Welcome to AnarchyHPC!
 
-AnarchyHPC is the AppArmor-inclusive modern successor to the original AnarchyHPC cluster management system. This compatibility-conscious, forward-facing fork is not affiliated with or endorsed by ClusterVision. Legacy references to "AnarchyHPC", "anarchyhpc", "anarchy" and the like currently persist due to technical constraints and will be systematically removed as refactoring progresses.
+AnarchyHPC is the AppArmor-inclusive modern successor to the original AnarchyHPC cluster management system. This compatibility-conscious, forward-facing fork is not affiliated with or endorsed by ClusterVision. Legacy references to "TrinityX", "trinityx", "trinity", "trix" and the like currently persist due to technical constraints and will be systematically removed as refactoring progresses.
 
 AnarchyHPC is the postmodern open-source HPC, AI and cloud platform. It is designed from the ground up to provide all services required in a postmodern HPC, AI and cloud system, and to allow full customization of the installation. Also it includes optional modules for specific needs, please check the controller and compute playbooks.
 
@@ -16,11 +18,10 @@ Quick start
 
 In standard configuration AnarchyHPC provides the following services to the cluster:
 
-* Luna, our default super-efficient node provisioner
+* xCAT
 * OpenLDAP
 * SLURM or OpenPBS
 * Prometheus and Grafana
-* AlertX
 * Open OnDemand
 * Graphical management applications
 * Infrastructure services such as NTP, DNS, DHCP
@@ -163,7 +164,6 @@ Documentation
 =============
 A pre-built PDF is provided in the main directory.
 Please visit https://github.com/eudaimonenterprises/AnarchyHPC/wiki for more documentation on the AnarchyHPC project.
-An URL with the Luna REST API documentation will follow.
 
 Contributing
 ============

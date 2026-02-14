@@ -20,9 +20,9 @@ exclusions:
       panel: Controller Filesystems
 
   template-job-rule:
-    reason: We use luna_group instead
+    reason: We use anarchy_group instead
   target-job-rule:
-    reason: We use luna_group instead
+    reason: We use anarchy_group instead
   template-instance-rule:
     reason: We use hostname instead
   target-instance-rule:

@@ -1,7 +1,0 @@
-/var/log/alertx/*.log {
-	compress
-	copytruncate
-	weekly
-	rotate 4
-	notifempty
-}

@@ -241,7 +241,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(max by(hostname) (up{exporter!=\"prometheus\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))",
+          "expr": "sum(max by(hostname) (up{exporter!=\"prometheus\", anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}))",
           "format": "time_series",
           "instant": true,
           "legendFormat": "Up",
@@ -255,7 +255,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(max by(hostname) (up{exporter!=\"prometheus\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))/count(avg by(hostname) (up{exporter!=\"prometheus\",luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))",
+          "expr": "sum(max by(hostname) (up{exporter!=\"prometheus\", anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}))/count(avg by(hostname) (up{exporter!=\"prometheus\",anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}))",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -270,7 +270,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "count(max by(hostname) (up{exporter!=\"prometheus\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))",
+          "expr": "count(max by(hostname) (up{exporter!=\"prometheus\", anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}))",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -284,7 +284,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "count(max by(hostname) (up{exporter!=\"prometheus\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))",
+          "expr": "count(max by(hostname) (up{exporter!=\"prometheus\", anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}))",
           "hide": false,
           "instant": false,
           "legendFormat": "Nodes",
@@ -474,7 +474,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "node_filesystem_free_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} > 0",
+          "expr": "node_filesystem_free_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"} > 0",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -492,7 +492,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "node_filesystem_size_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} > 0",
+          "expr": "node_filesystem_size_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"} > 0",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -510,7 +510,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(node_filesystem_size_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}-node_filesystem_free_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})/node_filesystem_size_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}*100  > 0",
+          "expr": "(node_filesystem_size_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}-node_filesystem_free_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"})/node_filesystem_size_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}*100  > 0",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -568,7 +568,7 @@
                 "aggregations": [],
                 "operation": "groupby"
               },
-              "luna_group": {
+              "anarchy_group": {
                 "aggregations": [
                   "lastNotNull"
                 ],
@@ -592,7 +592,7 @@
               "fstype (lastNotNull)": false,
               "instance": true,
               "job": true,
-              "luna_group": true,
+              "anarchy_group": true,
               "mountpoint": false
             },
             "indexByName": {
@@ -603,7 +603,7 @@
               "fstype (lastNotNull)": 8,
               "hostname": 1,
               "instance": 7,
-              "luna_group (lastNotNull)": 0,
+              "anarchy_group (lastNotNull)": 0,
               "mountpoint": 2
             },
             "renameByName": {
@@ -614,7 +614,7 @@
               "Value #use (lastNotNull)": "used_perc",
               "fstype (lastNotNull)": "fstype",
               "instance": "",
-              "luna_group (lastNotNull)": "luna_group"
+              "anarchy_group (lastNotNull)": "anarchy_group"
             }
           }
         },
@@ -758,7 +758,7 @@
             "type": "camptocamp-prometheus-alertmanager-datasource",
             "uid": "${alertmanager_datasource}"
           },
-          "filters": "hostname=~\"$hostname\",luna_group=~\"$luna_group\",severity=~\"$severity\"",
+          "filters": "hostname=~\"$hostname\",anarchy_group=~\"$anarchy_group\",severity=~\"$severity\"",
           "inhibited": false,
           "receiver": "",
           "refId": "A",
@@ -790,7 +790,7 @@
               "hostname": false,
               "id": true,
               "job": true,
-              "luna_group": true,
+              "anarchy_group": true,
               "name": true,
               "type": true
             },
@@ -902,7 +902,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(node_memory_MemAvailable_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})",
+          "expr": "sum(node_memory_MemAvailable_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"})",
           "format": "time_series",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -919,7 +919,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(count without(cpu, mode) (node_cpu_seconds_total{mode=\"idle\",luna_group=~\"$luna_group\", hostname=~\"$hostname\"}))",
+          "expr": "sum(count without(cpu, mode) (node_cpu_seconds_total{mode=\"idle\",anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}))",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -933,7 +933,7 @@
             "uid": "${prometheus_datasource}"
           },
           "editorMode": "code",
-          "expr": "sum by (name) (nvidia_smi_gpu_info{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})",
+          "expr": "sum by (name) (nvidia_smi_gpu_info{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"})",
           "hide": false,
           "instant": false,
           "legendFormat": "__auto",
@@ -1060,7 +1060,7 @@
                   {
                     "targetBlank": true,
                     "title": "Alert Dashboard",
-                    "url": "/d/trixalerts/alerts?orgId=1&var-luna_group=${__data.fields[\"luna_group\"]}&var-hostname=${__data.fields[\"hostname\"]}"
+                    "url": "/d/trixalerts/alerts?orgId=1&var-anarchy_group=${__data.fields[\"anarchy_group\"]}&var-hostname=${__data.fields[\"hostname\"]}"
                   }
                 ]
               }
@@ -1423,7 +1423,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "luna_group"
+              "options": "anarchy_group"
             },
             "properties": [
               {
@@ -1466,7 +1466,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(node_load1{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}/count(node_cpu_seconds_total{mode=\"idle\",luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) without (cpu,mode)) * 100",
+          "expr": "(node_load1{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}/count(node_cpu_seconds_total{mode=\"idle\",anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}) without (cpu,mode)) * 100",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
@@ -1484,7 +1484,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(node_load5{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}/count(node_cpu_seconds_total{mode=\"idle\",luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) without (cpu,mode)) * 100",
+          "expr": "(node_load5{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}/count(node_cpu_seconds_total{mode=\"idle\",anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}) without (cpu,mode)) * 100",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -1503,7 +1503,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(node_load15{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}/count(node_cpu_seconds_total{mode=\"idle\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) without (cpu,mode)) * 100",
+          "expr": "(node_load15{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}/count(node_cpu_seconds_total{mode=\"idle\", anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}) without (cpu,mode)) * 100",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -1522,7 +1522,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "node_memory_MemTotal_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}",
+          "expr": "node_memory_MemTotal_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -1541,7 +1541,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "node_memory_SwapTotal_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}",
+          "expr": "node_memory_SwapTotal_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -1560,7 +1560,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(node_memory_MemTotal_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} - node_memory_MemFree_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} - node_memory_Cached_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} - node_memory_Buffers_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})/node_memory_MemTotal_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}*100",
+          "expr": "(node_memory_MemTotal_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"} - node_memory_MemFree_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"} - node_memory_Cached_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"} - node_memory_Buffers_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"})/node_memory_MemTotal_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}*100",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -1579,7 +1579,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(node_memory_SwapTotal_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"} - node_memory_SwapFree_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})/node_memory_SwapTotal_bytes{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}*100",
+          "expr": "(node_memory_SwapTotal_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"} - node_memory_SwapFree_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"})/node_memory_SwapTotal_bytes{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}*100",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -1597,7 +1597,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "count(node_cpu_seconds_total{mode=\"idle\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) without (cpu,mode)",
+          "expr": "count(node_cpu_seconds_total{mode=\"idle\", anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}) without (cpu,mode)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1613,7 +1613,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "max by (hostname, luna_group) (ipmi_temperature_celsius{ name=~\"[cC][pP][uU].*[tT][eE][mM][pP].*\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})",
+          "expr": "max by (hostname, anarchy_group) (ipmi_temperature_celsius{ name=~\"[cC][pP][uU].*[tT][eE][mM][pP].*\", anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"})",
           "format": "table",
           "fullMetaSearch": false,
           "hide": false,
@@ -1631,7 +1631,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (hostname, luna_group) (node_systemd_unit_state{state=\"failed\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})",
+          "expr": "sum by (hostname, anarchy_group) (node_systemd_unit_state{state=\"failed\", anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"})",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1646,7 +1646,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (hostname, luna_group) (nvidia_smi_gpu_info{luna_group=~\"$luna_group\", hostname=~\"$hostname\"}) > 0",
+          "expr": "sum by (hostname, anarchy_group) (nvidia_smi_gpu_info{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"}) > 0",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1661,7 +1661,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "max by (hostname, luna_group) (nvidia_smi_temperature_gpu{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})",
+          "expr": "max by (hostname, anarchy_group) (nvidia_smi_temperature_gpu{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"})",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1676,7 +1676,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "max by (hostname, luna_group) (ipmi_temperature_celsius{ name=~\"S[Yy][Ss].*[tT][eE][mM][pP].*\", luna_group=~\"$luna_group\", hostname=~\"$hostname\"})",
+          "expr": "max by (hostname, anarchy_group) (ipmi_temperature_celsius{ name=~\"S[Yy][Ss].*[tT][eE][mM][pP].*\", anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"})",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1689,7 +1689,7 @@
             "type": "camptocamp-prometheus-alertmanager-datasource",
             "uid": "${alertmanager_datasource}"
           },
-          "filters": "hostname=~\"$hostname\",luna_group=~\"$luna_group\",severity=~\"$severity\",exporter!=\"prometheus\"",
+          "filters": "hostname=~\"$hostname\",anarchy_group=~\"$anarchy_group\",severity=~\"$severity\",exporter!=\"prometheus\"",
           "hide": false,
           "receiver": "",
           "refId": "errors"
@@ -1701,7 +1701,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "max by (hostname, luna_group)  (ipmi_dcmi_power_consumption_watts{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})",
+          "expr": "max by (hostname, anarchy_group)  (ipmi_dcmi_power_consumption_watts{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"})",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1716,7 +1716,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "max by (hostname, luna_group) (up{luna_group=~\"$luna_group\", hostname=~\"$hostname\"})",
+          "expr": "max by (hostname, anarchy_group) (up{anarchy_group=~\"$anarchy_group\", hostname=~\"$hostname\"})",
           "format": "table",
           "hide": true,
           "instant": true,
@@ -1834,7 +1834,7 @@
                 "aggregations": [],
                 "operation": "groupby"
               },
-              "luna_group": {
+              "anarchy_group": {
                 "aggregations": [],
                 "operation": "groupby"
               },
@@ -1871,7 +1871,7 @@
               "gpus ": 3,
               "hostname": 1,
               "load5 ": 4,
-              "luna_group": 0,
+              "anarchy_group": 0,
               "mem_tot ": 5,
               "mem_use ": 6,
               "power ": 13,
@@ -1904,7 +1904,7 @@
                     "value": ""
                   }
                 },
-                "fieldName": "luna_group"
+                "fieldName": "anarchy_group"
               },
               {
                 "config": {
@@ -1934,7 +1934,7 @@
         "current": {
           "selected": false,
           "text": "Prometheus",
-          "value": "trixprometheus"
+          "value": "anarchy-prometheus"
         },
         "description": "Prometheus data source",
         "hide": 2,
@@ -1983,15 +1983,15 @@
           "type": "prometheus",
           "uid": "${prometheus_datasource}"
         },
-        "definition": "label_values(up,luna_group)",
+        "definition": "label_values(up,anarchy_group)",
         "hide": 0,
         "includeAll": true,
-        "label": "Luna Group",
+        "label": "Anarchy Group",
         "multi": true,
-        "name": "luna_group",
+        "name": "anarchy_group",
         "options": [],
         "query": {
-          "query": "label_values(up,luna_group)",
+          "query": "label_values(up,anarchy_group)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -2015,7 +2015,7 @@
           "type": "prometheus",
           "uid": "${prometheus_datasource}"
         },
-        "definition": "label_values(up{luna_group=~\"$luna_group\"},hostname)",
+        "definition": "label_values(up{anarchy_group=~\"$anarchy_group\"},hostname)",
         "hide": 0,
         "includeAll": true,
         "label": "Hostname",
@@ -2023,7 +2023,7 @@
         "name": "hostname",
         "options": [],
         "query": {
-          "query": "label_values(up{luna_group=~\"$luna_group\"},hostname)",
+          "query": "label_values(up{anarchy_group=~\"$anarchy_group\"},hostname)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -2045,7 +2045,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "trixprometheus"
+          "uid": "${prometheus_datasource}"
         },
         "definition": "label_values(ALERTS,severity)",
         "hide": 0,

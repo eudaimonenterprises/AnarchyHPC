@@ -1234,7 +1234,7 @@
               "job": {
                 "aggregations": []
               },
-              "luna_group": {
+              "anarchy_group": {
                 "aggregations": []
               },
               "state": {
@@ -4625,7 +4625,7 @@
         "current": {
           "selected": false,
           "text": "Prometheus",
-          "value": "trixprometheus"
+          "value": "anarchy-prometheus"
         },
         "description": "Prometheus data source",
         "hide": 2,
@@ -4652,18 +4652,18 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "trixprometheus"
+          "uid": "${prometheus_datasource}"
         },
-        "definition": "label_values(up,luna_group)",
+        "definition": "label_values(up,anarchy_group)",
         "description": "Luna Group",
         "hide": 0,
         "includeAll": true,
-        "label": "Luna Group",
+        "label": "Anarchy Group",
         "multi": true,
-        "name": "luna_group",
+        "name": "anarchy_group",
         "options": [],
         "query": {
-          "query": "label_values(up,luna_group)",
+          "query": "label_values(up,anarchy_group)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -4680,7 +4680,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "trixprometheus"
+          "uid": "${prometheus_datasource}"
         },
         "definition": "label_values(node_zfs_zpool_state,hostname)",
         "description": "Luna Group",

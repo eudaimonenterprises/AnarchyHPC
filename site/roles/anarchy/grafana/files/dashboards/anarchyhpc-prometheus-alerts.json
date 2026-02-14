@@ -155,7 +155,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "nhc"
+              "options": "anarchy_group"
             },
             "properties": [
               {
@@ -242,7 +242,7 @@
             "type": "alertmanager",
             "uid": "${alertmanager}"
           },
-          "filters": "hostname=~\"$hostname\",luna_group=~\"$luna_group\",severity=~\"$severity\"",
+          "filters": "hostname=~\"$hostname\",anarchy_group=~\"$anarchy_group\",severity=~\"$severity\"",
           "inhibited": false,
           "receiver": "",
           "refId": "A",
@@ -296,7 +296,7 @@
               "hostname": 2,
               "id": 11,
               "job": 10,
-              "luna_group": 3,
+              "anarchy_group": 3,
               "name": 12,
               "nhc": 5,
               "path": 19,
@@ -329,7 +329,7 @@
         "current": {
           "selected": false,
           "text": "AlertManagerDatasource",
-          "value": "trixalertmanagerds"
+          "value": "anarchy-alertmanagerds"
         },
         "description": "Alertmanager Datasource",
         "hide": 2,
@@ -358,17 +358,17 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "trixprometheus"
+          "uid": "${prometheus_datasource}"
         },
-        "definition": "label_values(up,luna_group)",
+        "definition": "label_values(up,anarchy_group)",
         "hide": 0,
         "includeAll": true,
-        "label": "Luna Group",
+        "label": "Anarchy Group",
         "multi": true,
-        "name": "luna_group",
+        "name": "anarchy_group",
         "options": [],
         "query": {
-          "query": "label_values(up,luna_group)",
+          "query": "label_values(up,anarchy_group)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -390,9 +390,9 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "trixprometheus"
+          "uid": "${prometheus_datasource}"
         },
-        "definition": "label_values(up{luna_group=~\"$luna_group\"},hostname)",
+        "definition": "label_values(up{anarchy_group=~\"$anarchy_group\"},hostname)",
         "hide": 0,
         "includeAll": true,
         "label": "Hostname",
@@ -400,7 +400,7 @@
         "name": "hostname",
         "options": [],
         "query": {
-          "query": "label_values(up{luna_group=~\"$luna_group\"},hostname)",
+          "query": "label_values(up{anarchy_group=~\"$anarchy_group\"},hostname)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -417,7 +417,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "trixprometheus"
+          "uid": "${prometheus_datasource}"
         },
         "definition": "label_values(ALERTS,severity)",
         "description": "Severity",
@@ -446,7 +446,7 @@
   "timepicker": {},
   "timezone": "",
   "title": "Alerts",
-  "uid": "trixalerts",
+  "uid": "anarchy-alerts",
   "version": 13,
   "weekStart": ""
 }

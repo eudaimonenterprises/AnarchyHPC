@@ -58,28 +58,18 @@
       "description": "Quick view if all the services are up and running",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
+          "color": { "mode": "thresholds" },
           "mappings": [
             {
               "options": {
-                "0": {
-                  "color": "green",
-                  "index": 0,
-                  "text": "Ok"
-                }
+                "0": { "color": "green", "index": 0, "text": "Ok" }
               },
               "type": "value"
             },
             {
               "options": {
                 "from": 1,
-                "result": {
-                  "color": "red",
-                  "index": 1,
-                  "text": "Degraded"
-                },
+                "result": { "color": "red", "index": 1, "text": "Degraded" },
                 "to": "nan"
               },
               "type": "range"
@@ -87,33 +77,19 @@
             {
               "options": {
                 "match": "null",
-                "result": {
-                  "color": "#808080",
-                  "index": 2,
-                  "text": "Unknown"
-                }
+                "result": { "color": "#808080", "index": 2, "text": "Unknown" }
               },
               "type": "special"
             }
           ],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           }
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 6,
-        "w": 3,
-        "x": 0,
-        "y": 0
-      },
+      "gridPos": { "h": 6, "w": 3, "x": 0, "y": 0 },
       "id": 8,
       "options": {
         "colorMode": "background",
@@ -121,24 +97,17 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
-        "text": {
-          "valueSize": 40
-        },
+        "text": { "valueSize": 40 },
         "textMode": "auto"
       },
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
+          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
           "editorMode": "code",
           "expr": "max  (ha_cluster_pacemaker_fail_count)",
           "instant": false,
@@ -150,48 +119,30 @@
       "title": "Resources and Services",
       "type": "stat"
     },
+
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
       "description": "Hostname of the controller bearing the floating IP",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
+          "color": { "mode": "thresholds" },
           "mappings": [
             {
               "options": {
                 "match": "null",
-                "result": {
-                  "color": "#808080",
-                  "index": 0,
-                  "text": "Unknown"
-                }
+                "result": { "color": "#808080", "index": 0, "text": "Unknown" }
               },
               "type": "special"
             }
           ],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           }
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 6,
-        "w": 3,
-        "x": 3,
-        "y": 0
-      },
+      "gridPos": { "h": 6, "w": 3, "x": 3, "y": 0 },
       "id": 19,
       "options": {
         "colorMode": "background",
@@ -199,25 +150,18 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "/^node$/",
           "values": false
         },
-        "text": {
-          "valueSize": 40
-        },
+        "text": { "valueSize": 40 },
         "textMode": "value"
       },
       "pluginVersion": "10.1.2",
       "repeatDirection": "h",
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
+          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
           "editorMode": "code",
           "exemplar": false,
           "expr": "max by (node) (ha_cluster_pacemaker_resources{resource=\"anarchy-ip\"} != 0)",
@@ -233,10 +177,7 @@
         {
           "id": "organize",
           "options": {
-            "excludeByName": {
-              "Time": true,
-              "Value": true
-            },
+            "excludeByName": { "Time": true, "Value": true },
             "indexByName": {},
             "renameByName": {}
           }
@@ -244,41 +185,25 @@
       ],
       "type": "stat"
     },
+
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
-      "description": "Status of the 'Shoot The Other Node In The Head' feature, allowing to forcefully power off failed nodes, avoiding interferences caused by partial or complex failures",
+      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
+      "description": "Status of the 'Shoot The Other Node In The Head' feature",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
+          "color": { "mode": "thresholds" },
           "mappings": [
             {
               "options": {
-                "0": {
-                  "color": "#808080",
-                  "index": 1,
-                  "text": "Disabled"
-                },
-                "1": {
-                  "color": "green",
-                  "index": 0,
-                  "text": "Enabled"
-                }
+                "0": { "color": "#808080", "index": 1, "text": "Disabled" },
+                "1": { "color": "green", "index": 0, "text": "Enabled" }
               },
               "type": "value"
             },
             {
               "options": {
                 "match": "null",
-                "result": {
-                  "color": "#808080",
-                  "index": 2,
-                  "text": "Unknown"
-                }
+                "result": { "color": "#808080", "index": 2, "text": "Unknown" }
               },
               "type": "special"
             }
@@ -286,25 +211,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
+              { "color": "green", "value": null },
+              { "color": "red", "value": 80 }
             ]
           }
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 6,
-        "w": 3,
-        "x": 6,
-        "y": 0
-      },
+      "gridPos": { "h": 6, "w": 3, "x": 6, "y": 0 },
       "id": 7,
       "options": {
         "colorMode": "background",
@@ -312,24 +226,17 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
-        "text": {
-          "valueSize": 40
-        },
+        "text": { "valueSize": 40 },
         "textMode": "auto"
       },
       "pluginVersion": "10.1.2",
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
+          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
           "editorMode": "code",
           "expr": "min (ha_cluster_pacemaker_stonith_enabled)",
           "instant": false,
@@ -341,17 +248,13 @@
       "title": "Stonith Fencing",
       "type": "stat"
     },
+
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
       "description": "Expanded view of failing services",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
+          "color": { "mode": "palette-classic" },
           "custom": {
             "axisCenteredZero": false,
             "axisColorMode": "text",
@@ -361,51 +264,29 @@
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
             "insertNulls": false,
             "lineInterpolation": "stepAfter",
             "lineWidth": 1,
             "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
+            "scaleDistribution": { "type": "linear" },
             "showPoints": "auto",
             "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
+              { "color": "green", "value": null },
+              { "color": "red", "value": 80 }
             ]
           }
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 6,
-        "w": 15,
-        "x": 9,
-        "y": 0
-      },
+      "gridPos": { "h": 6, "w": 15, "x": 9, "y": 0 },
       "id": 6,
       "options": {
         "legend": {
@@ -414,17 +295,11 @@
           "placement": "bottom",
           "showLegend": true
         },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "tooltip": { "mode": "single", "sort": "none" }
       },
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
+          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
           "editorMode": "code",
           "expr": "max by (resource) (ha_cluster_pacemaker_fail_count)",
           "instant": false,
@@ -438,12 +313,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 6
-      },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
       "id": 13,
       "panels": [],
       "repeat": "hostname",
@@ -451,77 +321,51 @@
       "title": "Resources $hostname",
       "type": "row"
     },
+
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
       "description": "Status of Pacemaker resources on this host",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
+          "color": { "mode": "thresholds" },
           "mappings": [
             {
               "options": {
                 "pattern": ".*failed",
-                "result": {
-                  "color": "red",
-                  "index": 0
-                }
+                "result": { "color": "red", "index": 0 }
               },
               "type": "regex"
             },
             {
               "options": {
                 "pattern": "(stopping|starting).*",
-                "result": {
-                  "color": "yellow",
-                  "index": 1
-                }
+                "result": { "color": "yellow", "index": 1 }
               },
               "type": "regex"
             },
             {
               "options": {
                 "pattern": "unpromoted.*",
-                "result": {
-                  "color": "#808080",
-                  "index": 2
-                }
+                "result": { "color": "#808080", "index": 2 }
               },
               "type": "regex"
             },
             {
               "options": {
                 "pattern": ".*active",
-                "result": {
-                  "color": "green",
-                  "index": 3
-                }
+                "result": { "color": "green", "index": 3 }
               },
               "type": "regex"
             }
           ],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {
-                "color": "#808080",
-                "value": null
-              }
-            ]
+            "steps": [{ "color": "#808080", "value": null }]
           }
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 7
-      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 7 },
       "id": 10,
       "options": {
         "colorMode": "background",
@@ -529,9 +373,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -541,10 +383,7 @@
       "repeatDirection": "h",
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
+          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
           "editorMode": "code",
           "exemplar": false,
           "expr": "ha_cluster_pacemaker_resources{node=~\"$hostname\", group!='Anarchy-stack'} != 0",
@@ -561,34 +400,17 @@
           "id": "groupBy",
           "options": {
             "fields": {
-              "Time": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "agent": {
-                "aggregations": []
-              },
-              "group": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "node": {
-                "aggregations": []
-              },
-              "resource": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
+              "Time": { "aggregations": [], "operation": "groupby" },
+              "agent": { "aggregations": [] },
+              "group": { "aggregations": [], "operation": "groupby" },
+              "node": { "aggregations": [] },
+              "resource": { "aggregations": [], "operation": "groupby" },
               "role": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
+                "aggregations": ["lastNotNull"],
                 "operation": "aggregate"
               },
               "status": {
-                "aggregations": [
-                  "lastNotNull"
-                ],
+                "aggregations": ["lastNotNull"],
                 "operation": "aggregate"
               }
             }
@@ -604,9 +426,7 @@
               "right": "status (lastNotNull)"
             },
             "mode": "binary",
-            "reduce": {
-              "reducer": "sum"
-            },
+            "reduce": { "reducer": "sum" },
             "replaceFields": false
           }
         },
@@ -619,47 +439,30 @@
               "status (lastNotNull)": true
             },
             "indexByName": {},
-            "renameByName": {
-              "status": ""
-            }
+            "renameByName": { "status": "" }
           }
         },
         {
           "id": "partitionByValues",
-          "options": {
-            "fields": [
-              "resource"
-            ]
-          }
+          "options": { "fields": ["resource"] }
         },
         {
           "id": "renameByRegex",
-          "options": {
-            "regex": "status (.*)",
-            "renamePattern": "$1"
-          }
+          "options": { "regex": "status (.*)", "renamePattern": "$1" }
         }
       ],
       "type": "stat"
     },
+
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
       "description": "Status of Pacemaker resources on this host",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "shades"
-          },
+          "color": { "mode": "shades" },
           "custom": {
             "fillOpacity": 70,
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
             "insertNulls": 60000,
             "lineWidth": 0,
             "spanNulls": false
@@ -668,66 +471,40 @@
             {
               "options": {
                 "pattern": ".*failed",
-                "result": {
-                  "color": "red",
-                  "index": 0,
-                  "text": "failed"
-                }
+                "result": { "color": "red", "index": 0, "text": "failed" }
               },
               "type": "regex"
             },
             {
               "options": {
                 "pattern": "(starting|stopping).*",
-                "result": {
-                  "color": "yellow",
-                  "index": 1,
-                  "text": "$1"
-                }
+                "result": { "color": "yellow", "index": 1, "text": "$1" }
               },
               "type": "regex"
             },
             {
               "options": {
                 "pattern": "unpromoted.*",
-                "result": {
-                  "color": "#808080",
-                  "index": 2,
-                  "text": "unpromoted"
-                }
+                "result": { "color": "#808080", "index": 2, "text": "unpromoted" }
               },
               "type": "regex"
             },
             {
               "options": {
                 "pattern": ".*active",
-                "result": {
-                  "color": "green",
-                  "index": 3,
-                  "text": "active"
-                }
+                "result": { "color": "green", "index": 3, "text": "active" }
               },
               "type": "regex"
             }
           ],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              {
-                "color": "yellow",
-                "value": null
-              }
-            ]
+            "steps": [{ "color": "yellow", "value": null }]
           }
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 8,
-        "w": 16,
-        "x": 8,
-        "y": 7
-      },
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 7 },
       "id": 11,
       "options": {
         "alignValue": "left",
@@ -739,19 +516,13 @@
         "mergeValues": true,
         "rowHeight": 0.9,
         "showValue": "auto",
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "tooltip": { "mode": "single", "sort": "none" }
       },
       "pluginVersion": "10.1.2",
       "repeatDirection": "h",
       "targets": [
         {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${prometheus_datasource}"
-          },
+          "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
           "editorMode": "code",
           "exemplar": false,
           "expr": "ha_cluster_pacemaker_resources{node=~\"$hostname\", group!='Anarchy-stack'} != 0",
@@ -774,9 +545,7 @@
               "right": "status"
             },
             "mode": "binary",
-            "reduce": {
-              "reducer": "sum"
-            }
+            "reduce": { "reducer": "sum" }
           }
         },
         {
@@ -803,15 +572,13 @@
       ],
       "type": "state-timeline"
     },
+
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${prometheus_datasource}"
-      },
+      "datasource": { "type": "prometheus", "uid": "${prometheus_datasource}" },
       "description": "Status of Pacemaker Anarchy-stack resources on this host",
       "fieldConfig": {
         "defaults": {
-          "color": {
+                  "color": {
             "mode": "thresholds"
           },
           "mappings": [
@@ -1173,14 +940,14 @@
             "All"
           ],
           "value": [
-            "$__all"
+                        "$__all"
           ]
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "trixprometheus"
+          "uid": "${prometheus_datasource}"
         },
-        "definition": "label_values(up{luna_group=\"controller\"},hostname)",
+        "definition": "label_values(up{anarchy_group=\"controller\"},hostname)",
         "hide": 0,
         "includeAll": true,
         "label": "Hostname",
@@ -1188,7 +955,7 @@
         "name": "hostname",
         "options": [],
         "query": {
-          "query": "label_values(up{luna_group=\"controller\"},hostname)",
+          "query": "label_values(up{anarchy_group=\"controller\"},hostname)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -1201,7 +968,7 @@
         "current": {
           "selected": false,
           "text": "Prometheus",
-          "value": "trixprometheus"
+          "value": "anarchy-prometheus"
         },
         "description": "Prometheus data source",
         "hide": 2,
@@ -1225,7 +992,7 @@
   "timepicker": {},
   "timezone": "",
   "title": "High Availability",
-  "uid": "trixha",
+  "uid": "anarchy-ha",
   "version": 1,
   "weekStart": ""
 }

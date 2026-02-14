@@ -53,7 +53,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -153,7 +153,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -171,7 +171,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -190,7 +190,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -209,7 +209,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -326,7 +326,7 @@
               "hostname": true,
               "instance": true,
               "job": true,
-              "luna_group": true,
+              "anarchy_group": true,
               "oversubscribe": true,
               "type": true,
               "workdir": true
@@ -366,7 +366,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "trixprometheus"
+        "uid": "${prometheus_datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -447,7 +447,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "trixprometheus"
+            "uid": "${prometheus_datasource}"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -2541,7 +2541,7 @@
         "current": {
           "selected": false,
           "text": "Prometheus",
-          "value": "trixprometheus"
+          "value": "anarchy-prometheus"
         },
         "description": "Prometheus data source",
         "hide": 2,
@@ -2568,7 +2568,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "trixprometheus"
+          "uid": "${prometheus_datasource}"
         },
         "definition": "label_values(slurm_job_info_latest,jobstate)",
         "description": "Job State",
@@ -2600,7 +2600,7 @@
         },
         "datasource": {
           "type": "prometheus",
-          "uid": "trixprometheus"
+          "uid": "${prometheus_datasource}"
         },
         "definition": "label_values(slurm_job_info{jobstate=~\"$job_state\"},jobid)",
         "description": "Job ID",
@@ -2623,7 +2623,7 @@
       {
         "datasource": {
           "type": "prometheus",
-          "uid": "trixprometheus"
+          "uid": "${prometheus_datasource}"
         },
         "filters": [],
         "hide": 0,
