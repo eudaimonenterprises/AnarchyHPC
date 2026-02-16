@@ -15,9 +15,9 @@
       state: directory
       mode: '0755'
 
-  - name: "Create {{ trix_sync }}/k3s directory"
+  - name: "Create {{ anarchy_sync }}/k3s directory"
     ansible.builtin.file:
-      path: "{{ trix_sync }}/k3s/tls"
+      path: "{{ anarchy_sync }}/k3s/tls"
       state: directory
       mode: '0755'
     when: ha
@@ -27,10 +27,10 @@
   when: not in_image
   block:
 
-  - name: Retrieve the certificate and keys from {{trix_sync}}/k3s
+  - name: Retrieve the certificate and keys from {{anarchy_sync}}/k3s
     ansible.builtin.copy:
       remote_src: true
-      src: "{{ trix_sync }}/k3s/tls"
+      src: "{{ anarchy_sync }}/k3s/tls"
       dest: "/var/lib/rancher/k3s/server/tls"
     when: ha and not primary | default(True)
 
@@ -39,11 +39,11 @@
     include_tasks: certs.yml
     when: primary | default(True)
   
-  - name: Copy certificates and keys to {{trix_sync}}/k3s
+  - name: Copy certificates and keys to {{anarchy_sync}}/k3s
     ansible.builtin.copy:
       remote_src: true
       src: "/var/lib/rancher/k3s/server/tls"
-      dest: "{{ trix_sync }}/k3s/tls"
+      dest: "{{ anarchy_sync }}/k3s/tls"
     when: ha and primary | default(True)
 
 - name: Configure database for k3s
@@ -55,10 +55,10 @@
       state: directory
       mode: 0700
 
-  - name: Retrieve k3s user password for kubernetes DB from {{ trix_sync }}/k3s
+  - name: Retrieve k3s user password for kubernetes DB from {{ anarchy_sync }}/k3s
     ansible.builtin.copy:
       remote_src: true
-      src: "{{ trix_sync }}/k3s/{{ kubernetes_sql_user }}.txt"
+      src: "{{ anarchy_sync }}/k3s/{{ kubernetes_sql_user }}.txt"
       dest: "/etc/anarchy/passwords/mysql/{{ kubernetes_sql_user }}.txt"
     when: ha and not primary | default(True)
 
@@ -68,11 +68,11 @@
                             "/etc/anarchy/passwords/mysql/{{ kubernetes_sql_user }}.txt
                               chars=ascii_letters,digits,hexdigits") }}'
 
-  - name: Copy k3s user password to {{ trix_sync }}/k3s
+  - name: Copy k3s user password to {{ anarchy_sync }}/k3s
     ansible.builtin.copy:
       remote_src: true
       src: "/etc/anarchy/passwords/mysql/{{ kubernetes_sql_user }}.txt"
-      dest: "{{ trix_sync }}/k3s/{{ kubernetes_sql_user }}.txt"
+      dest: "{{ anarchy_sync }}/k3s/{{ kubernetes_sql_user }}.txt"
     when: ha and primary | default(True)
 
   - name: Create DB for k3s
@@ -185,10 +185,10 @@
         dest: /etc/systemd/system/k3s-server-nodes-cleaner.timer
         mode: '0644'
 
-    - name: Retrieve the token from {{ trix_sync }}/k3s/token
+    - name: Retrieve the token from {{ anarchy_sync }}/k3s/token
       ansible.builtin.copy:
         remote_src: true
-        src: "{{ trix_sync }}/k3s/token"
+        src: "{{ anarchy_sync }}/k3s/token"
         dest: /var/lib/rancher/k3s/server/token
         mode: '0600'
       when: ha and not primary | default(True)
@@ -214,11 +214,11 @@
         daemon_reload: true
         enabled: true
 
-    - name: "Copy the token to {{ trix_sync }}/k3s/token"
+    - name: "Copy the token to {{ anarchy_sync }}/k3s/token"
       ansible.builtin.copy:
         remote_src: true
         src: /var/lib/rancher/k3s/server/token
-        dest: "{{ trix_sync }}/k3s/token"
+        dest: "{{ anarchy_sync }}/k3s/token"
         mode: '0600'
       when: ha and primary | default(True)
 

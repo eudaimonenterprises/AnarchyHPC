@@ -3,7 +3,7 @@ Description=Aria2c systemd script
 
 [Service]
 Type=simple
-ExecStart={{ trix_sbin }}/aria2c-daemon.sh
+ExecStart={{ anarchy_sbin }}/aria2c-daemon.sh
 SendSIGHUP=yes
 StandardOutput=file:/var/log/aria2c.log
 StandardError=file:/var/log/aria2c.log

@@ -47,7 +47,7 @@
 - name: Copy cluster CA certificate from sync
   copy:
     remote_src: true
-    src: '{{ trix_sync }}/ssl/{{ item }}'
+    src: '{{ anarchy_sync }}/ssl/{{ item }}'
     dest: '{{ ssl_cert_path }}'
   with_items:
     - '{{ ssl_ca_cert | basename }}'
@@ -149,14 +149,14 @@
 
   - name: Ensure ssl sync directory exists
     file:
-      path: '{{ trix_sync }}/ssl'
+      path: '{{ anarchy_sync }}/ssl'
       state: directory
 
   - name: Add CA certificate to sync
     copy:
       remote_src: true
       src: '{{ ssl_cert_path }}/{{ item }}'
-      dest: '{{ trix_sync }}/ssl/{{ item }}'
+      dest: '{{ anarchy_sync }}/ssl/{{ item }}'
       mode: '0640'
     with_items:
       - '{{ ssl_ca_cert | basename }}'

@@ -18,14 +18,14 @@
       block: |
         {{anarchy_ctrl1_ip}}    {{anarchy_ctrl1_hostname}}.{{anarchy_domain}} {{anarchy_ctrl1_hostname}}
         {{anarchy_ctrl2_ip}}    {{anarchy_ctrl2_hostname}}.{{anarchy_domain}} {{anarchy_ctrl2_hostname}}
-        {{trix_ctrl3_ip}}    {{trix_ctrl3_hostname}}.{{anarchy_domain}} {{trix_ctrl3_hostname}}
-        {{trix_ctrl4_ip}}    {{trix_ctrl4_hostname}}.{{anarchy_domain}} {{trix_ctrl4_hostname}}
+        {{anarchy_ctrl3_ip}}    {{anarchy_ctrl3_hostname}}.{{anarchy_domain}} {{anarchy_ctrl3_hostname}}
+        {{anarchy_ctrl4_ip}}    {{anarchy_ctrl4_hostname}}.{{anarchy_domain}} {{anarchy_ctrl4_hostname}}
         {{anarchy_ctrl_ip}}    {{anarchy_ctrl_hostname}}.{{anarchy_domain}} {{anarchy_ctrl_hostname}}
     when: 
-      - trix_ctrl3_ip is defined
-      - trix_ctrl3_hostname is defined
-      - trix_ctrl4_ip is defined
-      - trix_ctrl4_hostname is defined
+      - anarchy_ctrl3_ip is defined
+      - anarchy_ctrl3_hostname is defined
+      - anarchy_ctrl4_ip is defined
+      - anarchy_ctrl4_hostname is defined
 
   - name: Set HA controllers' domain name
     blockinfile:
@@ -33,12 +33,12 @@
       block: |
         {{anarchy_ctrl1_ip}}    {{anarchy_ctrl1_hostname}}.{{anarchy_domain}} {{anarchy_ctrl1_hostname}}
         {{anarchy_ctrl2_ip}}    {{anarchy_ctrl2_hostname}}.{{anarchy_domain}} {{anarchy_ctrl2_hostname}}
-        {{trix_ctrl3_ip}}    {{trix_ctrl3_hostname}}.{{anarchy_domain}} {{trix_ctrl3_hostname}}
+        {{anarchy_ctrl3_ip}}    {{anarchy_ctrl3_hostname}}.{{anarchy_domain}} {{anarchy_ctrl3_hostname}}
         {{anarchy_ctrl_ip}}    {{anarchy_ctrl_hostname}}.{{anarchy_domain}} {{anarchy_ctrl_hostname}}
     when: 
-      - trix_ctrl3_ip is defined
-      - trix_ctrl3_hostname is defined
-      - (trix_ctrl4_ip is not defined) or (trix_ctrl4_hostname is not defined)
+      - anarchy_ctrl3_ip is defined
+      - anarchy_ctrl3_hostname is defined
+      - (anarchy_ctrl4_ip is not defined) or (anarchy_ctrl4_hostname is not defined)
 
   - name: Set HA controllers' domain name
     blockinfile:
@@ -48,8 +48,8 @@
         {{anarchy_ctrl2_ip}}    {{anarchy_ctrl2_hostname}}.{{anarchy_domain}} {{anarchy_ctrl2_hostname}}
         {{anarchy_ctrl_ip}}    {{anarchy_ctrl_hostname}}.{{anarchy_domain}} {{anarchy_ctrl_hostname}}
     when: 
-      - (trix_ctrl3_ip is not defined) or (trix_ctrl3_hostname is not defined)
-      - (trix_ctrl4_ip is not defined) or (trix_ctrl4_hostname is not defined)
+      - (anarchy_ctrl3_ip is not defined) or (anarchy_ctrl3_hostname is not defined)
+      - (anarchy_ctrl4_ip is not defined) or (anarchy_ctrl4_hostname is not defined)
   when: ha|default(False)
 
 - name: Set non-HA controller's domain name

@@ -5,10 +5,10 @@
     virtualenv: "{{ anarchy_local }}/python"
     extra_args: "--upgrade"
 
-- name: Symlink '{{ anarchy_local }}/python/bin/trix-config-manager' to '{{ anarchy_local }}/sbin/trix-config-manager'
+- name: Symlink '{{ anarchy_local }}/python/bin/anarchy-config-manager' to '{{ anarchy_local }}/sbin/anarchy-config-manager'
   ansible.builtin.file:
-    src: "{{ anarchy_local }}/python/bin/trix-config-manager"
-    dest: "{{ anarchy_local }}/sbin/trix-config-manager"
+    src: "{{ anarchy_local }}/python/bin/anarchy-config-manager"
+    dest: "{{ anarchy_local }}/sbin/anarchy-config-manager"
     state: link
 
 

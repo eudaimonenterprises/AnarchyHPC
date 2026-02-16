@@ -5,7 +5,7 @@ Before = ondemand-dex.service httpd.service
 
 [Service]
 Type = oneshot
-ExecStart = {{ trix_sbin }}/login-node-ood-reconfigure.sh
+ExecStart = {{ anarchy_sbin }}/login-node-ood-reconfigure.sh
 
 [Install]
 WantedBy = multi-user.target

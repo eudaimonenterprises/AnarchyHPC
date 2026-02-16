@@ -11,8 +11,8 @@
   - role: anarchy/password
     tags: password
 
-  - role: anarchy/trix-tree
-    tags: trix-tree
+  - role: anarchy/anarchy-tree
+    tags: anarchy-tree
 
   - role: anarchy/packages
     tags: packages
@@ -49,7 +49,7 @@
     sss_ldap_hosts:
     - '{{ anarchy_ctrl_hostname }}.{{ anarchy_domain }}'
     sss_filter_enabled: '{{ not enable_slurm_pam }}'
-    sss_use_ds389: '{{ trix_use_ds389 | default(False) }}'
+    sss_use_ds389: '{{ anarchy_use_ds389 | default(False) }}'
     tags: sssd
 
   - role: anarchy/nfs-mounts
@@ -182,6 +182,6 @@
     tags: wrapup-images
 
   environment:
-    no_proxy: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(anarchy_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(anarchy_ctrl2_hostname) }}"
-    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }},{{ trix_ctrl3_hostname|default(anarchy_ctrl1_hostname) }},{{ trix_ctrl4_hostname|default(anarchy_ctrl2_hostname) }}"
+    no_proxy: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }},{{ anarchy_ctrl3_hostname|default(anarchy_ctrl1_hostname) }},{{ anarchy_ctrl4_hostname|default(anarchy_ctrl2_hostname) }}"
+    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }},{{ anarchy_ctrl3_hostname|default(anarchy_ctrl1_hostname) }},{{ anarchy_ctrl4_hostname|default(anarchy_ctrl2_hostname) }}"
   tags: image-setup

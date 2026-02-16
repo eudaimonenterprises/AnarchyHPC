@@ -12,7 +12,7 @@
   - name: Copy prometheus password from sync
     copy:
       remote_src: true
-      src: '{{ trix_sync }}/prometheus/{{ prometheus_alertmanager_auth.credentials_file | basename }}'
+      src: '{{ anarchy_sync }}/prometheus/{{ prometheus_alertmanager_auth.credentials_file | basename }}'
       dest: '{{ prometheus_alertmanager_auth.credentials_file }}'
       mode: 0640
       group: '{{ prometheus_alertmanager_auth.group_access | default("root") }}'
@@ -52,14 +52,14 @@
 - block:
   - name: Ensure prometheus alertmanager sync directory exists
     file:
-      path: '{{ trix_sync }}/prometheus'
+      path: '{{ anarchy_sync }}/prometheus'
       state: directory
 
   - name: Add prometheus password to sync
     copy:
       remote_src: true
       src: '{{ prometheus_alertmanager_auth.credentials_file }}'
-      dest: '{{ trix_sync }}//prometheus/'
+      dest: '{{ anarchy_sync }}//prometheus/'
   when:
     - primary | default(True)
     - ha | default(False)

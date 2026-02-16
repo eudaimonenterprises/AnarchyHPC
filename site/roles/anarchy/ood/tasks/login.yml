@@ -5,7 +5,7 @@
     - name: Render login-node-ood-reconfigure script
       template:
         src: 'login/login-node-ood-reconfigure-script.j2'
-        dest: '{{ trix_sbin }}/login-node-ood-reconfigure.sh'
+        dest: '{{ anarchy_sbin }}/login-node-ood-reconfigure.sh'
         owner: root
         group: root
         mode: 0750

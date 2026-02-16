@@ -56,15 +56,15 @@ resource {{ disk.name | replace("/","_") }} {
         address   {{ drbd_ctrl2_ip }}:{{ port[0] }};
     }
 
-{% if trix_ctrl3_hostname is defined %}
-    on "{{ trix_ctrl3_hostname }}" {
+{% if anarchy_ctrl3_hostname is defined %}
+    on "{{ anarchy_ctrl3_hostname }}" {
         node-id   2;
         address   {{ drbd_ctrl3_ip }}:{{ port[0] }};
     }
 {% endif %}
 
-{% if trix_ctrl4_hostname is defined %}
-    on "{{ trix_ctrl4_hostname }}" {
+{% if anarchy_ctrl4_hostname is defined %}
+    on "{{ anarchy_ctrl4_hostname }}" {
         node-id   3;
         address   {{ drbd_ctrl4_ip }}:{{ port[0] }};
     }
@@ -72,11 +72,11 @@ resource {{ disk.name | replace("/","_") }} {
 
     connection-mesh {
         hosts     "{{ anarchy_ctrl1_hostname }}" "{{ anarchy_ctrl2_hostname }}"
-{%- if trix_ctrl3_hostname is defined %}
- "{{ trix_ctrl3_hostname }}" 
+{%- if anarchy_ctrl3_hostname is defined %}
+ "{{ anarchy_ctrl3_hostname }}" 
 {%- endif -%}
-{%- if trix_ctrl4_hostname is defined %}
- "{{ trix_ctrl4_hostname }}" 
+{%- if anarchy_ctrl4_hostname is defined %}
+ "{{ anarchy_ctrl4_hostname }}" 
 {%- endif -%};
     }
 }

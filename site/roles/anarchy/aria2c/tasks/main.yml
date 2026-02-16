@@ -22,7 +22,7 @@
 - name: Render aria2c daemon script
   template:
     src: 'aria2c-daemon.sh.j2'
-    dest: "{{ trix_sbin }}/aria2c-daemon.sh"
+    dest: "{{ anarchy_sbin }}/aria2c-daemon.sh"
     owner: 'root'
     group: 'root'
     mode: '0755'

@@ -91,29 +91,29 @@ nodelist {
                 ring1_addr: {{ anarchy_ctrl2_heartbeat_ip }}
                 {% endif -%}
         }
-{% if trix_ctrl3_hostname is defined %}
+{% if anarchy_ctrl3_hostname is defined %}
         node {
                 # Hostname of the node
-                name: {{ trix_ctrl3_hostname }}
+                name: {{ anarchy_ctrl3_hostname }}
                 # Cluster membership node identifier
                 nodeid: 3
                 # Address of first link
-                ring0_addr: {{ trix_ctrl3_ip }}
-                {% if anarchy_ctrl1_heartbeat_ip is defined and trix_ctrl3_heartbeat_ip is defined -%}
-                ring1_addr: {{ trix_ctrl3_heartbeat_ip }}
+                ring0_addr: {{ anarchy_ctrl3_ip }}
+                {% if anarchy_ctrl1_heartbeat_ip is defined and anarchy_ctrl3_heartbeat_ip is defined -%}
+                ring1_addr: {{ anarchy_ctrl3_heartbeat_ip }}
                 {% endif -%}
         }
 {% endif %}
-{% if trix_ctrl4_hostname is defined %}
+{% if anarchy_ctrl4_hostname is defined %}
         node {
                 # Hostname of the node
-                name: {{ trix_ctrl4_hostname }}
+                name: {{ anarchy_ctrl4_hostname }}
                 # Cluster membership node identifier
                 nodeid: 4
                 # Address of first link
-                ring0_addr: {{ trix_ctrl4_ip }}
-                {% if anarchy_ctrl1_heartbeat_ip is defined  and trix_ctrl4_heartbeat_ip is defined -%}
-                ring1_addr: {{ trix_ctrl4_heartbeat_ip }}
+                ring0_addr: {{ anarchy_ctrl4_ip }}
+                {% if anarchy_ctrl1_heartbeat_ip is defined  and anarchy_ctrl4_heartbeat_ip is defined -%}
+                ring1_addr: {{ anarchy_ctrl4_heartbeat_ip }}
                 {% endif -%}
         }
 {% endif %}

@@ -20,14 +20,14 @@
   # -- start sync
   - name: Ensure ssh keys sync directory exists
     file:
-      path: '{{ trix_sync }}/ssh'
+      path: '{{ anarchy_sync }}/ssh'
       state: directory
 
   - name: Add cluster ssh key to sync
     copy:
       remote_src: true
       src: '/root/.ssh/{{ item }}'
-      dest: '{{ trix_sync }}/ssh/{{ item }}'
+      dest: '{{ anarchy_sync }}/ssh/{{ item }}'
       mode: 0640
     with_items:
       - id_cluster_rsa
@@ -42,7 +42,7 @@
   - name: Copy cluster ssh keys from sync
     copy:
       remote_src: true
-      src: '{{ trix_sync }}/ssh/{{ item.0 }}'
+      src: '{{ anarchy_sync }}/ssh/{{ item.0 }}'
       dest: '/root/.ssh/'
       mode: '{{ item.1 }}'
     with_together:

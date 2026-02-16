@@ -48,14 +48,14 @@
 
   - name: Ensure drbd sync directory exists
     file:
-      path: '{{ trix_sync }}/drbd'
+      path: '{{ anarchy_sync }}/drbd'
       state: directory
 
   - name: Copy drbd shared secret to sync
     copy:
       remote_src: true
       src: '/etc/drbd.d/sharedsecret'
-      dest: '{{ trix_sync }}/drbd/'
+      dest: '{{ anarchy_sync }}/drbd/'
       mode: 0640
       owner: root
       group: root
@@ -65,7 +65,7 @@
 - name: Copy DRBD shared secret from ha storage
   copy:
     remote_src: true
-    src: '{{ trix_sync }}/drbd/sharedsecret'
+    src: '{{ anarchy_sync }}/drbd/sharedsecret'
     dest: '/etc/drbd.d/'
     mode: 0640
     owner: root

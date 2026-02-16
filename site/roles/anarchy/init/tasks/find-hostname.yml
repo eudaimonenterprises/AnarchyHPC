@@ -1,9 +1,9 @@
 ---
 
 - set_fact:
-    trix_this_ctrl_hostname: '{{ inner_loop_var }}'
+    anarchy_this_ctrl_hostname: '{{ inner_loop_var }}'
   when: 
-    - trix_this_ctrl_hostname is not defined
+    - anarchy_this_ctrl_hostname is not defined
     - inner_loop_var != ""
     - ansible_hostname == inner_loop_var
 

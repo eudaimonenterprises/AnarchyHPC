@@ -57,8 +57,8 @@
 
 - name: Add controller internal interface to trusted zone
   set_fact:
-     firewalld_trusted_interfaces: "{{ [trix_ctrl_interface] + firewalld_trusted_interfaces }}"
-  when: trix_ctrl_interface is defined and trix_ctrl_interface != ""
+     firewalld_trusted_interfaces: "{{ [anarchy_ctrl_interface] + firewalld_trusted_interfaces }}"
+  when: anarchy_ctrl_interface is defined and anarchy_ctrl_interface != ""
 
 - name: Assign interfaces to the trusted zone
   firewalld:

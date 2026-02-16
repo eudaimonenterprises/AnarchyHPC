@@ -52,7 +52,7 @@
     # ------------------------------------------------------------
     - anarchy/nfs             # NFS exports
     - anarchy/shared-fs
-    - anarchy/shared-tree
+    - anarchy/anarchy-tree
 
     # ------------------------------------------------------------
     # Slurm Controller

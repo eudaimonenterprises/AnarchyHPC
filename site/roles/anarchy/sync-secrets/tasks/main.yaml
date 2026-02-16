@@ -45,13 +45,13 @@
       msg: 'Using {{ sync_remote }} ip for syncing'
 
   - name: Temporarily mount sync from sync/primary controller
-    shell: "mount {{ sync_remote }}:{{ trix_sync }} /mnt/sync"
+    shell: "mount {{ sync_remote }}:{{ anarchy_sync }} /mnt/sync"
 
   - name: Copy all secrets
     copy:
       remote_src: true
       src: '/mnt/sync/'
-      dest: '{{ trix_sync }}'
+      dest: '{{ anarchy_sync }}'
 
   - name: Umount sync
     shell: "umount -l /mnt/sync"

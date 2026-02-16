@@ -33,7 +33,7 @@
   - name: Copy ds389 password from sync
     copy:
       remote_src: true
-      src: '{{ trix_sync }}/ds389/root.txt'
+      src: '{{ anarchy_sync }}/ds389/root.txt'
       dest: '/etc/anarchy/passwords/ds389/'
   when: 
     - not primary | default(False)
@@ -56,14 +56,14 @@
 - block:
   - name: Ensure ds389 sync directory exists
     file:
-      path: '{{ trix_sync }}/ds389'
+      path: '{{ anarchy_sync }}/ds389'
       state: directory
 
   - name: Add ds389 password to sync
     copy:
       remote_src: true
       src: '/etc/anarchy/passwords/ds389/root.txt'
-      dest: '{{ trix_sync }}/ds389/'
+      dest: '{{ anarchy_sync }}/ds389/'
       mode: 0640
   when:
     - primary | default(True)

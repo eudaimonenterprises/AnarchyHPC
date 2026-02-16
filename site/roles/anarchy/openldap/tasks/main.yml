@@ -23,7 +23,7 @@
   - name: Copy openldap password from sync
     copy:
       remote_src: true
-      src: '{{ trix_sync }}/openldap/root.txt'
+      src: '{{ anarchy_sync }}/openldap/root.txt'
       dest: '/etc/anarchy/passwords/openldap/'
   when: 
     - not primary | default(False)
@@ -47,14 +47,14 @@
 - block:
   - name: Ensure openldap sync directory exists
     file:
-      path: '{{ trix_sync }}/openldap'
+      path: '{{ anarchy_sync }}/openldap'
       state: directory
 
   - name: Add openldap password to sync
     copy:
       remote_src: true
       src: '/etc/anarchy/passwords/openldap/root.txt'
-      dest: '{{ trix_sync }}/openldap/'
+      dest: '{{ anarchy_sync }}/openldap/'
       mode: 0640
   when:
     - primary | default(True)
