@@ -1,0 +1,6 @@
+---
+galaxy_info:
+  author: you
+  description: Stub role for xCAT group creation
+  license: MIT
+dependencies: []

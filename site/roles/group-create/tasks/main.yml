@@ -1,0 +1,3 @@
+---
+- debug:
+    msg: "group-create role stub — not implemented yet"
