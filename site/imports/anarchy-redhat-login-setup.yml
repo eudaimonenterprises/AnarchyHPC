@@ -22,37 +22,39 @@
       tags: always
 
   roles:
-    # Facts
+    # ------------------------------------------------------------
+    # Basic system setup
+    # ------------------------------------------------------------
     - role: ansible.builtin.setup
       tags: always
 
-    # Basic packages, ssh, firewall, chrony
-    - role: geerlingguy.repo-epel
-    - role: geerlingguy.firewall
-      firewall_allowed_tcp_ports:
-        - 22
-        - 111
-        - 2049
-        - 443
-        - 6817
-        - 6818
-        - 6819
-      tags: firewalld
+    - role: anarchy/packages
+      tags: packages
 
-    - role: geerlingguy.chrony
-      chrony_ntp_servers:
-        - "{{ anarchy_ctrl_ip }}"
-      tags: chrony
-
-    - role: devsec.hardening.ssh_hardening
-      tags: ssh
-
-    # Hostname
-    - role: geerlingguy.hostname
-      hostname: "{{ inventory_hostname }}"
+    - role: anarchy/hostname
       tags: hostname
 
-    # SSL cert (you can swap this for your own cert management)
+    - role: anarchy/chrony
+      tags: chrony
+
+    - role: anarchy/firewalld
+      tags: firewalld
+
+    - role: anarchy/ssh
+      tags: ssh
+
+    - role: anarchy/pwquality
+      tags: pwquality
+
+    - role: anarchy/no_proxy
+      tags: no_proxy
+
+    - role: anarchy/resolv
+      tags: resolv
+
+    # ------------------------------------------------------------
+    # SSL certificate (local self-signed)
+    # ------------------------------------------------------------
     - name: Ensure self-signed cert for login node
       ansible.builtin.command:
         cmd: >
@@ -65,77 +67,87 @@
         creates: /etc/pki/tls/certs/login.crt
       tags: ssl-cert
 
-    # SSSD (LDAP/389ds assumed configured on controller)
-    - role: geerlingguy.sssd
-      sssd_domains:
-        - name: "LDAP"
-          ldap_uri: "ldap://{{ anarchy_ctrl_hostname }}.{{ anarchy_domain }}"
-          ldap_search_base: "dc=example,dc=com"
+    # ------------------------------------------------------------
+    # Authentication (SSSD)
+    # ------------------------------------------------------------
+    - role: anarchy/sssd
       tags: sssd
 
-    # NFS mounts
-    - role: geerlingguy.nfs
-      nfs_client: true
-      nfs_mounts:
-        - mount: "{{ nfs_home }}"
-          src: "{{ anarchy_ctrl_hostname }}:{{ nfs_home }}"
-          opts: "defaults,nfsvers=4,rw,retrans=4,noatime,_netdev"
-          state: mounted
-        - mount: "{{ nfs_shared }}"
-          src: "{{ anarchy_ctrl_hostname }}:{{ nfs_shared }}"
-          opts: "defaults,nfsvers=4,ro,retrans=4,_netdev"
-          state: mounted
+    - role: anarchy/nscd
+      tags: nscd
+
+    # ------------------------------------------------------------
+    # NFS client mounts
+    # ------------------------------------------------------------
+    - role: anarchy/nfs-mounts
+      vars:
+        nfs_mounts:
+          - mount: "{{ nfs_home }}"
+            src: "{{ anarchy_ctrl_hostname }}:{{ nfs_home }}"
+            opts: "defaults,nfsvers=4,rw,retrans=4,noatime,_netdev"
+            state: mounted
+          - mount: "{{ nfs_shared }}"
+            src: "{{ anarchy_ctrl_hostname }}:{{ nfs_shared }}"
+            opts: "defaults,nfsvers=4,ro,retrans=4,_netdev"
+            state: mounted
       tags: nfs-mounts
 
-    # Environment modules (optional OpenHPC integration can be added separately)
-    - role: geerlingguy.environment-modules
+    # ------------------------------------------------------------
+    # Environment modules
+    # ------------------------------------------------------------
+    - role: anarchy/environment-modules
       tags: environment-modules
 
-    # Slurm client on login node
-    - role: galaxyproject.slurm
-      slurm_role: client
-      slurm_controller_host: "{{ anarchy_ctrl_hostname }}"
-      when: true
+    # ------------------------------------------------------------
+    # Slurm client
+    # ------------------------------------------------------------
+    - role: anarchy/slurm
+      vars:
+        slurm_role: "client"
+        slurm_controller_host: "{{ anarchy_ctrl_hostname }}"
       tags: slurm
 
-    # rsyslog forwarding to controller
+    - role: anarchy/config-slurm
+      tags: slurm
+
+    # ------------------------------------------------------------
+    # rsyslog forwarding
+    # ------------------------------------------------------------
     - name: Configure rsyslog forwarding to controller
       ansible.builtin.blockinfile:
         path: /etc/rsyslog.d/10-controller.conf
         create: yes
         block: |
-          *.* @@{{ anarchy_ctrl_ip }}:514
+          *.* @@{{ controller_ip }}:514
       notify: Restart rsyslog
       tags: rsyslog
 
-    # Open OnDemand on login node
-    - role: osc.open_ondemand
-      ood_port: 443
-      ood_auth: "basic_pam"
+    # ------------------------------------------------------------
+    # Open OnDemand (login node)
+    # ------------------------------------------------------------
+    - role: anarchy/nginx
+      when: enable_ood
+      tags: nginx
+
+    - role: anarchy/ood
       when: enable_ood
       tags: ood
 
-    # Prometheus node exporter
-    - role: cloudalchemy.node_exporter
-      when: enable_prometheus
-      tags: prometheus-node-exporter, monitoring
+    - role: anarchy/ood-apps
+      when: enable_ood
+      tags: ood-apps
 
-    # Basic logrotate
-    - name: Ensure logrotate for system logs
-      ansible.builtin.copy:
-        dest: /etc/logrotate.d/system-logs
-        content: |
-          /var/log/messages /var/log/secure /var/log/cron /var/log/maillog {
-              weekly
-              rotate 4
-              compress
-              missingok
-              notifempty
-              sharedscripts
-              postrotate
-                  /bin/systemctl reload rsyslog.service > /dev/null 2>&1 || true
-              endscript
-          }
+    # ------------------------------------------------------------
+    # Prometheus node exporter
+    # ------------------------------------------------------------
+    - role: anarchy/prometheus-node-exporter
+      when: enable_prometheus
+      tags: prometheus-node-exporter
+
+    # ------------------------------------------------------------
+    # Logrotate
+    # ------------------------------------------------------------
+    - role: anarchy/logrotate
       tags: logrotate
 
   handlers:
@@ -145,6 +157,6 @@
         state: restarted
 
   environment:
-    no_proxy: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }}"
-    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }}"
+    no_proxy: ".{{ anarchy_domain }},{{ controller_ip }}"
+    NO_PROXY: ".{{ anarchy_domain }},{{ controller_ip }}"
   tags: image-setup

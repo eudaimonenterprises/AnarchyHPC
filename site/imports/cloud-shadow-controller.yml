@@ -13,32 +13,26 @@
       - 1.1.1.1
 
   roles:
+    # ------------------------------------------------------------
     # Basic system prep
-    - role: geerlingguy.repo-epel
-    - role: geerlingguy.firewall
-      firewall_allowed_tcp_ports:
-        - 22
-        - 111
-        - 2049
-        - 3121
-        - 5405
-        - 21064
-        - 53
-        - 514
+    # ------------------------------------------------------------
+    - role: anarchy/packages
+      tags: packages
+
+    - role: anarchy/firewalld
       tags: firewalld
 
-    - role: geerlingguy.chrony
-      chrony_ntp_servers:
-        - "{{ controller_nodes[0] }}"
+    - role: anarchy/chrony
       tags: chrony
 
-    - role: geerlingguy.hostname
-      hostname: "{{ inventory_hostname }}"
+    - role: anarchy/hostname
       tags: hostname
 
-    # SSL certificates (self-signed or real)
+    # ------------------------------------------------------------
+    # SSL certificates (self-signed)
+    # ------------------------------------------------------------
     - name: Create self-signed SSL certificate
-      command: >
+      ansible.builtin.command: >
         openssl req -x509 -nodes -days 3650
         -newkey rsa:2048
         -keyout /etc/pki/tls/private/cluster.key
@@ -48,16 +42,19 @@
         creates: /etc/pki/tls/certs/cluster.crt
       tags: ssl-cert
 
-    # Optional DNS server
-    - role: geerlingguy.bind
-      bind_forwarders: "{{ anarchy_dns_forwarders }}"
-      bind_listen_ipv4:
-        - "any"
+    # ------------------------------------------------------------
+    # DNS server (Bind)
+    # ------------------------------------------------------------
+    - role: anarchy/bind
+      vars:
+        bind_forwarders: "{{ anarchy_dns_forwarders }}"
       tags: bind
 
+    # ------------------------------------------------------------
     # Pacemaker + Corosync HA stack
+    # ------------------------------------------------------------
     - name: Install HA packages
-      package:
+      ansible.builtin.package:
         name:
           - pacemaker
           - corosync
@@ -66,51 +63,55 @@
       tags: ha
 
     - name: Enable and start pcsd
-      service:
+      ansible.builtin.service:
         name: pcsd
         state: started
         enabled: true
       tags: ha
 
     - name: Set hacluster password
-      command: "echo hacluster:password | chpasswd"
+      ansible.builtin.command: "echo hacluster:password | chpasswd"
       tags: ha
 
     - name: Authenticate pcs cluster nodes
-      command: >
+      ansible.builtin.command: >
         pcs host auth {{ controller_nodes | join(' ') }}
         -u hacluster -p password
       tags: ha
       run_once: true
 
     - name: Create HA cluster
-      command: >
+      ansible.builtin.command: >
         pcs cluster setup {{ cluster_name }}
         {{ controller_nodes | join(' ') }}
       tags: ha
       run_once: true
 
     - name: Start and enable HA cluster
-      command: pcs cluster start --all
+      ansible.builtin.command: pcs cluster start --all
       tags: ha
       run_once: true
 
     - name: Enable cluster services
-      command: pcs cluster enable --all
+      ansible.builtin.command: pcs cluster enable --all
       tags: ha
       run_once: true
 
+    # ------------------------------------------------------------
     # Virtual IP for controller failover
+    # ------------------------------------------------------------
     - name: Create virtual IP resource
-      command: >
+      ansible.builtin.command: >
         pcs resource create ClusterIP ocf:heartbeat:IPaddr2
         ip={{ controller_vip }} cidr_netmask=24 op monitor interval=30s
       tags: ha
       run_once: true
 
+    # ------------------------------------------------------------
     # rsyslog forwarding
+    # ------------------------------------------------------------
     - name: Configure rsyslog forwarding
-      blockinfile:
+      ansible.builtin.blockinfile:
         path: /etc/rsyslog.d/10-controller.conf
         block: |
           *.* @@{{ controller_vip }}:514
@@ -119,6 +120,6 @@
 
   handlers:
     - name: Restart rsyslog
-      service:
+      ansible.builtin.service:
         name: rsyslog
         state: restarted

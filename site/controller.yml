@@ -1,169 +1,99 @@
 ---
-- hosts: controllers
-  become: true
-  serial: 1
-
-  vars:
-    host_role: controller
-
-    # Controller identity
-    anarchy_domain: "cluster.local"
-    anarchy_ctrl_hostname: "controller1"
-    controller_ip: "10.0.0.1"
-
-    # Provisioning interface (correct variable)
-    anarchy_cluster_if: "eth0"
-
-    # Feature toggles
-    enable_ldap: true
-    ldap_backend: "openldap"
-    enable_slurm: true
-    enable_ood: true
-    enable_prometheus: true
-    enable_grafana: true
-
-    # NFS exports
-    nfs_exports:
-      - path: "/srv/nfs/home"
-        options: "*(rw,no_root_squash)"
-      - path: "/srv/nfs/shared"
-        options: "*(rw,no_root_squash)"
+- name: Configure HPC Controller Node
+  hosts: controller
+  become: yes
 
   roles:
 
-    ###########################################################################
-    # System preparation
-    ###########################################################################
-    - role: geerlingguy.repo-epel
-    - role: geerlingguy.firewall
-      firewall_allowed_tcp_ports:
-        - 22
-        - 111
-        - 2049
-        - 443
-        - 6817
-        - 6818
-        - 6819
-        - 3000
-        - 9090
-        - 9093
+    # ------------------------------------------------------------
+    # Core bootstrap
+    # ------------------------------------------------------------
+    - anarchy/prepare
+    - anarchy/init
+    - anarchy/packages
+    - anarchy/hostname
+    - anarchy/chrony
+    - anarchy/firewalld
+    - anarchy/pwquality
+    - anarchy/no_proxy
+    - anarchy/resolv
+    - anarchy/ssl-cert
+    - anarchy/environment
+    - anarchy/environment-modules
+    - anarchy/tunables
+    - anarchy/logrotate
 
-    - role: geerlingguy.chrony
+    # ------------------------------------------------------------
+    # Identity & Authentication
+    # ------------------------------------------------------------
+    - anarchy/ldap-backend-selector
+    - anarchy/openldap        # You selected OpenLDAP
+    - anarchy/sssd
+    - anarchy/nscd
+    - anarchy/password
 
-    ###########################################################################
-    # Hostname + networking
-    ###########################################################################
-    - role: geerlingguy.hostname
-      hostname: "{{ anarchy_ctrl_hostname }}"
+    # ------------------------------------------------------------
+    # Networking & Provisioning (xCAT stack)
+    # ------------------------------------------------------------
+    - anarchy/bind            # DNS
+    - anarchy/kea             # DHCP
+    - anarchy/xcat            # Provisioning
+    - anarchy/image-create
+    - anarchy/image-download
+    - anarchy/target
+    - anarchy/config-genders
+    - anarchy/config-manager
+    - anarchy/lock-check
+    - anarchy/check-latest-kernel
+    - anarchy/obol
 
-    ###########################################################################
-    # LDAP / 389‑DS
-    ###########################################################################
-    - role: geerlingguy.openldap_server
-      when: enable_ldap and ldap_backend == "openldap"
+    # ------------------------------------------------------------
+    # Storage & Shared Filesystems
+    # ------------------------------------------------------------
+    - anarchy/nfs             # NFS exports
+    - anarchy/shared-fs
+    - anarchy/shared-tree
 
-    - role: lisenet.389ds
-      when: enable_ldap and ldap_backend == "389ds"
+    # ------------------------------------------------------------
+    # Slurm Controller
+    # ------------------------------------------------------------
+    - anarchy/slurm
+    - anarchy/config-slurm
+    - anarchy/slurm-sbank
+    - anarchy/rdma-centos     # Optional but common for HPC fabrics
 
-    - role: geerlingguy.sssd
-      when: enable_ldap
+    # ------------------------------------------------------------
+    # Monitoring Stack (Prometheus + Grafana)
+    # ------------------------------------------------------------
+    - anarchy/prometheus-server
+    - anarchy/prometheus-alertmanager
+    - anarchy/prometheus-slurm-exporter
+    - anarchy/prometheus-slurm-job-exporter
+    - anarchy/prometheus-lshw-exporter
+    - anarchy/prometheus-ipmi-exporter
+    - anarchy/prometheus-infiniband-exporter
+    - anarchy/prometheus-ha-exporter
+    - anarchy/grafana
 
-    ###########################################################################
-    # MariaDB
-    ###########################################################################
-    - role: geerlingguy.mysql
-      mysql_databases:
-        - name: slurm_acct
-      mysql_users:
-        - name: slurm
-          password: slurm
-          priv: "slurm_acct.*:ALL"
-
-    ###########################################################################
-    # NFS server
-    ###########################################################################
-    - role: geerlingguy.nfs
-      nfs_exports: "{{ nfs_exports }}"
-
-    ###########################################################################
-    # Slurm controller
-    ###########################################################################
-    - role: galaxyproject.slurm
-      slurm_role: controller
-      slurm_controller_host: "{{ anarchy_ctrl_hostname }}"
-      slurmdbd_enabled: true
-      when: enable_slurm
-
-    ###########################################################################
+    # ------------------------------------------------------------
     # Open OnDemand
-    ###########################################################################
-    - role: osc.open_ondemand
-      ood_port: 443
-      ood_auth: "basic_pam"
-      when: enable_ood
+    # ------------------------------------------------------------
+    - anarchy/nginx
+    - anarchy/ood
+    - anarchy/ood-apps
 
-    ###########################################################################
-    # Prometheus + exporters
-    ###########################################################################
-    - role: cloudalchemy.prometheus
-      when: enable_prometheus
+    # ------------------------------------------------------------
+    # Logging
+    # ------------------------------------------------------------
+    - anarchy/rsyslog         # or anarchy/syslog-ng if preferred
+    - anarchy/wrapup
+    - anarchy/wrapup-images
 
-    - role: cloudalchemy.node_exporter
-      when: enable_prometheus
-
-    ###########################################################################
-    # Grafana
-    ###########################################################################
-    - role: cloudalchemy.grafana
-      grafana_security:
-        admin_user: admin
-        admin_password: admin
-      grafana_datasources:
-        - name: Prometheus
-          type: prometheus
-          access: proxy
-          url: "http://localhost:9090"
-      when: enable_grafana
-
-    ###########################################################################
-    # SSH hardening
-    ###########################################################################
-    - role: devsec.hardening.ssh_hardening
-
-    ###########################################################################
-    # Environment modules
-    ###########################################################################
-    - role: geerlingguy.environment-modules
-
-    ###########################################################################
-    # Compatibility layer (playbook import)
-    ###########################################################################
-    - name: Apply compatibility layer
-      import_playbook: ../compatibility.yml
-      tags: [compatibility, xcat]
-
-    ###########################################################################
-    # Provisioning stack (xCAT)
-    ###########################################################################
-    - role: anarchy/xcat
-      when:
-        - provisioning_enabled | default(false)
-        - provisioning_method | default('xcat') == 'xcat'
-      tags: [provisioning, xcat]
-      vars:
-        host_role: controller
-        provisioning_network:
-          device: "{{ anarchy_cluster_if }}"
-        xcat_manage_dhcp: true
-        xcat_manage_dns: false
-        build_images: "{{ not enable_ha | default(false) }}"
-
-    ###########################################################################
-    # Cleanup
-    ###########################################################################
-    - name: Remove unused packages
-      package:
-        name:
-          - telnet
-          - rsh
-        state: absent
+    # ------------------------------------------------------------
+    # Optional HPC stacks (enable if needed)
+    # ------------------------------------------------------------
+    # - anarchy/openhpc
+    # - anarchy/easybuild
+    # - anarchy/pbspro
+    # - anarchy/kubernetes
+    # - anarchy/pacemaker

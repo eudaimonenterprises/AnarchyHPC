@@ -80,14 +80,6 @@ if [ -f /etc/anarchy/prepare.conf ]; then
   done < /etc/anarchy/prepare.conf
 fi
 
-# --------------------------------------------------------------------------------------
-
-if [ ! -f AnarchyHPC.pdf ]; then
-  add_message "Please run from within the cloned AnarchyHPC folder"
-  show_message
-  exit 1
-fi
-
 # --------------------- SELINUX TASKS ----------------------
 
 SELINUX=$(getenforce)
