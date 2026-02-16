@@ -374,3 +374,25 @@
     ignore_errors: true
     when: ldapsearch.rc == 32
   when: (primary | default(True)) and (openldap_version is defined and openldap_version.stdout|int > 24)
+
+# ---------------------
+
+- block:
+  - name: Disable OpenLDAP service for H/A
+    systemd:
+      name: slapd
+      state: "{{ 'started' if primary else 'stopped' }}"
+      enabled: false
+
+  - name: Add pacemaker resource
+    pcs_resource:
+      name: 'openldap'
+      resource_class: 'systemd'
+      resource_type: 'systemd:slapd'
+      options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Anarchy-stack'
+      state: present
+    when: primary | default(True)
+  when: ha | default(False)
+  tags: pcs
+
+- meta: flush_handlers

@@ -455,14 +455,3 @@
       state: "{{ 'started' if primary else 'stopped' }}"
       enabled: false
 
-  - name: Add pacemaker resource
-    pcs_resource:
-      name: 'ds389'
-      resource_class: 'systemd'
-      resource_type: 'systemd:dirsrv@local'
-      options: 'meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Anarchy-stack'
-      state: present
-    when: primary | default(True)
-  when: ha | default(False)
-  tags: pcs
-

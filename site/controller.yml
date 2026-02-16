@@ -24,6 +24,11 @@
     - anarchy/logrotate
 
     # ------------------------------------------------------------
+    # High Availability (must run before any service roles)
+    # ------------------------------------------------------------
+    - anarchy/pacemaker
+
+    # ------------------------------------------------------------
     # Identity & Authentication
     # ------------------------------------------------------------
     - anarchy/ldap-backend-selector

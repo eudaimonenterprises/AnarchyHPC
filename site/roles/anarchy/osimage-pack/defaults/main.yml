@@ -1,0 +1,4 @@
+---
+- name: Placeholder for xCAT osimage packaging
+  debug:
+    msg: "osimage-pack role not implemented yet"
