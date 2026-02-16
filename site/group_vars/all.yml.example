@@ -87,23 +87,26 @@ enable_heartbeat_link: true
 # on the internal network.
 # Luna's provisioning network name will be set to the same value.
 
-anarchy_domain: cluster
+anarchy_domain: cluster.local
 
 
 # -----------------------------------------------------------------------
-# Internal network definitions and the DHCP range used to to PXE boot
+# Internal network definitions and the DHCP range used to PXE boot
 # the compute nodes. Also Infiniband IPoIB and bmc/ipmi networks.
 
-anarchy_cluster_net: 10.141.0.0
-anarchy_cluster_netprefix: 16
-anarchy_cluster_dhcp_start: 10.141.128.0
-anarchy_cluster_dhcp_end: 10.141.140.0
+# Cluster internal network (provisioning + internal services)
+anarchy_cluster_net: 10.0.0.0
+anarchy_cluster_netprefix: 24
+anarchy_cluster_dhcp_start: 10.0.0.100
+anarchy_cluster_dhcp_end: 10.0.0.200
 
-anarchy_infiniband_net: 10.149.0.0
-anarchy_infiniband_netprefix: 16
+# Infiniband IPoIB network (optional; adjust or ignore if no IB)
+anarchy_infiniband_net: 10.1.0.0
+anarchy_infiniband_netprefix: 24
 
-anarchy_bmc_net: 10.148.0.0
-anarchy_bmc_netprefix: 16
+# BMC/IPMI network (optional; adjust or ignore if no BMC network)
+anarchy_bmc_net: 192.168.20.0
+anarchy_bmc_netprefix: 24
 
 
 # -----------------------------------------------------------------------
@@ -111,9 +114,9 @@ anarchy_bmc_netprefix: 16
 # In an H/A pair, those are the hostname and IP for the first controller.
 # Those variables are required, with or without HA.
 
-anarchy_ctrl1_ip: 10.141.255.254
-anarchy_ctrl1_bmcip: 10.148.255.254
-anarchy_ctrl1_heartbeat_ip: 10.146.255.254
+anarchy_ctrl1_ip: 10.0.0.11
+anarchy_ctrl1_bmcip: 192.168.20.11
+anarchy_ctrl1_heartbeat_ip: 192.168.10.11
 anarchy_ctrl1_hostname: controller1
 
 # In a non-H/A setup, all of the following variables will be ignored:
@@ -122,19 +125,19 @@ anarchy_ctrl1_hostname: controller1
 
 # Hostname and IP of the second controller
 
-anarchy_ctrl2_ip: 10.141.255.253
-anarchy_ctrl2_bmcip: 10.148.255.253
-anarchy_ctrl2_heartbeat_ip: 10.146.255.253
+anarchy_ctrl2_ip: 10.0.0.12
+anarchy_ctrl2_bmcip: 192.168.20.12
+anarchy_ctrl2_heartbeat_ip: 192.168.10.12
 anarchy_ctrl2_hostname: controller2
 
-# Floating hostname and IP
+# Floating hostname and IP (VIP used by clients)
 
-anarchy_ctrl_ip: 10.141.255.252
+anarchy_ctrl_ip: 10.0.0.10
 anarchy_ctrl_hostname: controller
 
 
 # -----------------------------------------------------------------------
-# Optional overrides when defaults do not fullfil what's expected
+# Optional overrides when defaults do not fulfil what's expected
 # When left undefined or empty, ansible will use the IP/network address
 # assigned to the interface where the default route is defined for.
 # anarchy_ctrl_external_network is used for e.g. cloud VPN.
@@ -172,9 +175,9 @@ anarchy_login_fqdn: ''
 # -----------------------------------------------------------------------
 # DNS forwarders. These should normally point to your organization's DNS servers.
 
-anarchy_dns_forwarders: 
-  - "8.8.8.8"
-  - "8.8.4.4"
+anarchy_dns_forwarders:
+  - "1.1.1.1"
+  - "1.0.0.1"
 
 
 # -----------------------------------------------------------------------
