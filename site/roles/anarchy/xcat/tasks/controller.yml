@@ -1,5 +1,9 @@
 ---
-# tasks file for xCAT controller
+# xCAT Controller – Modernized Provisioning Pipeline
+
+###############################################################################
+# 0. Load OS-specific variables
+###############################################################################
 
 - name: Load OS-specific vars (if any)
   include_vars: "{{ item }}"
@@ -9,7 +13,9 @@
   no_log: true
   ignore_errors: true
 
-# ----------------- base packages / repos -----------------
+###############################################################################
+# 1. Base packages / repos
+###############################################################################
 
 - name: Ensure xCAT repo is configured (RedHat family example)
   template:
@@ -38,7 +44,9 @@
     - "{{ xcat_install_dir | default('/opt/xcat') }}"
     - "{{ xcat_config_dir | default('/etc/xcat') }}"
 
-# ----------------- xCAT core services -----------------
+###############################################################################
+# 2. Core xCAT services
+###############################################################################
 
 - name: Enable and start xcatd
   service:
@@ -46,79 +54,53 @@
     state: started
     enabled: true
 
-# ----------------- networking / provisioning -----------------
+###############################################################################
+# 3. Provisioning Pipeline (NEW)
+###############################################################################
+# This replaces the old ad‑hoc commands with a real orchestration pipeline.
 
-- name: Configure xCAT networks table for provisioning network
-  command: >
-    tabedit networks
-  args:
-    creates: "{{ xcat_config_dir | default('/etc/xcat') }}/networks"
-  changed_when: false
+# --- Pre-flight validation ----------------------------------------------------
 
-# You’ll likely want to manage networks via templates/commands instead of raw tabedit.
-# Example using command tasks:
+- name: Pre-flight validation before provisioning
+  import_tasks: roles/anarchy/xcat/tasks/preflight.yml
+  when: provisioning_pre_validation | default(true)
+  tags: [provisioning, preflight]
 
-- name: Define provisioning network in xCAT (idempotent-ish)
-  command: >
-    chdef -t network -o {{ provisioning_network.name | default('provnet') }}
-    net={{ provisioning_network.network }}
-    mask={{ provisioning_network.netmask }}
-    mgtifname={{ provisioning_network.device }}
-    gateway={{ provisioning_network.gateway | default('') }}
-  when: provisioning_network is defined
+# --- xCAT role (networks, images, nodes, services) ----------------------------
 
-# ----------------- DHCP / TFTP / HTTP via xCAT -----------------
+- name: Run xCAT provisioning role
+  role: anarchy/xcat
+  vars:
+    provisioning_pre_validation: true
+    xcat_build_images_if_missing: true
+    xcat_deploy_nodes_auto: true
+    xcat_validate_final_state: true
+  tags: [provisioning, xcat]
 
-- name: Configure DHCP via xCAT
-  command: makedhcp -n
-  register: makedhcp_out
-  changed_when: "'Error' not in makedhcp_out.stderr"
+# --- Image build orchestration ------------------------------------------------
 
-- name: Configure TFTP/boot resources via xCAT
-  command: makedhcp -a
-  register: makedhcp_add
-  changed_when: "'Error' not in makedhcp_add.stderr
+- name: Build OS images if missing or outdated
+  import_tasks: roles/anarchy/xcat/tasks/build-images.yml
+  when: xcat_build_images_if_missing | default(true)
+  tags: [provisioning, images]
 
-- name: Generate PXE boot configuration
-  command: makedhcp -q
-  changed_when: false
+# --- Node deployment ----------------------------------------------------------
 
-# ----------------- OS images -----------------
+- name: Deploy nodes (assign osimage, configure PXE, trigger install)
+  import_tasks: roles/anarchy/xcat/tasks/deploy-nodes.yml
+  when: xcat_deploy_nodes_auto | default(true)
+  tags: [provisioning, nodes]
 
-- name: Create xCAT osimage definitions (placeholder)
-  command: >
-    mkdef -t osimage -o {{ item.name }}
-    osvers={{ item.osvers }}
-    osarch={{ item.osarch | default('x86_64') }}
-    profile={{ item.profile | default('compute') }}
-    provmethod={{ item.provmethod | default('install') }}
-  loop: "{{ xcat_osimages | default([]) }}"
-  when: xcat_osimages is defined
+# --- Final validation ---------------------------------------------------------
 
-# ----------------- nodes / groups -----------------
+- name: Validate final provisioning state
+  import_tasks: roles/anarchy/xcat/tasks/finalize.yml
+  when: xcat_validate_final_state | default(true)
+  tags: [provisioning, finalize]
 
-- name: Create xCAT node groups
-  command: >
-    mkdef -t group -o {{ item.name }} members={{ item.members | join(',') }}
-  loop: "{{ xcat_groups | default([]) }}"
-  when: xcat_groups is defined
-
-- name: Create xCAT node definitions
-  command: >
-    mkdef -t node -o {{ item.name }}
-    groups={{ item.groups | join(',') }}
-    ip={{ item.ip }}
-    mac={{ item.mac }}
-    netboot={{ item.netboot | default('pxe') }}
-    os={{ item.os }}
-  loop: "{{ xcat_nodes | default([]) }}"
-  when: xcat_nodes is defined
-
-# ----------------- post-setup sanity -----------------
-
-- name: Refresh xCAT services
-  command: service xcatd restart
-  changed_when: false
+###############################################################################
+# 4. Post-setup wait (optional)
+###############################################################################
 
 - name: Wait a bit for xcatd to settle
   wait_for:

@@ -87,10 +87,6 @@ ood_apps:
   - name: rack
     type: anarchy
     mode: "0750"
-  - name: alertx
-    type: anarchy
-    mode: "0750"
-    tasks: ["alertx.yml"]
   - name: passwd
     type: anarchy
     mode: "0755"

@@ -1,14 +1,120 @@
 ---
+###############################################################################
+# 0. Pre-flight: ensure xCAT is installed
+###############################################################################
+
+- name: Verify xCAT installation before finalization
+  ansible.builtin.command: which lsdef
+  changed_when: false
+  failed_when: false
+  register: xcat_check
+  tags: [provisioning, finalize]
+
+###############################################################################
+# 1. Regenerate DHCP/DNS configuration (idempotent)
+###############################################################################
+
 - name: Regenerate DHCP configuration
   ansible.builtin.command: makedhcp -n
-  when: xcat_manage_dhcp
+  when:
+    - xcat_check.rc == 0
+    - xcat_manage_dhcp
   notify: restart dhcpd
+  tags: [provisioning, finalize, dhcp]
 
 - name: Regenerate DNS configuration
   ansible.builtin.command: makedns -n
-  when: xcat_manage_dns
+  when:
+    - xcat_check.rc == 0
+    - xcat_manage_dns
   notify: restart named
+  tags: [provisioning, finalize, dns]
 
-- name: Restart xCAT daemon
+###############################################################################
+# 2. Restart xCAT daemon (idempotent)
+###############################################################################
+
+- name: Restart xCAT daemon safely
   ansible.builtin.command: restartxcatd
+  when: xcat_check.rc == 0
   notify: restart xcatd
+  tags: [provisioning, finalize, xcatd]
+
+###############################################################################
+# 3. Service health verification (post-convergence)
+###############################################################################
+
+- name: Verify xcatd is active
+  ansible.builtin.command: systemctl is-active xcatd
+  register: xcatd_status
+  changed_when: false
+  failed_when: "'inactive' in xcatd_status.stdout or 'failed' in xcatd_status.stdout"
+  when: xcat_check.rc == 0
+  tags: [provisioning, finalize, validation]
+
+- name: Verify DHCP service is active
+  ansible.builtin.command: systemctl is-active {{ dhcp_service_name | default('dhcpd') }}
+  register: dhcp_status
+  changed_when: false
+  failed_when: "'inactive' in dhcp_status.stdout or 'failed' in dhcp_status.stdout"
+  when:
+    - xcat_check.rc == 0
+    - xcat_manage_dhcp
+  tags: [provisioning, finalize, validation]
+
+- name: Verify DNS service is active
+  ansible.builtin.command: systemctl is-active named
+  register: dns_status
+  changed_when: false
+  failed_when: "'inactive' in dns_status.stdout or 'failed' in dns_status.stdout"
+  when:
+    - xcat_check.rc == 0
+    - xcat_manage_dns
+  tags: [provisioning, finalize, validation]
+
+###############################################################################
+# 4. PXE Boot / Network Convergence Validation (NEW)
+###############################################################################
+
+- name: Validate DHCPACK events for PXE boot
+  ansible.builtin.command: tail -n 50 /var/log/messages | grep "DHCPACK"
+  register: finalize_dhcpack
+  changed_when: false
+  failed_when: finalize_dhcpack.stdout | length == 0
+  when:
+    - xcat_check.rc == 0
+    - xcat_manage_dhcp | default(true)
+    - provisioning_enabled | default(true)
+  tags: [provisioning, finalize, validation, dhcp]
+
+###############################################################################
+# 5. Image Packability Validation (NEW)
+###############################################################################
+
+- name: Validate packimage dry-run for all OS images
+  ansible.builtin.command: packimage --dryrun {{ item.name }}
+  register: finalize_image_check
+  changed_when: false
+  failed_when: "'Error' in finalize_image_check.stderr"
+  loop: "{{ xcat_os_images }}"
+  when:
+    - xcat_check.rc == 0
+    - provisioning_enabled | default(true)
+    - xcat_os_images is defined
+  tags: [provisioning, finalize, validation, images]
+
+###############################################################################
+# 6. Final status report
+###############################################################################
+
+- name: Report final provisioning status
+  ansible.builtin.debug:
+    msg: >
+      xCAT finalization complete.
+      DHCP: {{ 'enabled' if xcat_manage_dhcp else 'disabled' }}.
+      DNS: {{ 'enabled' if xcat_manage_dns else 'disabled' }}.
+      PXE boot validated: {{ (finalize_dhcpack.stdout | default('')) | length > 0 }}.
+      Images validated: {{ xcat_os_images | length }} checked.
+      All critical services validated.
+  when: xcat_check.rc == 0
+  tags: [provisioning, finalize]

@@ -1,0 +1,12 @@
+packages:
+  - name: xcat-client
+    version: "2.17.4-1.el9"
+  - name: slurm-slurmd
+    version: "24.05.0-1.el9"
+  - name: ipmitool
+  - name: perl-JSON
+
+dependencies:
+  - package: xcat-client
+    requires:
+      - perl-JSON

@@ -138,15 +138,6 @@
           }
       tags: logrotate
 
-    # Cleanup legacy bits (no vendor cleanup)
-    - name: Remove legacy packages
-      ansible.builtin.package:
-        name:
-          - telnet
-          - rsh
-        state: absent
-      tags: cleanup-legacy
-
   handlers:
     - name: Restart rsyslog
       ansible.builtin.service:

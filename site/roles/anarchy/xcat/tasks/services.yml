@@ -1,22 +1,149 @@
 ---
+###############################################################################
+# 0. DNS/DHCP generation (idempotent, conditional)
+###############################################################################
+
 - name: Configure DNS via xCAT
   ansible.builtin.command: makedns -n
   when: xcat_manage_dns
+  tags: [provisioning, services, dns]
 
 - name: Configure DHCP via xCAT
   ansible.builtin.command: makedhcp -n
   when: xcat_manage_dhcp
+  tags: [provisioning, services, dhcp]
 
-- name: Ensure TFTP is enabled
-  ansible.builtin.service:
-    name: tftp
-    enabled: true
-    state: started
-  when: xcat_manage_tftp
+###############################################################################
+# 1. Pre-flight: verify xCAT installation
+###############################################################################
 
-- name: Ensure HTTP is enabled
-  ansible.builtin.service:
-    name: httpd
-    enabled: true
+- name: Verify xCAT installation before service configuration
+  command: which lsdef
+  changed_when: false
+  failed_when: false
+  register: xcat_check
+  tags: [provisioning, services]
+
+###############################################################################
+# 2. TFTP service discovery (multi-OS, deterministic)
+###############################################################################
+
+- name: Detect TFTP service using package facts
+  block:
+
+    - name: Gather package facts
+      package_facts:
+        manager: auto
+      when:
+        - xcat_check.rc == 0
+        - ansible_facts.packages is not defined
+
+    - name: Determine TFTP service name
+      set_fact:
+        tftp_service_name: >-
+          {{
+            {
+              'RedHat': [
+                ('tftp-server' if 'tftp-server' in ansible_facts.packages | default([]) else none),
+                ('tftp' if 'tftp' in ansible_facts.packages | default([]) else none)
+              ],
+              'Debian': [
+                ('tftpd-hpa' if 'tftpd-hpa' in ansible_facts.packages | default([]) else none),
+                ('atftpd' if 'atftpd' in ansible_facts.packages | default([]) else none),
+                ('tftp' if 'tftp' in ansible_facts.packages | default([]) else none)
+              ]
+            }
+            [ansible_os_family] | default([])
+            | select('defined')
+            | first
+          }}
+      when:
+        - xcat_check.rc == 0
+        - tftp_service_name is not defined or tftp_service_name == 'tftp'
+
+    - name: Fallback TFTP service name
+      set_fact:
+        tftp_service_name: "tftp"
+      when:
+        - xcat_check.rc == 0
+        - tftp_service_name is not defined
+
+  tags: [provisioning, services, tftp]
+
+- name: Ensure TFTP server package is installed
+  package:
+    name: "{{ tftp_service_name }}"
+    state: present
+  register: tftp_package_result
+  changed_when: tftp_package_result.changed | default(false)
+  when: xcat_check.rc == 0
+  tags: [provisioning, services, tftp]
+
+###############################################################################
+# 3. HTTP service configuration (image serving)
+###############################################################################
+
+- name: Determine HTTP service name per OS family
+  set_fact:
+    httpd_service_name: "{{ 'httpd' if ansible_os_family == 'RedHat' else 'apache2' }}"
+  when: httpd_service_name is not defined
+  tags: [provisioning, services, http]
+
+###############################################################################
+# 4. Start and enable services (idempotent)
+###############################################################################
+
+- name: Enable and start xcatd service
+  systemd:
+    name: xcatd
     state: started
-  when: xcat_manage_http
+    enabled: yes
+  register: xcatd_result
+  changed_when: xcatd_result.changed | default(false)
+  when: xcat_check.rc == 0
+  tags: [provisioning, services]
+
+- name: Enable and start TFTP service
+  systemd:
+    name: "{{ tftp_service_name }}"
+    state: started
+    enabled: yes
+  register: tftp_result
+  changed_when: tftp_result.changed | default(false)
+  when: xcat_check.rc == 0
+  tags: [provisioning, services, tftp]
+
+- name: Enable and start HTTP service for image serving
+  systemd:
+    name: "{{ httpd_service_name }}"
+    state: started
+    enabled: yes
+  register: httpd_result
+  changed_when: httpd_result.changed | default(false)
+  when: xcat_check.rc == 0
+  tags: [provisioning, services, http]
+
+###############################################################################
+# 5. Service verification (idempotent)
+###############################################################################
+
+- name: Verify xcatd is running
+  command: systemctl is-active xcatd
+  register: xcatd_status
+  changed_when: false
+  failed_when: "'inactive' in xcatd_status.stdout or 'failed' in xcatd_status.stdout"
+  tags: [provisioning, services, validation]
+
+- name: Verify TFTP service is running
+  command: systemctl is-active {{ tftp_service_name }}
+  register: tftp_status
+  changed_when: false
+  failed_when: "'inactive' in tftp_status.stdout or 'failed' in tftp_status.stdout"
+  tags: [provisioning, services, validation]
+
+- name: Verify HTTP service is running
+  command: systemctl is-active {{ httpd_service_name }}
+  register: httpd_status
+  changed_when: false
+  failed_when: "'inactive' in httpd_status.stdout or 'failed' in httpd_status.stdout"
+  tags: [provisioning, services, validation]

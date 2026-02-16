@@ -1,0 +1,103 @@
+---
+# AnarchyHPC Variable Compatibility Layer
+# Maps legacy variable names to modern equivalents safely and idempotently
+
+- name: Apply variable compatibility mappings
+  hosts: controllers
+  gather_facts: false
+  serial: 1
+  tags: [compatibility, xcat]
+
+  pre_tasks:
+
+    ###########################################################################
+    # 1. Provisioning method defaults (only if undefined)
+    ###########################################################################
+    - name: Ensure provisioning_method has a default
+      set_fact:
+        provisioning_method: "xcat"
+      when: provisioning_method is not defined
+
+    - name: Ensure provisioning_enabled has a default
+      set_fact:
+        provisioning_enabled: true
+      when: provisioning_enabled is not defined
+
+
+    ###########################################################################
+    # 2. Legacy → Modern: provisioning_network
+    ###########################################################################
+    - name: Map legacy provisioning_network → modern structure
+      set_fact:
+        provisioning_network:
+          device: "{{ anarchy_cluster_if | default('eth0') }}"
+          ipaddr: "{{ anarchy_ctrl1_ip | default('10.0.0.1') }}"
+          netmask: "{{ anarchy_cluster_net.split('/')[1] | default('16') }}"
+      when:
+        - provisioning_network is not defined
+        - anarchy_cluster_net is defined
+
+
+    ###########################################################################
+    # 3. Legacy → Modern: xcat_os_images
+    ###########################################################################
+    - name: Convert legacy xcat_osimages → xcat_os_images
+      set_fact:
+        xcat_os_images: "{{ xcat_osimages }}"
+      when:
+        - xcat_os_images is not defined
+        - xcat_osimages is defined
+
+
+    ###########################################################################
+    # 4. Fallback image definitions (only if nothing defined)
+    ###########################################################################
+    - name: Provide fallback xCAT image definitions (safe defaults)
+      set_fact:
+        xcat_os_images:
+          - { name: "rocky8-x86_64-install", osvers: "rocky8", arch: "x86_64", profile: "compute", provmethod: "install" }
+          - { name: "rocky9-x86_64-install", osvers: "rocky9", arch: "x86_64", profile: "compute", provmethod: "install" }
+          - { name: "alma8-x86_64-install",  osvers: "alma8",  arch: "x86_64", profile: "compute", provmethod: "install" }
+          - { name: "alma9-x86_64-install",  osvers: "alma9",  arch: "x86_64", profile: "compute", provmethod: "install" }
+      when:
+        - xcat_os_images is not defined
+        - provisioning_method == "xcat"
+        - provisioning_enabled
+
+
+    ###########################################################################
+    # 5. Legacy → Modern: xcat_networks
+    ###########################################################################
+    - name: Create xCAT networks list from AnarchyHPC variables
+      set_fact:
+        xcat_networks:
+          - name: "cluster"
+            net: "{{ anarchy_cluster_net.split('/')[0] }}"
+            mask: "{{ anarchy_cluster_net.split('/')[1] }}"
+            mgtifname: "{{ provisioning_network.device }}"
+            dhcp: "yes"
+            dynamicrange: "{{ anarchy_cluster_dhcp_start | default('10.141.1.1') }}-{{ anarchy_cluster_dhcp_end | default('10.141.254.254') }}"
+          - name: "bmc"
+            net: "{{ anarchy_bmc_net.split('/')[0] }}"
+            mask: "{{ anarchy_bmc_net.split('/')[1] }}"
+            mgtifname: "bmc"
+            dhcp: "no"
+      when:
+        - xcat_networks is not defined
+        - anarchy_cluster_net is defined
+        - anarchy_bmc_net is defined
+        - provisioning_method == "xcat"
+        - provisioning_enabled
+
+
+    ###########################################################################
+    # 6. Display compatibility layer status
+    ###########################################################################
+    - name: Show applied compatibility mappings
+      debug:
+        msg:
+          - "Compatibility layer applied."
+          - "Provisioning method: {{ provisioning_method }}"
+          - "Provisioning enabled: {{ provisioning_enabled }}"
+          - "Networks defined: {{ xcat_networks | default([]) | length }}"
+          - "Images defined: {{ xcat_os_images | default([]) | length }}"

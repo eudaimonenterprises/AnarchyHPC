@@ -1,12 +1,57 @@
 ---
-- name: Add xCAT repo (RHEL-like)
-  ansible.builtin.yum:
-    name: "http://xcat.org/files/xcat/repos/yum/latest/xcat-core/xcat-core.repo"
+# xCAT installation with OS-aware repo selection
+
+# Ensure EPEL is available (RHEL-family only)
+- name: Enable EPEL repository
+  yum:
+    name: epel-release
     state: present
   when: ansible_os_family == "RedHat"
 
+# ------------------------------------------------------------
+# Use upstream OpenHPC repo (optional)
+# ------------------------------------------------------------
+- name: Enable OpenHPC upstream repo
+  yum_repository:
+    name: openhpc-upstream
+    description: "OpenHPC Upstream Repository"
+    baseurl: "{{ active_repos.openhpc }}"
+    gpgcheck: no
+    enabled: yes
+  when:
+    - ansible_os_family == "RedHat"
+    - active_repos.openhpc is defined
+
+# ------------------------------------------------------------
+# Use upstream xCAT repo (preferred for RHEL 9+)
+# ------------------------------------------------------------
+- name: Configure upstream xCAT repository
+  yum_repository:
+    name: xcat-upstream
+    description: "xCAT Upstream Repository (OBS)"
+    baseurl: "{{ active_repos.xcat }}"
+    gpgcheck: no
+    enabled: yes
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution_major_version | int >= 9
+
+# ------------------------------------------------------------
+# Fallback for older RHEL-family systems (< 9)
+# ------------------------------------------------------------
+- name: Install xCAT fallback repo (legacy upstream)
+  yum:
+    name: "http://xcat.org/files/xcat/repos/yum/latest/xcat-core/xcat-core.repo"
+    state: present
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution_major_version | int < 9
+
+# ------------------------------------------------------------
+# Install xCAT packages
+# ------------------------------------------------------------
 - name: Install xCAT packages
-  ansible.builtin.package:
+  package:
     name:
       - xcat-core
       - xcat-dep
@@ -14,8 +59,11 @@
       - ipmitool
     state: present
 
+# ------------------------------------------------------------
+# Enable and start xCAT services
+# ------------------------------------------------------------
 - name: Enable and start xCAT services
-  ansible.builtin.service:
+  service:
     name: xcatd
     enabled: true
     state: started

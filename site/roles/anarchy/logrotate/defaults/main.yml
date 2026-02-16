@@ -2,8 +2,7 @@ logrotate_files:
   - anarchyhpc
   - aria2c
   - prometheus
-  - alertx
-
+  
 logrotate_additional: []
 
 logrotate_packages:

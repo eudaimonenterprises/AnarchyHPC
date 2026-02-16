@@ -1,0 +1,16 @@
+# centos9_controller.yaml
+packages:
+  - name: xcat-core
+    version: "2.17.4-1.el9"
+  - name: slurm-slurmctld
+    version: "24.05.0-1.el9"
+  - name: prometheus
+    min_version: "2.45.0"
+  - name: conserver-xcat
+  - name: ipmitool
+  - name: perl-JSON
+
+dependencies:
+  - package: xcat-core
+    requires:
+      - perl-JSON

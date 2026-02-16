@@ -1,0 +1,73 @@
+---
+# Modernization defaults for xCAT role
+# Safe, minimal, and correct
+
+###############################################################################
+# DHCP/DNS management toggles (safe defaults)
+###############################################################################
+
+xcat_manage_dhcp: true
+xcat_manage_dns: false
+
+xcat_dhcp_range_start: "{{ anarchy_cluster_dhcp_start | default('10.141.1.1') }}"
+xcat_dhcp_range_end: "{{ anarchy_cluster_dhcp_end | default('10.141.254.254') }}"
+
+###############################################################################
+# Image settings (deterministic behavior)
+###############################################################################
+
+xcat_pkgdir: "/opt/xcat/share/nodetypes"
+xcat_install_dir: "/install"
+
+###############################################################################
+# Timeout and retry settings
+###############################################################################
+
+rpm_retries: 3
+rpm_delay: 15
+network_validation_timeout: 60
+service_start_timeout: 120
+
+###############################################################################
+# Site table defaults
+###############################################################################
+
+xcat_site:
+  domain: "{{ anarchy_domain | default('cluster') }}"
+  master: "{{ anarchy_cluster_if | default('eth0') }}"
+  dhcpinterfaces: "{{ anarchy_cluster_if | default('eth0') }}"
+  useNmapfornodeset: "yes"
+
+###############################################################################
+# Provisioning network defaults
+###############################################################################
+
+provisioning_network:
+  device: "{{ anarchy_cluster_if | default('eth0') }}"
+  ipaddr: "{{ anarchy_ctrl1_ip | default('10.0.0.1') }}"
+  netmask: "{{ anarchy_cluster_net.split('/')[1] | default('16') }}"
+  network: "{{ anarchy_cluster_net.split('/')[0] if anarchy_cluster_net is defined else '10.141.0.0' }}"
+
+# Do NOT set broadcast; let xCAT compute it.
+
+###############################################################################
+# Legacy image compatibility (do not override user values)
+###############################################################################
+
+# Only define if user has not provided anything
+xcat_os_images: "{{ xcat_os_images | default([]) }}"
+
+###############################################################################
+# Provisioning toggles (do not force defaults)
+###############################################################################
+
+# These should be defined in inventory, not defaults.
+# provisioning_method:
+# provisioning_enabled:
+
+###############################################################################
+# BMC defaults
+###############################################################################
+
+bmc_default_user: "admin"
+bmc_default_pass: ""   # Must be defined by user

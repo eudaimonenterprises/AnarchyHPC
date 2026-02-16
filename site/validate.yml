@@ -1,0 +1,159 @@
+---
+# AnarchyHPC Deployment Validation Playbook
+# Validates xCAT provisioning stack after installation
+
+- name: Validate AnarchyHPC Deployment
+  hosts: controllers
+  become: true
+  gather_facts: true
+  serial: 1
+
+  vars:
+    validation_timeout: 60
+
+  tasks:
+
+    # -----------------------------
+    # 1. xCAT Installation Check
+    # -----------------------------
+    - name: Verify xCAT is installed (xcat-core package)
+      command: rpm -q xcat-core
+      register: xcat_check
+      changed_when: false
+      failed_when: xcat_check.rc != 0
+      tags: [provisioning, validation]
+
+    - name: Check xcatd binary exists
+      stat:
+        path: /opt/xcat/bin/xcatd
+      register: xcatd_bin
+      failed_when: not xcatd_bin.stat.exists
+      tags: [provisioning, validation]
+
+    # -----------------------------
+    # 2. xcatd Service Check
+    # -----------------------------
+    - name: Verify xcatd is running
+      command: systemctl is-active xcatd
+      register: xcatd_status
+      changed_when: false
+      failed_when: xcatd_status.stdout not in ['active']
+      tags: [provisioning, validation, services]
+
+    # -----------------------------
+    # 3. Networks Table Check
+    # -----------------------------
+    - name: List defined networks
+      command: lsdef -t network
+      register: networks_list
+      changed_when: false
+      tags: [provisioning, validation, networks]
+
+    - name: Verify cluster network exists
+      command: lsdef -t network cluster
+      register: cluster_network_check
+      changed_when: false
+      failed_when: cluster_network_check.rc != 0
+      tags: [provisioning, validation, networks]
+
+    # -----------------------------
+    # 4. OS Images Check
+    # -----------------------------
+    - name: List defined images
+      command: lsdef -t osimage
+      register: images_list
+      changed_when: false
+      tags: [provisioning, validation, images]
+
+    - name: Verify at least one image exists
+      failed_when: images_list.stdout_lines | length == 0
+      tags: [provisioning, validation, images]
+
+    # -----------------------------
+    # 5. Nodes Table Check
+    # -----------------------------
+    - name: List defined nodes
+      command: lsdef -t node
+      register: nodes_list
+      changed_when: false
+      tags: [provisioning, validation, nodes]
+
+    - name: Verify controller is defined in xCAT
+      command: lsdef "{{ ansible_hostname }}"
+      register: controller_node_check
+      changed_when: false
+      failed_when: controller_node_check.rc != 0
+      tags: [provisioning, validation, nodes]
+
+    # -----------------------------
+    # 6. DHCP/DNS Check
+    # -----------------------------
+    - name: Check DHCP configuration exists
+      stat:
+        path: /tftpboot/dhcpd.conf
+      register: dhcp_conf
+      tags: [provisioning, validation, networking]
+
+    - name: Verify TFTP directory exists
+      stat:
+        path: /tftpboot
+      register: tftp_dir
+      failed_when: not tftp_dir.stat.exists
+      tags: [provisioning, validation, networking]
+
+    # -----------------------------
+    # 7. DHCP/DNS Dry-Run Validation
+    # -----------------------------
+    - name: Validate DHCP is functional (dry-run)
+      command: makedhcp -n
+      register: dhcp_validation
+      changed_when: false
+      failed_when: "'Error' in dhcp_validation.stderr"
+      when: xcat_manage_dhcp | default(true)
+      tags: [provisioning, validation, networking]
+
+    - name: Validate DNS is functional (dry-run)
+      command: makedns -n
+      register: dns_validation
+      changed_when: false
+      failed_when: "'Error' in dns_validation.stderr"
+      when: xcat_manage_dns | default(false)
+      tags: [provisioning, validation, networking]
+
+    # -----------------------------
+    # 8. Network Convergence Check (NEW)
+    # -----------------------------
+    - name: Verify nodes can PXE boot (DHCPACK validation)
+      command: tail -n 50 /var/log/messages | grep "DHCPACK"
+      register: dhcp_lease_log
+      changed_when: false
+      failed_when: dhcp_lease_log.stdout | length == 0
+      when: provisioning_enabled | default(true)
+      tags: [provisioning, validation, networking]
+
+    # -----------------------------
+    # 9. Image Packability Check (NEW)
+    # -----------------------------
+    - name: Confirm images are packable (not corrupted)
+      command: packimage --dryrun {{ item }}
+      register: image_check
+      changed_when: false
+      failed_when: "'Error' in image_check.stderr"
+      loop: "{{ xcat_os_images | map(attribute='name') | list }}"
+      when: provisioning_enabled | default(true)
+      tags: [provisioning, validation, images]
+
+    # -----------------------------
+    # 10. Final Validation Report
+    # -----------------------------
+    - name: Print validation summary
+      debug:
+        msg:
+          - "xCAT installed: {{ xcat_check.rc == 0 }}"
+          - "xcatd service active: {{ xcatd_status.stdout == 'active' }}"
+          - "Cluster network defined: {{ cluster_network_check.rc == 0 }}"
+          - "OS images defined: {{ images_list.stdout_lines | length }}"
+          - "Controller node defined: {{ controller_node_check.rc == 0 }}"
+          - "DHCP config exists: {{ dhcp_conf.stat.exists }}"
+          - "TFTP directory exists: {{ tftp_dir.stat.exists }}"
+      tags: [provisioning, validation]

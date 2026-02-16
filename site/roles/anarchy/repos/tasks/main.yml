@@ -1,15 +1,28 @@
 ---
-- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+# Load OS‑specific variables
+- name: Load a variable file based on the OS type, or a default if not found
   include_vars: "{{ item }}"
   with_first_found:
-    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
-    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version }}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version }}.yaml"
     - "{{ ansible_distribution }}.yaml"
     - "{{ ansible_os_family }}.yaml"
   no_log: true
   ignore_errors: true
 
+# ------------------------------------------------------------
+# Step 2.2 — Dynamic Repository Resolution (NEW)
+# ------------------------------------------------------------
+- name: Set upstream repos based on OS family
+  set_fact:
+    active_repos: "{{ anarchyhpc_repository_map[ansible_os_family]
+                      | default(anarchyhpc_upstream_repos.redhat_family_9_plus) }}"
+
+# ------------------------------------------------------------
+# RedHat-family repository configuration
+# ------------------------------------------------------------
 - block:
+
   - name: Rebuild RPM DB
     shell: "rpm --rebuilddb"
     ignore_errors: true
@@ -32,13 +45,6 @@
     with_items: "{{ anarchyhpc_repositories }}"
     when: item.gpgkey is defined and item.gpgdata is defined
 
-  # - name: Add GPG keys to RPM DB. normally NOT needed - Antoine
-  #   ansible.builtin.rpm_key:
-  #     state: present
-  #     key: "{{ item.gpgkey | default('') }}"
-  #   with_items: "{{ anarchyhpc_repositories }}"
-  #   ignore_errors: True
-
   - name: Install external repo RPMS
     dnf:
       name: "{{ item.name }}"
@@ -50,14 +56,7 @@
     delay: "{{ rpm_delay | default(15) }}"
     with_items: "{{ external_repository_rpms }}"
     when: item.name is defined
-#    notify:
-#      - Disable repos
-#      - Mend repos
-#      - Use baseurl
-#
-#  - meta: flush_handlers
 
-  # Notify doesn't work inside chroot.... sigh..
   - ansible.builtin.include_tasks:
       file: mangling.yml
 
@@ -72,12 +71,6 @@
     delay: "{{ rpm_delay | default(15) }}"
     with_items: "{{ package_based_repositories }}"
     when: item.name is defined
-#    notify:
-#      - Disable repos
-#      - Mend repos
-#      - Use baseurl
-#
-#  - meta: flush_handlers
 
   - ansible.builtin.include_tasks:
       file: mangling.yml
@@ -108,3 +101,45 @@
   when: ansible_facts['os_family'] == "RedHat"
   tags: install-only
 
+###############################################################################
+# Debian-family repository configuration
+###############################################################################
+
+- block:
+
+    - name: Ensure apt cache is updated
+      apt:
+        update_cache: yes
+
+    - name: Configure xCAT upstream repo (APT)
+      apt_repository:
+        repo: "deb [trusted=yes] {{ active_repos.xcat }} ./"
+        state: present
+
+    - name: Configure OpenHPC upstream repo (APT)
+      apt_repository:
+        repo: "deb [trusted=yes] {{ active_repos.openhpc }} ./"
+        state: present
+      when: active_repos.openhpc is defined
+
+    - name: Install required repo packages
+      apt:
+        name: "{{ item.name }}"
+        state: present
+        update_cache: yes
+      loop: "{{ package_based_repositories }}"
+      when: item.name is defined
+
+    - name: Configure custom APT repos
+      apt_repository:
+        repo: "{{ item.repo }}"
+        state: present
+      loop: "{{ custom_repositories }}"
+      when: item.repo is defined
+
+    - name: Update apt cache after repo changes
+      apt:
+        update_cache: yes
+
+  when: ansible_os_family == "Debian"
+  tags: install-only

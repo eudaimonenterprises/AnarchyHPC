@@ -1,30 +1,75 @@
 ---
-# Main xCAT role entry point
+- name: Load OS-specific variables
+  include_vars: "{{ ansible_distribution }}{{ ansible_distribution_major_version }}.yaml"
 
-- name: Install xCAT packages
-  include_tasks: install.yml
-  when: on_controller
+- import_tasks: validation.yml
+  tags: [validation]
 
-- name: Configure xCAT management node
-  include_tasks: controller.yml
-  when: on_controller
+# Main xCAT role entry point - modernized, safe, and maintainable
 
-- name: Configure xCAT networks (DHCP, DNS, TFTP)
-  include_tasks: networks.yml
-  when: on_controller
+###############################################################################
+# Pre-flight: Only run xCAT provisioning if enabled and selected
+###############################################################################
+- block:
 
-- name: Configure xCAT services
-  include_tasks: services.yml
-  when: on_controller
+    - name: Show provisioning mode
+      debug:
+        msg: "xCAT provisioning enabled (method={{ provisioning_method }})"
 
-- name: Build xCAT images
-  include_tasks: images.yml
-  when: on_controller and build_images | default(False)
+  when:
+    - provisioning_enabled | default(false) | bool
+    - provisioning_method | default('xcat') == 'xcat'
+  tags: [xcat, provisioning]
 
-- name: Configure compute nodes
-  include_tasks: nodes.yml
-  when: not on_controller
 
-- name: Finalize provisioning
-  include_tasks: finalize.yml
-  when: on_controller
+###############################################################################
+# Controller tasks
+###############################################################################
+- block:
+
+    - name: Install xCAT packages
+      include_tasks: install.yml
+      tags: [install]
+
+    - name: Configure xCAT management node
+      include_tasks: controller.yml
+      tags: [configuration]
+
+    - name: Configure xCAT networks (DHCP, DNS, TFTP)
+      include_tasks: networks.yml
+      tags: [networks]
+
+    - name: Configure xCAT services
+      include_tasks: services.yml
+      tags: [services]
+
+    - name: Build xCAT images
+      include_tasks: images.yml
+      when: build_images | default(false) | bool
+      tags: [images]
+
+    - name: Finalize provisioning
+      include_tasks: finalize.yml
+      tags: [finalize]
+
+  when:
+    - provisioning_enabled | default(false) | bool
+    - provisioning_method | default('xcat') == 'xcat'
+    - host_role | default('compute') == 'controller'
+  tags: [xcat, provisioning]
+
+
+###############################################################################
+# Compute node tasks
+###############################################################################
+- block:
+
+    - name: Configure compute nodes
+      include_tasks: nodes.yml
+      tags: [nodes]
+
+  when:
+    - provisioning_enabled | default(false) | bool
+    - provisioning_method | default('xcat') == 'xcat'
+    - host_role | default('compute') == 'compute'
+  tags: [xcat, provisioning]

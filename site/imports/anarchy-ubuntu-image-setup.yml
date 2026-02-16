@@ -172,12 +172,12 @@
     tags: prometheus-amd-exporter, prometheus, monitoring
 
   - role: anarchy/prometheus-lshw-exporter
-    # Prometheus lshw exporter, used by alertx
+    # Prometheus lshw exporter, used by manager
     prometheus_lshw_exporter_system_user: root
-    tags: prometheus-lshw-exporter, prometheus, monitoring, lshw, alertx
+    tags: prometheus-lshw-exporter, prometheus, monitoring, lshw, alerting
 
-  - role: anarchy/alertx
-    tags: monitoring, alertx
+  - role: anarchy/alertmanager
+    tags: monitoring, alerting
 
   - role: anarchy/logrotate
     logrotate_files:
@@ -186,9 +186,6 @@
 
   - role: anarchy/osconfig
     tags: osconfig
-
-  - role: anarchy/cleanup-legacy
-    tags: cleanup-legacy
 
   - role: anarchy/wrapup-images
     tags: wrapup-images

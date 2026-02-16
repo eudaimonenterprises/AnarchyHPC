@@ -4,19 +4,25 @@
   serial: 1
 
   vars:
+    host_role: controller
+
+    # Controller identity
     anarchy_domain: "cluster.local"
     anarchy_ctrl_hostname: "controller1"
     controller_ip: "10.0.0.1"
 
-    enable_ldap: true
-    ldap_backend: "openldap"   # or "389ds"
+    # Provisioning interface (correct variable)
+    anarchy_cluster_if: "eth0"
 
+    # Feature toggles
+    enable_ldap: true
+    ldap_backend: "openldap"
     enable_slurm: true
     enable_ood: true
     enable_prometheus: true
     enable_grafana: true
 
-    nfs_export_root: "/srv/nfs"
+    # NFS exports
     nfs_exports:
       - path: "/srv/nfs/home"
         options: "*(rw,no_root_squash)"
@@ -25,9 +31,9 @@
 
   roles:
 
-    # -----------------------------
+    ###########################################################################
     # System preparation
-    # -----------------------------
+    ###########################################################################
     - role: geerlingguy.repo-epel
     - role: geerlingguy.firewall
       firewall_allowed_tcp_ports:
@@ -44,15 +50,15 @@
 
     - role: geerlingguy.chrony
 
-    # -----------------------------
+    ###########################################################################
     # Hostname + networking
-    # -----------------------------
+    ###########################################################################
     - role: geerlingguy.hostname
       hostname: "{{ anarchy_ctrl_hostname }}"
 
-    # -----------------------------
+    ###########################################################################
     # LDAP / 389‑DS
-    # -----------------------------
+    ###########################################################################
     - role: geerlingguy.openldap_server
       when: enable_ldap and ldap_backend == "openldap"
 
@@ -62,9 +68,9 @@
     - role: geerlingguy.sssd
       when: enable_ldap
 
-    # -----------------------------
+    ###########################################################################
     # MariaDB
-    # -----------------------------
+    ###########################################################################
     - role: geerlingguy.mysql
       mysql_databases:
         - name: slurm_acct
@@ -73,41 +79,41 @@
           password: slurm
           priv: "slurm_acct.*:ALL"
 
-    # -----------------------------
+    ###########################################################################
     # NFS server
-    # -----------------------------
+    ###########################################################################
     - role: geerlingguy.nfs
       nfs_exports: "{{ nfs_exports }}"
 
-    # -----------------------------
+    ###########################################################################
     # Slurm controller
-    # -----------------------------
+    ###########################################################################
     - role: galaxyproject.slurm
       slurm_role: controller
       slurm_controller_host: "{{ anarchy_ctrl_hostname }}"
       slurmdbd_enabled: true
       when: enable_slurm
 
-    # -----------------------------
+    ###########################################################################
     # Open OnDemand
-    # -----------------------------
+    ###########################################################################
     - role: osc.open_ondemand
       ood_port: 443
       ood_auth: "basic_pam"
       when: enable_ood
 
-    # -----------------------------
+    ###########################################################################
     # Prometheus + exporters
-    # -----------------------------
+    ###########################################################################
     - role: cloudalchemy.prometheus
       when: enable_prometheus
 
     - role: cloudalchemy.node_exporter
       when: enable_prometheus
 
-    # -----------------------------
+    ###########################################################################
     # Grafana
-    # -----------------------------
+    ###########################################################################
     - role: cloudalchemy.grafana
       grafana_security:
         admin_user: admin
@@ -119,19 +125,42 @@
           url: "http://localhost:9090"
       when: enable_grafana
 
-    # -----------------------------
+    ###########################################################################
     # SSH hardening
-    # -----------------------------
+    ###########################################################################
     - role: devsec.hardening.ssh_hardening
 
-    # -----------------------------
+    ###########################################################################
     # Environment modules
-    # -----------------------------
+    ###########################################################################
     - role: geerlingguy.environment-modules
 
-    # -----------------------------
+    ###########################################################################
+    # Compatibility layer (playbook import)
+    ###########################################################################
+    - name: Apply compatibility layer
+      import_playbook: ../compatibility.yml
+      tags: [compatibility, xcat]
+
+    ###########################################################################
+    # Provisioning stack (xCAT)
+    ###########################################################################
+    - role: anarchy/xcat
+      when:
+        - provisioning_enabled | default(false)
+        - provisioning_method | default('xcat') == 'xcat'
+      tags: [provisioning, xcat]
+      vars:
+        host_role: controller
+        provisioning_network:
+          device: "{{ anarchy_cluster_if }}"
+        xcat_manage_dhcp: true
+        xcat_manage_dns: false
+        build_images: "{{ not enable_ha | default(false) }}"
+
+    ###########################################################################
     # Cleanup
-    # -----------------------------
+    ###########################################################################
     - name: Remove unused packages
       package:
         name:

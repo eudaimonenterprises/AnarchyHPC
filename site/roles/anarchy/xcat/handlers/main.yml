@@ -1,34 +1,74 @@
 ---
-# handler file for xcat
+# Modernized xCAT handler file
 
-- name: restart xinetd
+###############################################################################
+# Core service restarts
+###############################################################################
+
+- name: restart xcatd
   service:
-    name: xinetd
+    name: xcatd
     state: restarted
+  ignore_errors: true
 
 - name: restart dhcpd
   service:
-    name: dhcpd
+    name: "{{ dhcp_service_name | default('dhcpd') }}"
     state: restarted
-
-- name: restart nginx
-  service:
-    name: nginx
-    state: restarted
+  ignore_errors: true
 
 - name: restart named
   service:
     name: named
     state: restarted
+  ignore_errors: true
 
-# Removed vendor-specific luna2-daemon handler
+- name: restart nginx
+  service:
+    name: nginx
+    state: restarted
+  ignore_errors: true
+  when: ansible_facts.services is not defined or
+        ('nginx.service' in ansible_facts.services)
+
+###############################################################################
+# Firewall handlers
+###############################################################################
 
 - name: reload firewalld
   service:
     name: firewalld
     state: reloaded
+  ignore_errors: true
 
 - name: fix firewall zones
   shell: /tmp/fix-firewalld-zones.sh
   ignore_errors: true
   listen: reload firewalld
+
+###############################################################################
+# xCAT regeneration handlers
+###############################################################################
+
+- name: regenerate DHCP config
+  command: makedhcp -n
+  ignore_errors: true
+
+- name: regenerate DNS config
+  command: makedns -n
+  ignore_errors: true
+
+- name: regenerate TFTP resources
+  command: nodeset all boot
+  ignore_errors: true
+  when: xcat_manage_dhcp | default(true)
+
+###############################################################################
+# Grafana handler (needed by cleanup role)
+###############################################################################
+
+- name: restart grafana-server
+  service:
+    name: grafana-server
+    state: restarted
+  ignore_errors: true

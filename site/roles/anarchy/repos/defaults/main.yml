@@ -1,5 +1,4 @@
 ---
-
 # Primary AnarchyHPC repositories (vendor-neutral placeholders)
 anarchyhpc_repositories:
   - name: anarchyhpc
@@ -7,7 +6,6 @@ anarchyhpc_repositories:
     gpgcheck: False
 
 # External repository RPMs (previously ClusterVision-hosted)
-# Leave empty unless you provide your own RPM URLs.
 external_repository_rpms: []
 
 # Package-based repositories (generic and safe)
@@ -42,3 +40,25 @@ replace_baseurls:
   - name: elrepo-extras
     filter_url: 'http://elrepo.org'
     replace_url: 'http://linux-mirrors.fnal.gov'
+
+#######################################################################
+# AnarchyHPC distro-aware upstream repository mappings (NEW SECTION)
+#######################################################################
+
+# Upstream repository definitions per OS family
+anarchyhpc_upstream_repos:
+  redhat_family_9_plus:
+    xcat: "https://download.opensuse.org/repositories/systemsmanagement:/xCAT:/Stable/RHEL_9/"
+    openhpc: "http://build.openhpc.community/releases/2.13/RedHat_9/"
+
+  debian_family_unstable:
+    xcat: "http://repo.xcat.org/xcat-core/debian/unstable/"
+    openhpc: "http://repo.xcat.org/openhpc/debian/unstable/"
+
+# Map Ansible OS families to upstream repo sets
+anarchyhpc_repository_map:
+  RedHat: "{{ anarchyhpc_upstream_repos.redhat_family_9_plus }}"
+  Rocky: "{{ anarchyhpc_upstream_repos.redhat_family_9_plus }}"
+  AlmaLinux: "{{ anarchyhpc_upstream_repos.redhat_family_9_plus }}"
+  Ubuntu: "{{ anarchyhpc_upstream_repos.debian_family_unstable }}"
+  Debian: "{{ anarchyhpc_upstream_repos.debian_family_unstable }}"

@@ -1,0 +1,19 @@
+- name: Start DHCP
+  service:
+    name: dhcpd
+    state: started
+
+- name: Start HTTP
+  service:
+    name: httpd
+    state: started
+
+- name: Start TFTP
+  service:
+    name: tftp
+    state: started
+
+- name: Start xcatd
+  service:
+    name: xcatd
+    state: started

@@ -1,36 +1,219 @@
 ---
-###############################################################################
-# 1. Define nodes in xCAT
-###############################################################################
-
-- name: Define nodes in xCAT
-  ansible.builtin.command: >
-    mkdef -t node -o {{ item.name }}
-    ip={{ item.ip }}
-    mac={{ item.mac }}
-    groups={{ item.groups | join(',') }}
-    osimage={{ item.osimage }}
-  loop: "{{ xcat_nodes }}"
-  when: xcat_nodes | length > 0
+# xCAT node definitions - production-grade with full idempotency
 
 ###############################################################################
-# 2. Configure BMC/IPMI (optional)
+# 0. Pre-flight: ensure xCAT is installed
 ###############################################################################
 
-- name: Configure BMC settings for nodes
-  ansible.builtin.command: >
-    chdef {{ item.name }}
-    bmc={{ item.bmc_ip }}
-    bmcusername={{ item.bmc_user }}
-    bmcpassword={{ item.bmc_pass }}
+- name: Verify xCAT installation before node configuration
+  command: which lsdef
+  changed_when: false
+  failed_when: false
+  register: xcat_check
+  tags: [provisioning, nodes]
+
+###############################################################################
+# 1. Node creation and update (idempotent)
+###############################################################################
+
+- name: Define compute nodes in xCAT (fully idempotent)
+  block:
+
+    ###########################################################################
+    # 1.1 Check if node exists
+    ###########################################################################
+
+    - name: Check if node exists
+      command: lsdef -t node -o {{ item.name }}
+      changed_when: false
+      failed_when: false
+      register: existing_node
+
+    ###########################################################################
+    # 1.2 Create node if missing
+    ###########################################################################
+
+    - name: Create node if missing
+      command: >
+        mkdef -t node -o {{ item.name }}
+        groups={{ item.groups | default(['compute']) | join(',') }}
+        ip={{ item.ip }}
+        mac={{ item.mac }}
+        netboot={{ item.netboot | default('pxe') }}
+      register: node_create_result
+      changed_when: node_create_result.rc == 0
+      failed_when: node_create_result.rc != 0
+      when:
+        - existing_node.rc != 0
+        - item.name is defined
+        - item.ip is defined
+        - item.mac is defined
+
+    ###########################################################################
+    # 1.3 Drift detection for existing nodes
+    ###########################################################################
+
+    - name: Get current node attributes
+      command: lsdef -t node -o {{ item.name }}
+      changed_when: false
+      register: current_node_values
+      when: existing_node.rc == 0
+
+    - name: Determine if IP update is needed
+      set_fact:
+        needs_ip_update: true
+      when:
+        - existing_node.rc == 0
+        - current_node_values.stdout is not regex("ip={{ item.ip }}\\b")
+
+    - name: Determine if group update is needed
+      set_fact:
+        needs_group_update: true
+      when:
+        - existing_node.rc == 0
+        - item.groups is defined
+        - current_node_values.stdout is not regex("groups={{ item.groups | join(',') }}\\b")
+
+    ###########################################################################
+    # 1.4 Apply updates
+    ###########################################################################
+
+    - name: Update node IP if needed
+      command: chdef -t node {{ item.name }} ip={{ item.ip }}
+      register: node_ip_update
+      changed_when: node_ip_update.rc == 0
+      failed_when: node_ip_update.rc != 0
+      when: needs_ip_update | default(false)
+
+    - name: Update node groups if needed
+      command: chdef -t node {{ item.name }} groups={{ item.groups | join(',') }}
+      register: node_group_update
+      changed_when: node_group_update.rc == 0
+      failed_when: node_group_update.rc != 0
+      when: needs_group_update | default(false)
+
+    ###########################################################################
+    # 1.5 Verify node definition
+    ###########################################################################
+
+    - name: Verify node definition
+      command: lsdef -t node -o {{ item.name }}
+      register: node_verify
+      changed_when: false
+      failed_when: node_verify.rc != 0
+
   loop: "{{ xcat_nodes }}"
   when:
-    - item.bmc_ip is defined
-    - item.bmc_user is defined
-    - item.bmc_pass is defined
+    - xcat_check.rc == 0
+    - provisioning_method == 'xcat'
+  tags: [provisioning, nodes]
 
 ###############################################################################
-# 3. HPC node configuration (image-side)
+# 2. BMC Configuration (idempotent + credential validation)
+###############################################################################
+
+- name: Configure node BMC settings (idempotent)
+  block:
+
+    ###########################################################################
+    # 2.1 Validate BMC credentials (non-fatal)
+    ###########################################################################
+
+    - name: Validate BMC credentials
+      command: >
+        ipmitool -I lanplus -H {{ item.bmc_ip }}
+        -U {{ bmc_default_user | default('admin') }}
+        -P {{ bmc_default_pass | default('') }}
+        chassis status
+      register: bmc_check
+      changed_when: false
+      failed_when: false
+      when: item.bmc_ip is defined
+
+    - name: Skip BMC update if credentials invalid
+      debug:
+        msg: "Skipping BMC update for {{ item.name }}: invalid credentials"
+      when:
+        - item.bmc_ip is defined
+        - "'Error' in bmc_check.stderr or 'failed' in bmc_check.stdout"
+
+    ###########################################################################
+    # 2.2 Update BMC settings only if valid and changed
+    ###########################################################################
+
+    - name: Get current BMC config
+      command: lsdef -t node {{ item.name }} | grep bmc=
+      changed_when: false
+      failed_when: false
+      register: existing_bmc_config
+      when:
+        - item.bmc_ip is defined
+        - "'Error' not in bmc_check.stderr"
+
+    - name: Update BMC IP if needed
+      command: chdef -t node {{ item.name }} bmc={{ item.bmc_ip }}
+      register: bmc_update
+      changed_when: bmc_update.rc == 0
+      failed_when: bmc_update.rc != 0
+      when:
+        - item.bmc_ip is defined
+        - "'Error' not in bmc_check.stderr"
+        - existing_bmc_config.stdout is not regex("bmc={{ item.bmc_ip }}\\b")
+
+    ###########################################################################
+    # 2.3 Verify BMC configuration
+    ###########################################################################
+
+    - name: Verify BMC configuration
+      command: lsdef -t node {{ item.name }} | grep bmc={{ item.bmc_ip }}
+      register: bmc_verify
+      changed_when: false
+      failed_when: bmc_verify.rc != 0
+      when:
+        - item.bmc_ip is defined
+        - "'Error' not in bmc_check.stderr"
+
+  loop: "{{ xcat_nodes }}"
+  when:
+    - xcat_check.rc == 0
+    - provisioning_method == 'xcat'
+  tags: [provisioning, nodes, bmc]
+
+###############################################################################
+# 3. PXE Options Configuration (idempotent)
+###############################################################################
+
+- name: Configure PXE boot options (idempotent)
+  block:
+
+    - name: Get current PXE options
+      command: lsdef -t node {{ item.name }} | grep pxeoptions=
+      changed_when: false
+      failed_when: false
+      register: existing_pxe_options
+
+    - name: Update PXE options if needed
+      command: chdef -t node {{ item.name }} pxeoptions='default'
+      register: pxe_update
+      changed_when: pxe_update.rc == 0
+      failed_when: pxe_update.rc != 0
+      when:
+        - existing_pxe_options.stdout is not regex("pxeoptions=default\\b")
+
+    - name: Verify PXE options
+      command: lsdef -t node {{ item.name }} | grep pxeoptions=default
+      register: pxe_verify
+      changed_when: false
+      failed_when: pxe_verify.rc != 0
+
+  loop: "{{ xcat_nodes }}"
+  when:
+    - xcat_check.rc == 0
+    - provisioning_method == 'xcat'
+  tags: [provisioning, nodes, pxe]
+
+###############################################################################
+# 4. HPC node configuration (image-side)
 ###############################################################################
 
 - block:
@@ -52,9 +235,10 @@
   when:
     - image_path is defined
     - on_controller | default(false)
+  tags: [provisioning, nodes, hpc]
 
 ###############################################################################
-# 4. HPC node configuration (live node)
+# 5. HPC node configuration (live node)
 ###############################################################################
 
 - block:
@@ -75,3 +259,4 @@
         mode: 0644
   when:
     - in_image | default(false) or on_node | default(false)
+  tags: [provisioning, nodes, hpc]

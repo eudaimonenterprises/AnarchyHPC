@@ -1,0 +1,10 @@
+- name: Validate TFTP directory exists
+  stat:
+    path: /tftpboot
+  register: tftp_dir
+  failed_when: not tftp_dir.stat.exists
+
+- name: Validate node definitions exist
+  command: lsdef -t node
+  register: node_defs
+  failed_when: node_defs.rc != 0

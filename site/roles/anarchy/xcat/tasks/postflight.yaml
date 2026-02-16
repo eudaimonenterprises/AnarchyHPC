@@ -1,0 +1,10 @@
+- name: Ping all compute nodes
+  command: "nodels {{ groups['compute'] | join(',') }} -s ping"
+  register: ping_check
+  failed_when: ping_check.rc != 0
+
+- name: Validate xCAT metadata consistency
+  command: "lsdef -t node -o {{ item }}"
+  loop: "{{ groups['compute'] }}"
+  register: metadata_check
+  failed_when: metadata_check.failed
