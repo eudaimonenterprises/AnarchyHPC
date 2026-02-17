@@ -171,7 +171,6 @@ sudo dnf install -y ansible ansible-core ansible-collection-community-general an
 
 # ansible-galaxy can run unprivileged (installs into user space by default)
 ansible-galaxy collection install community.mysql
-ansible-galaxy install OndrejHome.pcs-modules-2
 
 # --------------------- KERNEL CHECK ----------------------
 
