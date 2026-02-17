@@ -1,7 +1,9 @@
 #!/bin/bash
+set -euo pipefail
 
+# /etc/anarchy requires root
 if [ ! -d /etc/anarchy ]; then
-    mkdir /etc/anarchy
+    sudo mkdir -p /etc/anarchy
 fi
 
 # --------------------------------------------------------------------------------------
@@ -57,46 +59,50 @@ function get_confirmation() {
 function store_config() {
   local KEY=$1
   local VALUE=$2
-  if [ -f /etc/anarchy/prepare.conf ] && [ "$(grep '^'$KEY'=' /etc/anarchy/prepare.conf)" ]; then
-    sed -i 's/^'$KEY'=.*$/'$KEY'='$VALUE'/' /etc/anarchy/prepare.conf
+  # prepare.conf lives in /etc → needs sudo
+  if sudo test -f /etc/anarchy/prepare.conf && sudo grep -q "^${KEY}=" /etc/anarchy/prepare.conf; then
+    sudo sed -i "s/^${KEY}=.*$/${KEY}=${VALUE}/" /etc/anarchy/prepare.conf
   else
-    echo "$KEY=$VALUE" >> /etc/anarchy/prepare.conf
+    echo "${KEY}=${VALUE}" | sudo tee -a /etc/anarchy/prepare.conf >/dev/null
   fi
 }
 
 # --------------------------------------------------------------------------------------
 
-if [ -f /etc/anarchy/prepare.conf ]; then
+if sudo test -f /etc/anarchy/prepare.conf; then
+  # read via sudo, but export into current shell
   while IFS='=' read -ra line; do
-    comment=$(echo $line | grep '^#')
+    comment=$(echo "${line[*]}" | grep '^#' || true)
     if [ ! "$comment" ]; then
-      if [ "$line" ]; then
-	key=$(echo ${line[0]})
-        value=$(echo ${line[1]})
+      if [ "${line[*]}" ]; then
+        key=$(echo "${line[0]}")
+        value=$(echo "${line[1]}")
         declare -x "${key}"="${value}"
         echo "$key = $value"
       fi
     fi
-  done < /etc/anarchy/prepare.conf
+  done < <(sudo cat /etc/anarchy/prepare.conf)
 fi
 
 # --------------------- SELINUX TASKS ----------------------
 
-SELINUX=$(getenforce)
+SELINUX=$(getenforce || echo "Disabled")
+
 if [ "$SELINUX" == "Disabled" ]; then
     add_message "SELinux seems to be disabled on the controller"
     add_message "If you continue, the flag enable_selinux will be set to false"
     add_message "This means you will continue without using SELinux"
     show_message
-    if [ ! "$NO_SELINUX" ] && [ ! "$GITLAB_CI" ]; then
+    if [ ! "${NO_SELINUX:-}" ] && [ ! "${GITLAB_CI:-}" ]; then
       NO_SELINUX=$(get_confirmation n "Do you want to proceed without SELinux")
-      store_config 'NO_SELINUX' $NO_SELINUX
+      store_config 'NO_SELINUX' "$NO_SELINUX"
     fi
-    if [ "$NO_SELINUX" == "no" ]; then
+    if [ "${NO_SELINUX:-}" == "no" ]; then
       add_message "Please have a look in /etc/selinux/config, configure SELINUX to permissive, reboot and try the installation again"
       show_message
       exit 1
     fi
+    # group_vars is in repo → no sudo
     sed -i 's/^enable_selinux:\s\+true/enable_selinux: false/g' site/group_vars/all.yml*
 else
   if [ "$SELINUX" == "Permissive" ]; then
@@ -106,53 +112,56 @@ else
     add_message "AnarchyHPC currently only supports permissive SELinux"
     show_message
     PERM_SELINUX=$(get_confirmation y "Do you want to proceed with permissive SELinux")
-    if [ "$PERM_SELINUX" == "no" ] && [ ! "$GITLAB_CI" ]; then
+    if [ "$PERM_SELINUX" == "no" ] && [ ! "${GITLAB_CI:-}" ]; then
       add_message "Please reconsider having a look in /etc/selinux/config, configure SELINUX to permissive, setenforce 0 and try the installation again"
       show_message
       exit 1
     fi
-    setenforce 0
-    sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
+    # needs root
+    sudo setenforce 0
+    sudo sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
   fi
 fi
 
 # --------------------- TUI INSTALL (removed) ---------------------
 echo "Skipping vendor TUI download (replaced with upstream-safe version)."
 
+# --------------------- SYSTEM UPDATES & PACKAGES ----------------
 
-# inside a runner (test mode) we do not update the kernel.
-if [ "$GITLAB_CI" ]; then
-    dnf update -y --exclude=kernel*
+if [ "${GITLAB_CI:-}" ]; then
+    sudo dnf update -y --exclude=kernel*
 else
-    dnf update -y
+    sudo dnf update -y
 fi
-dnf install curl tar git -y
+
+sudo dnf install -y curl tar git
 
 # ------------------- ANSIBLE INSTALL --------------------
 
-REDHAT_RELEASE=$(grep -i "Red Hat Enterprise Linux" /etc/os-release | grep -oE '[0-9]+' | head -n1)
+REDHAT_RELEASE=$(grep -i "Red Hat Enterprise Linux" /etc/os-release | grep -oE '[0-9]+' | head -n1 || true)
 if [ "$REDHAT_RELEASE" ]; then
   ARCH=$(uname -m)
-  subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-${ARCH}-rpms
-  dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm -y
+  sudo subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-${ARCH}-rpms
+  sudo dnf install -y "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm"
 else
-  dnf install epel-release -y
+  sudo dnf install -y epel-release
 fi
 
-dnf install ansible -y 2> /dev/null || true
-dnf install ansible-core -y
-dnf install ansible-collection-community-general -y 2> /dev/null
-dnf install ansible-collection-ansible-posix -y 2> /dev/null
+sudo dnf install -y ansible 2>/dev/null || true
+sudo dnf install -y ansible-core
+sudo dnf install -y ansible-collection-community-general 2>/dev/null || true
+sudo dnf install -y ansible-collection-ansible-posix 2>/dev/null || true
+
+# ansible-galaxy can run unprivileged (installs into user space by default)
 ansible-galaxy collection install community.mysql
 ansible-galaxy install OndrejHome.pcs-modules-2
 
 # --------------------- KERNEL CHECK ----------------------
-# kernel check. Did we pull in a newer kernel?
-# We might want to reboot before using ZFS...
-CURRENT_KERNEL=$(uname -r)
-LATEST_KERNEL=$(ls -tr /lib/modules/|tail -n1)
 
-if [ "$USE_CURRENT_KERNEL" != "yes" ] && [ "$CURRENT_KERNEL" != "$LATEST_KERNEL" ] && [ ! "$GITLAB_CI" ]; then
+CURRENT_KERNEL=$(uname -r)
+LATEST_KERNEL=$(ls -tr /lib/modules/ | tail -n1)
+
+if [ "${USE_CURRENT_KERNEL:-}" != "yes" ] && [ "$CURRENT_KERNEL" != "$LATEST_KERNEL" ] && [ ! "${GITLAB_CI:-}" ]; then
   add_message "Current running kernel is not the latest installed. It comes highly recommended to reboot prior continuing installation."
   add_message "After reboot, please re-run prepare.sh to make sure all requirements are met."
   show_message
@@ -164,15 +173,15 @@ fi
 
 # ---------------------- ZFS INSTALL ----------------------
 
-if [ ! "$WITH_ZFS" ] && [ ! "$GITLAB_CI" ]; then
+if [ ! "${WITH_ZFS:-}" ] && [ ! "${GITLAB_CI:-}" ]; then
   add_message "Would you prefer to include ZFS?" 
   add_message "ZFS is supported in the shared_fs_disk/HA role. If you prefer to use ZFS there, please confirm below."
   show_message
   WITH_ZFS=$(get_confirmation y "Do you want to install ZFS")
 fi
-store_config 'WITH_ZFS' $WITH_ZFS
+store_config 'WITH_ZFS' "${WITH_ZFS:-no}"
 
-if [ "$WITH_ZFS" == "yes" ] || [ "$GITLAB_CI" ]; then
+if [ "${WITH_ZFS:-no}" == "yes" ] || [ "${GITLAB_CI:-}" ]; then
   ARCH=$(uname -m)
   if [ "$ARCH" == "aarch64" ]; then
     add_message "Automated ZFS support for ARM is limited. To have ZFS support for ARM based systems, please follow the below steps:"
@@ -187,10 +196,10 @@ if [ "$WITH_ZFS" == "yes" ] || [ "$GITLAB_CI" ]; then
     add_message "- make install"
     show_message
   else
-    yes y | dnf -y install https://zfsonlinux.org/epel/zfs-release-2-8$(rpm --eval "%{dist}").noarch.rpm
-    yes y | dnf -y install zfs zfs-dkms
-    echo "zfs" >> /etc/modules-load.d/zfs.conf
-    modprobe zfs
+    yes y | sudo dnf -y install "https://zfsonlinux.org/epel/zfs-release-2-8$(rpm --eval "%{dist}").noarch.rpm"
+    yes y | sudo dnf -y install zfs zfs-dkms
+    echo "zfs" | sudo tee /etc/modules-load.d/zfs.conf >/dev/null
+    sudo modprobe zfs
   fi
 fi
 
@@ -203,6 +212,7 @@ else
     add_message "Please note the hostnames are not matching (see site/hosts)."
   fi
 fi
+
 if [ ! -f site/group_vars/all.yml ]; then
     add_message "Please modify the site/group_vars/all.yml.example and save it as site/group_vars/all.yml"
 else
@@ -210,9 +220,9 @@ else
     add_message "Please note the hostnames are not matching (see site/group_vars/all.yml)."
   fi
 fi
+
 add_message "Please configure the network before starting Ansible"
 
-touch /etc/anarchy/prepare.done
+# mark prepare done (in /etc → sudo)
+sudo touch /etc/anarchy/prepare.done
 show_message
-
-
