@@ -138,19 +138,36 @@ sudo dnf install -y curl tar git
 
 # ------------------- ANSIBLE INSTALL --------------------
 
-REDHAT_RELEASE=$(grep -i "Red Hat Enterprise Linux" /etc/os-release | grep -oE '[0-9]+' | head -n1 || true)
-if [ "$REDHAT_RELEASE" ]; then
-  ARCH=$(uname -m)
-  sudo subscription-manager repos --enable codeready-builder-for-rhel-${REDHAT_RELEASE}-${ARCH}-rpms
-  sudo dnf install -y "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_RELEASE}.noarch.rpm"
-else
-  sudo dnf install -y epel-release
-fi
+OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
+OS_VER=$(grep -E '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
 
-sudo dnf install -y ansible 2>/dev/null || true
-sudo dnf install -y ansible-core
-sudo dnf install -y ansible-collection-community-general 2>/dev/null || true
-sudo dnf install -y ansible-collection-ansible-posix 2>/dev/null || true
+case "$OS_ID" in
+  rhel)
+    echo "Detected RHEL $OS_VER"
+    ARCH=$(uname -m)
+    sudo subscription-manager repos --enable codeready-builder-for-rhel-${OS_VER}-${ARCH}-rpms
+    sudo dnf install -y "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${OS_VER}.noarch.rpm"
+    ;;
+
+  rocky|almalinux)
+    echo "Detected $OS_ID $OS_VER"
+    sudo dnf install -y epel-release
+    sudo dnf config-manager --set-enabled crb || true
+    ;;
+
+  centos)
+    echo "Detected CentOS Stream $OS_VER"
+    sudo dnf install -y epel-release
+    sudo dnf config-manager --set-enabled crb || true
+    ;;
+
+  *)
+    echo "Unknown OS: $OS_ID — attempting generic EPEL install"
+    sudo dnf install -y epel-release || true
+    ;;
+esac
+
+sudo dnf install -y ansible ansible-core ansible-collection-community-general ansible-collection-ansible-posix || true
 
 # ansible-galaxy can run unprivileged (installs into user space by default)
 ansible-galaxy collection install community.mysql
