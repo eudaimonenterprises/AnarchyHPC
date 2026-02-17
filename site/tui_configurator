@@ -60,16 +60,26 @@ get_yaml_value() {
 set_yaml_value() {
   local key="$1"
   local value="$2"
+  local file="$ALL_YML"
+
+  # YAML-safe quoting
   case "$value" in
     true|false) new="${key}: ${value}" ;;
-    *) new="${key}: '${value}'" ;;
+    *) new="${key}: \"${value}\"" ;;
   esac
 
-  if grep -qE "^${key}:" "$ALL_YML"; then
-    sed -i -E "s|^${key}:.*|${new}|" "$ALL_YML"
+  # Replace existing key (with or without indentation)
+  if grep -qE "^[[:space:]]*${key}:" "$file"; then
+    sed -i -E "s|^[[:space:]]*${key}:.*|${new}|" "$file"
+    return
+  fi
+
+  # Insert before marker (match even if indented or with extra text)
+  if grep -q "DO NOT REMOVE" "$file"; then
+    sed -i "/DO NOT REMOVE/i ${new}" "$file"
   else
-    # Insert before the DO NOT REMOVE marker
-    sed -i "/^# DO NOT REMOVE/i ${new}" "$ALL_YML"
+    # Fallback: append at end
+    echo "$new" >> "$file"
   fi
 }
 
@@ -209,7 +219,6 @@ set_yaml_value "enable_openhpc" "$enable_openhpc"
 set_yaml_value "enable_easybuild" "$enable_easybuild"
 set_yaml_value "enable_authentication" "$enable_authentication"
 
-# Fix workload_manager block
 remove_yaml_block "workload_manager"
 {
   echo "workload_manager:"
@@ -218,6 +227,22 @@ remove_yaml_block "workload_manager"
 
 # Fix DNS block
 set_yaml_list_strings "anarchy_dns_forwarders" "${dns_array[@]}"
+
+
+# ---------------------------------------------------------------------------
+# NOTE:
+# Ansible does NOT read controller IPs from group_vars/all.yml.
+# It uses the inventory file (hosts). The first time this TUI runs,
+# hosts is copied from hosts.example and never updated again.
+# This block regenerates the inventory so Ansible connects to the
+# correct controller hostname and IP selected in the TUI.
+# ---------------------------------------------------------------------------
+echo "Writing inventory to ${HOSTS_FILE}" > /dev/tty
+{
+  echo "[controllers]"
+  echo "${anarchy_ctrl1_hostname} ansible_host=${anarchy_ctrl1_ip}"
+} > "$HOSTS_FILE"
+
 
 echo "Configuration flow completed successfully" > /dev/tty
 add_message "Configuration complete."
