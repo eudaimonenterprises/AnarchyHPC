@@ -1,0 +1,6 @@
+---
+- name: Install Alertmanager
+  include_tasks: install.yml
+
+- name: Configure Alertmanager
+  include_tasks: config.yml

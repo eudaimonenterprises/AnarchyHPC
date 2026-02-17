@@ -1,0 +1,22 @@
+---
+- name: Deploy Alertmanager config
+  template:
+    src: alertmanager.yml.j2
+    dest: /etc/alertmanager/alertmanager.yml
+    owner: alertmanager
+    group: alertmanager
+    mode: '0644'
+  notify: restart alertmanager
+
+- name: Install systemd service
+  copy:
+    src: alertmanager.service
+    dest: /etc/systemd/system/alertmanager.service
+    mode: '0644'
+  notify: restart alertmanager
+
+- name: Enable and start service
+  systemd:
+    name: alertmanager
+    enabled: yes
+    state: started

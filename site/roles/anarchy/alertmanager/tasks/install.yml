@@ -1,0 +1,38 @@
+---
+- name: Create alertmanager user
+  user:
+    name: alertmanager
+    shell: /sbin/nologin
+    system: yes
+
+- name: Create directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: alertmanager
+    group: alertmanager
+    mode: '0755'
+  loop:
+    - /etc/alertmanager
+    - /var/lib/alertmanager
+
+- name: Download Alertmanager tarball
+  get_url:
+    url: "{{ alertmanager_download_url }}"
+    dest: /tmp/alertmanager.tar.gz
+    mode: '0644'
+
+- name: Extract Alertmanager
+  unarchive:
+    src: /tmp/alertmanager.tar.gz
+    dest: /opt/
+    remote_src: yes
+
+- name: Symlink binaries
+  file:
+    src: "/opt/{{ alertmanager_dir }}/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    state: link
+  loop:
+    - alertmanager
+    - amtool

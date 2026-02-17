@@ -1,0 +1,3 @@
+---
+- debug:
+    msg: "stub role — not implemented yet"
