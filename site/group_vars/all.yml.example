@@ -162,7 +162,7 @@ anarchy_ctrl_hostname: controller
 # like open-ondemand. This hostname is in most scenarios the fqdn of the host,
 # but this can be overridden if external resolution/name differs.
 
-anarchy_anarchy_external_fqdn: ''
+anarchy_external_fqdn: ''
 
 
 # -----------------------------------------------------------------------
@@ -540,7 +540,13 @@ export_easybuild: 'rw'
 
 enable_authentication: true
 
+# -----------------------------------------------------------------------
+# Host list for image setup playbooks
+# This defines which hosts the imports playbooks run on.
+# For image building, this should always be localhost.
 
+hostlist:
+  - localhost
 
 # -----------------------------------------------------------------------
 # DO NOT REMOVE: yml check: 150300

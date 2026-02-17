@@ -4,3 +4,4 @@ galaxy_info:
   description: Stub role for xCAT group creation
   license: MIT
 dependencies: []
+

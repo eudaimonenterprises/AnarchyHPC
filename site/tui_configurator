@@ -7,15 +7,14 @@ ALL_YML_EXAMPLE="group_vars/all.yml.example"
 HOSTS_FILE="hosts"
 HOSTS_EXAMPLE="hosts.example"
 
-function add_message() {
+add_message() {
   echo -e "$1" | fold -w70 -s >> /tmp/mesg.$$.dat
 }
 
-function show_message() {
+show_message() {
   echo "+---------------------------------- X -------------------------------------+"
   echo "|                                                                          |"
-  while read -r LINE
-  do
+  while read -r LINE; do
     printf '|  %-70s  |\n' "$LINE"
   done < /tmp/mesg.$$.dat
   echo "|                                                                          |"
@@ -35,34 +34,22 @@ trap cleanup EXIT
 echo "Checking base files (${ALL_YML}, ${HOSTS_FILE})" > /dev/tty
 
 if [ ! -f "$ALL_YML" ]; then
-  if [ -f "$ALL_YML_EXAMPLE" ]; then
-    echo "${ALL_YML} missing, copying from example" > /dev/tty
-    cp "$ALL_YML_EXAMPLE" "$ALL_YML"
-  else
-    echo "ERROR: $ALL_YML and $ALL_YML_EXAMPLE are missing." > /dev/tty
-    exit 1
-  fi
+  cp "$ALL_YML_EXAMPLE" "$ALL_YML"
 fi
 
 if [ ! -f "$HOSTS_FILE" ]; then
-  if [ -f "$HOSTS_EXAMPLE" ]; then
-    echo "${HOSTS_FILE} missing, copying from example" > /dev/tty
-    cp "$HOSTS_EXAMPLE" "$HOSTS_FILE"
-  else
-    echo "ERROR: $HOSTS_FILE and $HOSTS_EXAMPLE are missing." > /dev/tty
-    exit 1
-  fi
+  cp "$HOSTS_EXAMPLE" "$HOSTS_FILE"
 fi
 
 # ---------------------------------------------------------------------------
-# Helper: get/set YAML
+# YAML helpers
 # ---------------------------------------------------------------------------
 
 get_yaml_value() {
   local key="$1"
   local default="$2"
   local val
-  val=$(grep -E "^${key}:" "$ALL_YML" 2>/dev/null | head -n1 | sed -E "s/^${key}:[[:space:]]*//")
+  val=$(grep -E "^${key}:" "$ALL_YML" | head -n1 | sed -E "s/^${key}:[[:space:]]*//")
   if [ -z "$val" ]; then
     echo "$default"
   else
@@ -74,13 +61,15 @@ set_yaml_value() {
   local key="$1"
   local value="$2"
   case "$value" in
-    true|false)  new="${key}: ${value}" ;;
-    *)           new="${key}: '${value}'" ;;
+    true|false) new="${key}: ${value}" ;;
+    *) new="${key}: '${value}'" ;;
   esac
+
   if grep -qE "^${key}:" "$ALL_YML"; then
     sed -i -E "s|^${key}:.*|${new}|" "$ALL_YML"
   else
-    echo "${new}" >> "$ALL_YML"
+    # Insert before the DO NOT REMOVE marker
+    sed -i "/^# DO NOT REMOVE/i ${new}" "$ALL_YML"
   fi
 }
 
@@ -88,22 +77,47 @@ set_yaml_list_strings() {
   local key="$1"
   shift
   local items=("$@")
+
+  awk -v k="${key}:" '
+    $0 ~ "^"k {skip=1; next}
+    skip && /^[[:space:]]*-/ {next}
+    skip && NF==0 {skip=0; next}
+    !skip {print}
+  ' "$ALL_YML" > "$ALL_YML.tmp"
+
+  mv "$ALL_YML.tmp" "$ALL_YML"
+
   {
     echo "${key}:"
     for i in "${items[@]}"; do
       echo "  - \"${i}\""
     done
-  } >> "$ALL_YML.tmp"
+  } >> "$ALL_YML"
+}
 
+remove_yaml_block() {
+  local key="$1"
   awk -v k="${key}:" '
-    $0 ~ "^"k {skip=1}
-    skip && NF==0 {skip=0; next}
-    !skip {print}
-  ' "$ALL_YML" > "$ALL_YML.clean" || true
+    # When we see the key, start skipping
+    $0 ~ "^"k {
+      skip=1
+      next
+    }
 
-  mv "$ALL_YML.clean" "$ALL_YML"
-  cat "$ALL_YML.tmp" >> "$ALL_YML"
-  rm -f "$ALL_YML.tmp"
+    # If skipping, skip lines that are indented (part of the block)
+    skip && /^[[:space:]]+/ {
+      next
+    }
+
+    # If skipping and we hit a non-indented line, stop skipping
+    skip {
+      skip=0
+    }
+
+    # Print everything else
+    { print }
+  ' "$ALL_YML" > "$ALL_YML.tmp"
+  mv "$ALL_YML.tmp" "$ALL_YML"
 }
 
 # ---------------------------------------------------------------------------
@@ -115,11 +129,7 @@ prompt_default() {
   local default="$2"
   local var
   read -r -p "${prompt} [${default}]: " var < /dev/tty
-  if [ -z "$var" ]; then
-    echo "$default"
-  else
-    echo "$var"
-  fi
+  echo "${var:-$default}"
 }
 
 prompt_bool() {
@@ -133,13 +143,10 @@ prompt_bool() {
   fi
   while true; do
     read -r -p "${prompt} (${def_char}): " ans < /dev/tty
-    if [ -z "$ans" ]; then
-      echo "$default"
-      return
-    fi
     case "$ans" in
+      "") echo "$default"; return ;;
       y|Y|yes|YES) echo "true"; return ;;
-      n|N|no|NO)   echo "false"; return ;;
+      n|N|no|NO) echo "false"; return ;;
       *) echo "Please answer y or n." > /dev/tty ;;
     esac
   done
@@ -154,71 +161,38 @@ add_message "You will be asked a few questions; defaults are shown in brackets."
 show_message
 
 echo "Gathering cluster basics" > /dev/tty
-cur_domain=$(get_yaml_value "anarchy_domain" "cluster")
-anarchy_domain=$(prompt_default "Cluster internal domain name" "$cur_domain")
-
-cur_project=$(get_yaml_value "project_id" "000000")
-project_id=$(prompt_default "Project ID (for prompts/logging)" "$cur_project")
+anarchy_domain=$(prompt_default "Cluster internal domain name" "$(get_yaml_value anarchy_domain cluster.local)")
+project_id=$(prompt_default "Project ID" "$(get_yaml_value project_id 000000)")
 
 echo "Gathering controller settings" > /dev/tty
-cur_ctrl_host=$(get_yaml_value "anarchy_ctrl1_hostname" "controller1")
-anarchy_ctrl1_hostname=$(prompt_default "Controller hostname" "$cur_ctrl_host")
-
-cur_ctrl_ip=$(get_yaml_value "anarchy_ctrl1_ip" "10.141.255.254")
-anarchy_ctrl1_ip=$(prompt_default "Controller IP address" "$cur_ctrl_ip")
+anarchy_ctrl1_hostname=$(prompt_default "Controller hostname" "$(get_yaml_value anarchy_ctrl1_hostname controller1)")
+anarchy_ctrl1_ip=$(prompt_default "Controller IP address" "$(get_yaml_value anarchy_ctrl1_ip 10.0.0.11)")
 
 echo "Gathering HA and external FQDN" > /dev/tty
-cur_ha=$(get_yaml_value "ha" "false")
-ha=$(prompt_bool "Enable High Availability (HA)" "$cur_ha")
-
-cur_ext_fqdn=$(get_yaml_value "anarchy_external_fqdn" "")
-anarchy_external_fqdn=$(prompt_default "External FQDN (leave empty if none)" "$cur_ext_fqdn")
+ha=$(prompt_bool "Enable High Availability (HA)" "$(get_yaml_value ha false)")
+anarchy_external_fqdn=$(prompt_default "External FQDN" "$(get_yaml_value anarchy_external_fqdn "")")
 
 echo "Gathering DNS forwarders" > /dev/tty
-add_message "DNS forwarders (comma-separated). Example: 8.8.8.8,8.8.4.4"
-show_message
-cur_dns1=$(grep -E "anarchy_dns_forwarders" -A5 "$ALL_YML" 2>/dev/null | grep -E '^\s*-\s*"' | head -n1 | sed -E 's/^\s*-\s*"(.*)".*/\1/')
-cur_dns2=$(grep -E "anarchy_dns_forwarders" -A5 "$ALL_YML" 2>/dev/null | grep -E '^\s*-\s*"' | sed -n '2p' | sed -E 's/^\s*-\s*"(.*)".*/\1/')
-default_dns="${cur_dns1:-8.8.8.8},${cur_dns2:-8.8.4.4}"
+cur_dns1=$(grep -A5 anarchy_dns_forwarders "$ALL_YML" | grep -E '^\s*-\s*"' | sed -n '1p' | sed -E 's/.*"(.*)".*/\1/')
+cur_dns2=$(grep -A5 anarchy_dns_forwarders "$ALL_YML" | grep -E '^\s*-\s*"' | sed -n '2p' | sed -E 's/.*"(.*)".*/\1/')
+default_dns="${cur_dns1:-1.1.1.1},${cur_dns2:-1.0.0.1}"
 dns_input=$(prompt_default "DNS forwarders" "$default_dns")
 IFS=',' read -r -a dns_array <<< "$dns_input"
 
 echo "Gathering feature toggles" > /dev/tty
-cur_selinux=$(get_yaml_value "enable_selinux" "true")
-enable_selinux=$(prompt_bool "Enable SELinux" "$cur_selinux")
-
-cur_ood=$(get_yaml_value "enable_ood" "true")
-enable_ood=$(prompt_bool "Enable Open OnDemand" "$cur_ood")
-
-cur_ohpc=$(get_yaml_value "enable_openhpc" "true")
-enable_openhpc=$(prompt_bool "Enable OpenHPC" "$cur_ohpc")
-
-cur_easy=$(get_yaml_value "enable_easybuild" "false")
-enable_easybuild=$(prompt_bool "Enable EasyBuild" "$cur_easy")
-
-cur_auth=$(get_yaml_value "enable_authentication" "true")
-enable_authentication=$(prompt_bool "Enable internal authentication (LDAP/SSSD)" "$cur_auth")
+enable_selinux=$(prompt_bool "Enable SELinux" "$(get_yaml_value enable_selinux true)")
+enable_ood=$(prompt_bool "Enable Open OnDemand" "$(get_yaml_value enable_ood true)")
+enable_openhpc=$(prompt_bool "Enable OpenHPC" "$(get_yaml_value enable_openhpc true)")
+enable_easybuild=$(prompt_bool "Enable EasyBuild" "$(get_yaml_value enable_easybuild false)")
+enable_authentication=$(prompt_bool "Enable internal authentication" "$(get_yaml_value enable_authentication true)")
 
 echo "Gathering workload manager" > /dev/tty
-cur_wm=""
-if grep -qE "^workload_manager" "$ALL_YML" 2>/dev/null; then
-  cur_wm=$(
-    grep -E "^workload_manager" -A5 "$ALL_YML" 2>/dev/null \
-      | grep -E "^\s*-\s*'" \
-      | head -n1 \
-      | sed -E "s/^\s*-\s*'(.*)'.*/\1/"
-  )
-fi
-cur_wm=${cur_wm:-slurm}
-
-wm=$(prompt_default "Workload manager (slurm or k3s)" "$cur_wm")
-case "$wm" in
-  slurm|k3s) ;;
-  *) wm="slurm" ;;
-esac
+cur_wm=$(grep -A5 workload_manager "$ALL_YML" | grep -E "^\s*-\s*'" | head -n1 | sed -E "s/.*'(.*)'.*/\1/")
+wm=$(prompt_default "Workload manager (slurm or k3s)" "${cur_wm:-slurm}")
+[[ "$wm" != "k3s" ]] && wm="slurm"
 
 # ---------------------------------------------------------------------------
-# Write back to all.yml
+# Write back
 # ---------------------------------------------------------------------------
 
 echo "Writing configuration to ${ALL_YML}" > /dev/tty
@@ -235,73 +209,20 @@ set_yaml_value "enable_openhpc" "$enable_openhpc"
 set_yaml_value "enable_easybuild" "$enable_easybuild"
 set_yaml_value "enable_authentication" "$enable_authentication"
 
-awk '!/^workload_manager:/{print}' "$ALL_YML" > "$ALL_YML.tmp" || true
-mv "$ALL_YML.tmp" "$ALL_YML"
+# Fix workload_manager block
+remove_yaml_block "workload_manager"
 {
   echo "workload_manager:"
   echo "  - '${wm}'"
 } >> "$ALL_YML"
 
-echo "Writing DNS forwarders list to ${ALL_YML}" > /dev/tty
+# Fix DNS block
 set_yaml_list_strings "anarchy_dns_forwarders" "${dns_array[@]}"
 
-# ---------------------------------------------------------------------------
-# Update hosts
-# ---------------------------------------------------------------------------
-
-echo "Updating hosts file (${HOSTS_FILE})" > /dev/tty
-
-if ! grep -q "^
-
-\[controllers\]
-
-" "$HOSTS_FILE"; then
-  echo "[controllers] group missing, creating it" > /dev/tty
-  {
-    echo "[controllers]"
-    echo "${anarchy_ctrl1_hostname} ansible_host=${anarchy_ctrl1_ip} ansible_connection=local"
-  } >> "$HOSTS_FILE"
-else
-  if grep -q "^${anarchy_ctrl1_hostname}\b" "$HOSTS_FILE"; then
-    echo "Updating existing controller entry in hosts" > /dev/tty
-    sed -i -E "s|^${anarchy_ctrl1_hostname}.*|${anarchy_ctrl1_hostname} ansible_host=${anarchy_ctrl1_ip} ansible_connection=local|" "$HOSTS_FILE"
-  else
-    echo "Adding controller entry under [controllers]" > /dev/tty
-    awk -v h="${anarchy_ctrl1_hostname}" -v ip="${anarchy_ctrl1_ip}" '
-      BEGIN { added=0 }
-      /^
-
-\[controllers\]
-
-/ {
-        print
-        getline
-        if ($0 !~ /^
-
-\[/) print $0
-        print h" ansible_host="ip" ansible_connection=local"
-        added=1
-        next
-      }
-      { print }
-      END {
-        if (!added) print h" ansible_host="ip" ansible_connection=local"
-      }
-    ' "$HOSTS_FILE" > "$HOSTS_FILE.tmp"
-    mv "$HOSTS_FILE.tmp" "$HOSTS_FILE"
-  fi
-fi
-
-# ---------------------------------------------------------------------------
-# Completion
-# ---------------------------------------------------------------------------
-
 echo "Configuration flow completed successfully" > /dev/tty
-
 add_message "Configuration complete."
 add_message "Updated:"
 add_message "  - ${ALL_YML}"
-add_message "  - ${HOSTS_FILE}"
 show_message
 
 exit 0
