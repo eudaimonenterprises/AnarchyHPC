@@ -1,6 +1,18 @@
 ---
-
 required_packages:
-  - "dnf-utils"
+  - "zypper"
+  - "rpm"
   - "distribution-gpg-keys"
-                                                                                                                                                                                             
+  - "ca-certificates"
+  - "ca-certificates-mozilla"
+  - "python3"
+  - "python3-pip"
+  - "python3-xml"
+  - "python3-setuptools"
+  - "python3-wheel"
+  - "git"
+  - "curl"
+  - "wget"
+  - "tar"
+  - "gzip"
+  - "util-linux"
