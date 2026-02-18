@@ -327,7 +327,7 @@
   - name: Verify whether we have to add cluster-ca
     command: 'certutil -L -d "/etc/dirsrv/slapd-local" -n cluster-ca'
     register: ds389_ca_cert
-    no_long: false
+    no_log: false
     ignore_errors: true
 
   - name: Add cluster CA as a valid DS389 CA
@@ -392,7 +392,7 @@
       ldapsearch -x -H ldap://localhost -D "cn=Directory Manager"
          -w {{ ds389_root_pwd }} -b "ou=Group,dc=local"
     register: ds389_ldapsearch
-    no_long: false
+    no_log: false
     ignore_errors: true
 
   - name: Load OpenLDAP local schema

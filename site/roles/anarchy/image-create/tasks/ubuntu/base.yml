@@ -1,7 +1,7 @@
 ---
 - name: Load OS‑specific variables
   include_vars: "{{ package_arch }}/image-{{ image_create_distribution }}.yaml"
-  no_long: false
+  no_log: false
   ignore_errors: true
 
 - name: Install required packages
