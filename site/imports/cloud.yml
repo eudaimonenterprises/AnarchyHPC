@@ -17,25 +17,37 @@
     - name: Set cloud_condition fact
       set_fact:
         cloud_condition: >-
-          {{ cloud_support | map('regex_replace', '^(.*)$', '\1_cloud')
-                           | map('extract', vars)
-                           | select('equalto', true)
-                           | list | length > 0 }}
+          {{ cloud_support
+             | map('regex_replace', '^(.*)$', '\1_cloud')
+             | map('extract', vars)
+             | select('equalto', true)
+             | list
+             | length > 0 }}
 
     - block:
+
+        # ---------------------------------------------------------
+        # LOAD CLOUD VARIABLES
+        # ---------------------------------------------------------
 
         - name: Include Cloud variables
           include_vars: "group_vars/{{ item }}.yml"
           loop: "{{ vars.cloud_support }}"
-          when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+          when: vars[item + '_cloud'] | default(false)
 
         - name: Set IAC fact
           set_fact:
-            terraform_installer: "{{ vars | dict2items
-                                      | selectattr('key', 'search', '_installer')
-                                      | map(attribute='value')
-                                      | select('equalto', 'terraform')
-                                      | list | length > 0 }}"
+            terraform_installer: >-
+              {{ vars | dict2items
+                       | selectattr('key', 'search', '_installer')
+                       | map(attribute='value')
+                       | select('equalto', 'terraform')
+                       | list
+                       | length > 0 }}
+
+        # ---------------------------------------------------------
+        # EXTERNAL IP DISCOVERY
+        # ---------------------------------------------------------
 
         - block:
             - name: Resolving AS external IP address
@@ -46,13 +58,15 @@
             - name: Setting external AS IP address
               set_fact:
                 cloud_local_external_as_ip: "{{ cloud_local_external_as_ip_info.json.ip }}"
-              when:
-                - cloud_local_external_as_ip_info.status is defined
-                - cloud_local_external_as_ip_info.status | int == 200
+              when: cloud_local_external_as_ip_info.status | default(0) | int == 200
           when: cloud_local_external_as_ip is not defined
 
         - debug:
             msg: "cloud_local_external_as_ip: {{ cloud_local_external_as_ip }}"
+
+        # ---------------------------------------------------------
+        # iPXE IMAGE BUILD
+        # ---------------------------------------------------------
 
         - name: Verifying if iPXE uEFI image has already been built
           stat:
@@ -72,6 +86,10 @@
                 dest: /etc/anarchy/cloud-image.done
           when: not cloud_uefi_image_done.stat.exists
 
+        # ---------------------------------------------------------
+        # CLOUD PHASE ONE
+        # ---------------------------------------------------------
+
         - name: Verifying if cloud phase one already done
           stat:
             path: /etc/anarchy/cloud-phaseone.done
@@ -79,9 +97,9 @@
 
         - block:
 
-            # -------------------------------
+            # ---------------------------------------------------------
             # PSK SECRET HANDLING
-            # -------------------------------
+            # ---------------------------------------------------------
 
             - name: Verify if psk secret exists
               stat:
@@ -105,9 +123,7 @@
                     mode: 0640
                     owner: root
                     group: root
-                  when:
-                    - cloud_base64_psk_data is defined
-                    - cloud_base64_psk_data.rc | int == 0
+                  when: cloud_base64_psk_data.rc | int == 0
               when: not cloud_psk_secret_file.stat.exists
 
             - name: Read PSK secret
@@ -119,9 +135,9 @@
             - set_fact:
                 cloud_psk_secret: "{{ cloud_psk_secret_cmd.stdout }}"
 
-            # -------------------------------
+            # ---------------------------------------------------------
             # SSH KEY HANDLING
-            # -------------------------------
+            # ---------------------------------------------------------
 
             - name: Read controller public key
               become: true
@@ -132,9 +148,9 @@
             - set_fact:
                 cloud_ssh_public_key: "{{ controller_pubkey.stdout }}"
 
-            # -------------------------------
+            # ---------------------------------------------------------
             # CLOUD ROLE EXECUTION
-            # -------------------------------
+            # ---------------------------------------------------------
 
             - name: Include Cloud Role and Install IAC approach
               include_role:
@@ -146,11 +162,11 @@
                 on_premise_controller_ip: "{{ anarchy_ctrl_ip }}"
                 include_ipxe_efi_build: true
               loop: "{{ vars.cloud_support }}"
-              when: vars[item + '_cloud'] is defined and vars[item + '_cloud'] is true
+              when: vars[item + '_cloud'] | default(false)
 
-            # -------------------------------
+            # ---------------------------------------------------------
             # TERRAFORM HANDLING
-            # -------------------------------
+            # ---------------------------------------------------------
 
             - name: Verifying if terraform already done
               stat:
@@ -169,7 +185,7 @@
                     loop_var: cloud_item
                   when:
                     - terraform_installer
-                    - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+                    - vars[cloud_item + '_cloud'] | default(false)
 
                 - name: Signing terraform off
                   copy:
@@ -177,25 +193,26 @@
                     dest: /etc/anarchy/cloud-terraform.done
               when: not cloud_terraform_done.stat.exists
 
-            # -------------------------------
+            # ---------------------------------------------------------
             # TERRAFORM VARIABLE EXTRACTION
-            # -------------------------------
+            # ---------------------------------------------------------
 
             - name: Read terraform variables file
               become: true
               slurp:
-                src: "/terraform/{{ cloud_item }}/variables.dat"
+                src: "{{ anarchy_local }}/terraform/{{ cloud_item }}/variables.dat"
               register: terraform_vars_raw
               loop: "{{ vars.cloud_support }}"
               loop_control:
                 loop_var: cloud_item
-              when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+              when: vars[cloud_item + '_cloud'] | default(false)
 
             - name: Extract VPN remote IP
               set_fact:
                 "{{ cloud_item + '_obtained_remote_ip' }}": >-
                   {{
-                    (terraform_vars_raw.results
+                    (
+                      terraform_vars_raw.results
                       | selectattr('item', 'equalto', cloud_item)
                       | map(attribute='content')
                       | map('b64decode')
@@ -210,13 +227,14 @@
               loop: "{{ vars.cloud_support }}"
               loop_control:
                 loop_var: cloud_item
-              when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+              when: vars[cloud_item + '_cloud'] | default(false)
 
             - name: Extract VPN remote PSK (AWS only)
               set_fact:
                 "{{ cloud_item + '_obtained_remote_psk' }}": >-
                   {{
-                    (terraform_vars_raw.results
+                    (
+                      terraform_vars_raw.results
                       | selectattr('item', 'equalto', cloud_item)
                       | map(attribute='content')
                       | map('b64decode')
@@ -227,7 +245,7 @@
                     | first
                     | regex_findall('\".+\"')
                     | first
-                    | regex_findall('[a-zA-Z0-9\\_\\.]+')
+                    | regex_findall('[a-zA-Z0-9_\\.]+')
                     | first
                   }}
               loop: "{{ vars.cloud_support }}"
@@ -235,11 +253,11 @@
                 loop_var: cloud_item
               when:
                 - cloud_item == 'aws'
-                - vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+                - vars[cloud_item + '_cloud'] | default(false)
 
-            # -------------------------------
+            # ---------------------------------------------------------
             # VPN CONFIGURATION
-            # -------------------------------
+            # ---------------------------------------------------------
 
             - name: Calling VPN role
               include_role:
@@ -248,8 +266,8 @@
                 vpn_connection_name: "{{ vars[cloud_item + '_vpn_connection_name'] }}"
                 vpn_remote_public_ip: "{{ vars[cloud_item + '_obtained_remote_ip'] }}"
                 vpn_local_external_ip: "{{ controller_external_ip }}"
-                vpn_local_private_subnet: "{{ anarchy_cluster_net + '/' + anarchy_cluster_netprefix }}"
-                vpn_remote_private_subnet: "{{ vars[cloud_item + '_cluster_net'] + '/' + vars[cloud_item + '_cluster_netprefix'] }}"
+                vpn_local_private_subnet: "{{ anarchy_cluster_net }}/{{ anarchy_cluster_netprefix }}"
+                vpn_remote_private_subnet: "{{ vars[cloud_item + '_cluster_net'] }}/{{ vars[cloud_item + '_cluster_netprefix'] }}"
                 vpn_psk_secret: "{{ vars[cloud_item + '_obtained_remote_psk'] | default(cloud_psk_secret) }}"
                 vpn_template: "{{ cloud_item }}"
               loop: "{{ vars.cloud_support }}"
@@ -264,9 +282,9 @@
 
           when: not cloud_phaseone_done.stat.exists
 
-        # -------------------------------
+        # ---------------------------------------------------------
         # CLOUD PHASE TWO
-        # -------------------------------
+        # ---------------------------------------------------------
 
         - name: Verifying if cloud phase two already done
           stat:
@@ -279,17 +297,17 @@
               include_role:
                 name: "cloud/cluster"
               vars:
-                createnodes: "{{ True if vars[cloud_item + '_node'] is defined and vars[cloud_item + '_node'] else False }}"
+                createnodes: "{{ vars[cloud_item + '_node'] | default(false) }}"
                 rawhostlist: "{{ vars[cloud_item + '_nodes'] | default('') }}"
                 cloudname: "{{ cloud_item }}"
                 cloudtype: "{{ cloud_item }}"
-                network: "{{ vars[cloud_item + '_cluster_net'] + '/' + vars[cloud_item + '_cluster_netprefix'] }}"
-                dhcprange: "{{ vars[cloud_item + '_cluster_dhcp_start'] | default('') + '-' + vars[cloud_item + '_cluster_dhcp_end'] | default('') }}"
+                network: "{{ vars[cloud_item + '_cluster_net'] }}/{{ vars[cloud_item + '_cluster_netprefix'] }}"
+                dhcprange: "{{ vars[cloud_item + '_cluster_dhcp_start'] | default('') }}-{{ vars[cloud_item + '_cluster_dhcp_end'] | default('') }}"
                 domain: "{{ vars[cloud_item + '_domain'] | default('cluster-' + cloud_item) }}"
               loop: "{{ vars.cloud_support }}"
               loop_control:
                 loop_var: cloud_item
-              when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+              when: vars[cloud_item + '_cloud'] | default(false)
 
             - name: Include cloud controller installer
               include_role:
@@ -300,7 +318,7 @@
               loop: "{{ vars.cloud_support }}"
               loop_control:
                 loop_var: cloud_item
-              when: vars[cloud_item + '_cloud'] is defined and vars[cloud_item + '_cloud'] is true
+              when: vars[cloud_item + '_cloud'] | default(false)
 
             - name: Signing cloud phase two off
               copy:

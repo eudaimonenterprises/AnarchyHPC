@@ -10,8 +10,9 @@
         state: directory
 
     # ---------------------------------------------------------
-    # Read controller's own SSH public key (must exist on controller)
+    # CONTROLLER PUBLIC KEY
     # ---------------------------------------------------------
+
     - name: Ensure controller public key exists
       stat:
         path: /root/.ssh/id_rsa.pub
@@ -19,7 +20,7 @@
 
     - name: Fail if controller public key is missing
       fail:
-        msg: "Controller public key /root/.ssh/id_rsa.pub does not exist. Controller key generation failed."
+        msg: "Controller public key /root/.ssh/id_rsa.pub does not exist on controller."
       when: not controller_pubkey_stat.stat.exists
 
     - name: Read controller public key
@@ -29,7 +30,6 @@
       changed_when: false
 
     - name: Add controller's key to authorized keys in the image
-      become: true
       authorized_key:
         user: root
         state: present
@@ -37,8 +37,9 @@
         path: "{{ image_path }}/root/.ssh/authorized_keys"
 
     # ---------------------------------------------------------
-    # Read cluster key (only in HA mode)
+    # CLUSTER PUBLIC KEY (HA ONLY)
     # ---------------------------------------------------------
+
     - name: Ensure cluster public key exists (HA only)
       stat:
         path: /root/.ssh/id_cluster_rsa.pub
@@ -47,7 +48,7 @@
 
     - name: Fail if cluster public key is missing (HA only)
       fail:
-        msg: "Cluster public key /root/.ssh/id_cluster_rsa.pub does not exist. Cluster key generation failed."
+        msg: "Cluster public key /root/.ssh/id_cluster_rsa.pub does not exist on controller."
       when:
         - ha | default(False)
         - not cluster_pubkey_stat.stat.exists
@@ -60,7 +61,6 @@
       when: ha | default(False)
 
     - name: Add cluster key to authorized keys in the image
-      become: true
       authorized_key:
         user: root
         state: present

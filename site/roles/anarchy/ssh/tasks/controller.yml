@@ -1,6 +1,10 @@
 ---
 # tasks file for ssh
 
+# ---------------------------------------------------------
+# ENSURE SSH DIRECTORY EXISTS
+# ---------------------------------------------------------
+
 - name: Ensure /root/.ssh exists
   file:
     path: /root/.ssh
@@ -19,51 +23,59 @@
     creates: /root/.ssh/id_rsa
 
 # ---------------------------------------------------------
-# CLUSTER SSH KEY GENERATION
+# CLUSTER SSH KEY GENERATION (HA ONLY)
 # ---------------------------------------------------------
 
 - block:
-  - name: Generate ssh cluster keys on the primary controller
-    command: ssh-keygen -t rsa -b 4096 -f /root/.ssh/id_cluster_rsa -N ""
-    args:
-      creates: /root/.ssh/id_cluster_rsa
 
-  - name: Ensure ssh keys sync directory exists
-    file:
-      path: '{{ anarchy_sync }}/ssh'
-      state: directory
+    - name: Generate ssh cluster keys on the primary controller
+      command: ssh-keygen -t rsa -b 4096 -f /root/.ssh/id_cluster_rsa -N ""
+      args:
+        creates: /root/.ssh/id_cluster_rsa
 
-  - name: Add cluster ssh key to sync
-    copy:
-      remote_src: true
-      src: '/root/.ssh/{{ item }}'
-      dest: '{{ anarchy_sync }}/ssh/{{ item }}'
-      mode: 0640
-    with_items:
-      - id_cluster_rsa
-      - id_cluster_rsa.pub
+    - name: Ensure ssh keys sync directory exists
+      file:
+        path: '{{ anarchy_sync }}/ssh'
+        state: directory
+
+    - name: Add cluster ssh key to sync
+      copy:
+        remote_src: true
+        src: '/root/.ssh/{{ item }}'
+        dest: '{{ anarchy_sync }}/ssh/{{ item }}'
+        mode: 0640
+      with_items:
+        - id_cluster_rsa
+        - id_cluster_rsa.pub
+
   when:
     - primary | default(True)
     - ha | default(False)
 
-- block:
-  - name: Copy cluster ssh keys from sync
-    copy:
-      remote_src: true
-      src: '{{ anarchy_sync }}/ssh/{{ item.0 }}'
-      dest: '/root/.ssh/'
-      mode: '{{ item.1 }}'
-    with_together:
-      - ['id_cluster_rsa', 'id_cluster_rsa.pub']
-      - ['0600','0644']
+# ---------------------------------------------------------
+# CLUSTER KEY SYNC FOR SECONDARY CONTROLLERS
+# ---------------------------------------------------------
 
-  - name: Update ssh and sshd configuration files for cluster ssh
-    copy:
-      src: 'ssh_cluster_config'
-      dest: '/root/.ssh/config'
-      mode: '0644'
-      owner: root
-      group: root
+- block:
+
+    - name: Copy cluster ssh keys from sync
+      copy:
+        remote_src: true
+        src: '{{ anarchy_sync }}/ssh/{{ item.0 }}'
+        dest: '/root/.ssh/'
+        mode: '{{ item.1 }}'
+      with_together:
+        - ['id_cluster_rsa', 'id_cluster_rsa.pub']
+        - ['0600','0644']
+
+    - name: Update ssh and sshd configuration files for cluster ssh
+      copy:
+        src: 'ssh_cluster_config'
+        dest: '/root/.ssh/config'
+        mode: '0644'
+        owner: root
+        group: root
+
   when:
     - not primary | default(False)
     - ha | default(False)
@@ -86,7 +98,7 @@
     key: "{{ controller_pubkey.stdout }}"
 
 # ---------------------------------------------------------
-# SSHD CONFIG
+# SSHD CONFIGURATION
 # ---------------------------------------------------------
 
 - name: Update ssh and sshd configuration files
@@ -106,6 +118,10 @@
     name: sshd
     state: started
     enabled: true
+
+# ---------------------------------------------------------
+# USER SSH AUTO-CREATION SCRIPT
+# ---------------------------------------------------------
 
 - name: Automatic SSH key creation for user
   copy:
