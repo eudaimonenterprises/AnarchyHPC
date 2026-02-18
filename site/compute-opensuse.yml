@@ -10,7 +10,7 @@
   vars:
     image_name: "{{ hostvars['localhost']['image_name'] }}"
     image_password:
-    opensuse_release: "leap/16.0"
+    opensuse_release: "16.0"
 
 - import_playbook: imports/anarchy-opensuse-image-setup.yml
   vars:
