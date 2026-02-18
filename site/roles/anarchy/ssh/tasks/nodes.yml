@@ -63,14 +63,14 @@
     authorized_key:
       user: root
       state: present
-      key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
+      key: '{{ lookup("pipe", "/root/.ssh/id_rsa.pub") }}'
       path: "{{ image_path }}/root/.ssh/authorized_keys"
   
   - name: Add cluster key to authorized keys
     authorized_key:
       user: root
       state: present
-      key: '{{ lookup("file", "/root/.ssh/id_cluster_rsa.pub") }}'
+      key: '{{ lookup("pipe", "/root/.ssh/id_cluster_rsa.pub") }}'
       path: "{{ image_path }}/root/.ssh/authorized_keys"
     when: ha | default(False)
   when:

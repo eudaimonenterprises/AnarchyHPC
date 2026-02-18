@@ -69,7 +69,7 @@
   authorized_key:
     user: root
     state: present
-    key: '{{ lookup("file", "/root/.ssh/id_rsa.pub") }}'
+    key: '{{ lookup("pipe", "/root/.ssh/id_rsa.pub") }}'
 
 - name: Update ssh and sshd configuration files
   copy:

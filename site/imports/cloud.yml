@@ -102,7 +102,7 @@
 
             - name: Reading in ssh public key
               set_fact:
-                cloud_ssh_public_key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
+                cloud_ssh_public_key: "{{ lookup('pipe', '/root/.ssh/id_rsa.pub') }}"
 
             - name: Include Cloud Role and Install IAC approach
               include_role:

@@ -121,13 +121,6 @@
     install -t pattern base
 
 # ---------------------------------------------------------
-# Initialize RPM DB (AFTER bootstrap + pattern)
-# ---------------------------------------------------------
-- name: Initialize the rpm DB
-  become: true
-  command: "rpm --root {{ image_path }} --initdb"
-
-# ---------------------------------------------------------
 # Copy GPG key
 # ---------------------------------------------------------
 - name: Copy the rpm gpg key to the image
@@ -135,3 +128,4 @@
   copy:
     src: /usr/share/distribution-gpg-keys/opensuse/RPM-GPG-KEY-openSUSE
     dest: "{{ image_path }}/etc/pki/rpm-gpg/"
+    remote_src: true
