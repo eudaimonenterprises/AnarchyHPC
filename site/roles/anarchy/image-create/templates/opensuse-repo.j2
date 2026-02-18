@@ -1,9 +1,7 @@
-[opensuse]
-name=OpenSUSE {{ opensuse_release|default('Leap 15.6') }}
-baseurl=https://download.opensuse.org/distribution/{{ opensuse_release|default('leap/15.6') }}/repo/oss/
-{% if for_image|default(False) %}
+[opensuse-oss]
+name=OpenSUSE Leap {{ opensuse_release|default('16.0') }} - OSS
 enabled=1
-{% else %}
-enabled=0
-{% endif %}
+autorefresh=1
+baseurl=https://download.opensuse.org/distribution/leap/{{ opensuse_release|default('16.0') }}/repo/oss/
+type=rpm-md
 gpgcheck=0

@@ -8,6 +8,7 @@
 # Install required packages on the controller
 # ---------------------------------------------------------
 - name: Install required packages (controller)
+  become: true
   zypper:
     name: "{{ required_packages }}"
     state: present
@@ -17,67 +18,37 @@
 # ---------------------------------------------------------
 # Prepare image directory structure
 # ---------------------------------------------------------
-- name: Prepare paths in image
+- name: Prepare image directory structure
+  become: true
   file:
     path: "{{ image_path }}/{{ item }}"
     state: directory
   loop:
+    - usr
+    - usr/lib
+    - usr/lib/sysimage
+    - usr/lib/sysimage/rpm
     - etc/zypp/repos.d
-    - var/lib/rpm
     - etc/pki/rpm-gpg
+    - dev
     - dev/pts
+    - proc
+    - sys
 
 # ---------------------------------------------------------
 # Copy repo definition into the image
 # ---------------------------------------------------------
 - name: Configure openSUSE repositories
+  become: true
   template:
     src: opensuse-repo.j2
     dest: "{{ image_path }}/etc/zypp/repos.d/opensuse.repo"
 
 # ---------------------------------------------------------
-# Initialize RPM DB
+# Create /dev nodes FIRST (before any mounts)
 # ---------------------------------------------------------
-- name: Initialize the rpm DB
-  command: "rpm --root {{ image_path }} --initdb"
-
-# ---------------------------------------------------------
-# Copy GPG key
-# ---------------------------------------------------------
-- name: Copy the rpm gpg key to the image
-  copy:
-    src: /usr/share/distribution-gpg-keys/opensuse/RPM-GPG-KEY-openSUSE
-    dest: "{{ image_path }}/etc/pki/rpm-gpg/"
-
-# ---------------------------------------------------------
-# Bootstrap the image using zypper --root
-# ---------------------------------------------------------
-- name: Install bootstrap packages in image
-  command: >
-    zypper --non-interactive --root {{ image_path }}
-    --gpg-auto-import-keys install {{ item }}
-  loop: "{{ image_bootstrap_packages }}"
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-# ---------------------------------------------------------
-# Install base system pattern
-# ---------------------------------------------------------
-- name: Install base pattern in image
-  command: >
-    zypper --non-interactive --root {{ image_path }}
-    install -t pattern base
-
-# ---------------------------------------------------------
-# Create /dev nodes
-# ---------------------------------------------------------
-- name: Create /dev directory
-  file:
-    path: "{{ image_path }}/dev"
-    state: directory
-    mode: 0755
-
 - name: Create basic /dev files
+  become: true
   command: "/usr/bin/mknod {{ image_path }}/dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }}"
   args:
     creates: "{{ image_path }}/dev/{{ item.dev }}"
@@ -91,8 +62,76 @@
     - {dev: "tty",       t: 'c', ma: 5,   mi: 0}
 
 - name: Create /dev/fd symlink
+  become: true
   file:
     src: /proc/self/fd
     dest: "{{ image_path }}/dev/fd"
     state: link
     force: true
+
+# ---------------------------------------------------------
+# Bind mount required virtual filesystems
+# ---------------------------------------------------------
+- name: Bind mount /dev/pts
+  become: true
+  mount:
+    src: /dev/pts
+    path: "{{ image_path }}/dev/pts"
+    fstype: none
+    opts: bind
+    state: mounted
+
+- name: Bind mount /proc
+  become: true
+  mount:
+    src: /proc
+    path: "{{ image_path }}/proc"
+    fstype: none
+    opts: bind
+    state: mounted
+
+- name: Bind mount /sys
+  become: true
+  mount:
+    src: /sys
+    path: "{{ image_path }}/sys"
+    fstype: none
+    opts: bind
+    state: mounted
+
+# ---------------------------------------------------------
+# Bootstrap the image using zypper --root
+# ---------------------------------------------------------
+- name: Install bootstrap packages in image
+  become: true
+  command: >
+    zypper --non-interactive --root {{ image_path }}
+    --gpg-auto-import-keys install {{ item }}
+  loop: "{{ image_bootstrap_packages }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+# ---------------------------------------------------------
+# Install base system pattern
+# ---------------------------------------------------------
+- name: Install base pattern in image
+  become: true
+  command: >
+    zypper --non-interactive --root {{ image_path }}
+    install -t pattern base
+
+# ---------------------------------------------------------
+# Initialize RPM DB (AFTER bootstrap + pattern)
+# ---------------------------------------------------------
+- name: Initialize the rpm DB
+  become: true
+  command: "rpm --root {{ image_path }} --initdb"
+
+# ---------------------------------------------------------
+# Copy GPG key
+# ---------------------------------------------------------
+- name: Copy the rpm gpg key to the image
+  become: true
+  copy:
+    src: /usr/share/distribution-gpg-keys/opensuse/RPM-GPG-KEY-openSUSE
+    dest: "{{ image_path }}/etc/pki/rpm-gpg/"
