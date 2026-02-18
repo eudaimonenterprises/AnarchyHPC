@@ -1,7 +1,7 @@
 ---
 - name: Load OS‑specific variables
   include_vars: "{{ package_arch }}/docker-{{ image_create_distribution }}.yaml"
-  no_log: true
+  no_long: false
   ignore_errors: true
 
 - name: Create /dev

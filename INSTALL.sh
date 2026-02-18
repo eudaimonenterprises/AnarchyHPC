@@ -88,6 +88,7 @@ sudo chown $USER:$USER /var/log/anarchy.log
 
 echo
 add_message "Ansible Playbooks will now run"
+add_message "BECOME password is the REMOTE user password on the controller"
 show_message
 count_down 5
-ansible-playbook controller.yml compute-default.yml compute-ubuntu.yml
+ansible-playbook -K controller.yml compute-default.yml compute-ubuntu.yml

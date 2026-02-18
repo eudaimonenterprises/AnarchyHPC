@@ -86,10 +86,12 @@ done
 echo
 echo "--- Removing Ansible collections installed by AnarchyHPC ---"
 
-ansible-galaxy collection remove community.mysql || true
-ansible-galaxy collection remove ansible.posix || true
-ansible-galaxy collection remove community.general || true
-ansible-galaxy remove OndrejHome.pcs-modules-2 || true
+# Remove collections manually if they exist
+COLL_DIR="$HOME/.ansible/collections/ansible_collections"
+
+sudo rm -rf "$COLL_DIR/community/mysql" 2>/dev/null || true
+sudo rm -rf "$COLL_DIR/ansible/posix" 2>/dev/null || true
+sudo rm -rf "$COLL_DIR/community/general" 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
 # 6. Remove packages installed specifically by prepare.sh
@@ -97,7 +99,7 @@ ansible-galaxy remove OndrejHome.pcs-modules-2 || true
 echo
 echo "--- Removing packages installed by AnarchyHPC ---"
 
-sudo dnf remove -y ansible ansible-core git curl tar || true
+sudo dnf remove -y ansible ansible-core || true
 
 # ---------------------------------------------------------------------------
 # 7. Remove leftover temp files

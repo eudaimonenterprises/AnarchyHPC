@@ -4,7 +4,7 @@ shared_root: '/opt/cluster'
 
 # Directory definitions used by other roles
 shared_tree_dirs:
-  - name: 
+  - name: anarchy_root
     path: '{{ anarchy_root }}'
   - name: anarchy_sync
     path: '{{ anarchy_root }}/sync'

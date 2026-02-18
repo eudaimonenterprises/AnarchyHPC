@@ -201,8 +201,7 @@ anarchy_root: '/anarchy'
 # The AnarchyHPC root contains multiple subdirectories for different uses:
 # - anarchy_images For the compute node images
 # - anarchy_shared for everything shared by the controllers to the nodes
-# - anarchy_local for configuration files specific to each machine. This one
-#              is not listed and hard configured to /anarchy/local.
+# - anarchy_local for configuration files specific to each machine.
 # - anarchy_home for the user home directories
 #
 # The partitioning on the controller must be set up before starting the installation.
@@ -212,6 +211,7 @@ anarchy_root: '/anarchy'
 # WARNING: use with caution! Not all deviating combinations are tested and
 # may render problems.
 
+anarchy_local: '{{ anarchy_root }}/local'
 anarchy_images: '{{ anarchy_root }}/images'
 anarchy_shared: '{{ anarchy_root }}/shared'
 anarchy_ha: '{{ anarchy_root }}/ha'

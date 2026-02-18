@@ -7,7 +7,7 @@
     - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
     - "{{ ansible_distribution }}.yaml"
     - "{{ ansible_os_family }}.yaml"
-  no_log: true
+  no_long: false
   ignore_errors: true
 
 - name: Install required packages

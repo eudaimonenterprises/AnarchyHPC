@@ -57,6 +57,30 @@ get_yaml_value() {
   fi
 }
 
+# NEW: read defaults from all.yml.example
+get_example_value() {
+  local key="$1"
+  local val
+  val=$(grep -E "^${key}:" "$ALL_YML_EXAMPLE" | head -n1 | sed -E "s/^${key}:[[:space:]]*//")
+  echo "${val//\"/}"
+}
+
+# NEW: unified default loader
+get_default() {
+  local key="$1"
+  local from_all
+  local from_example
+
+  from_all=$(get_yaml_value "$key" "")
+  if [ -n "$from_all" ]; then
+    echo "$from_all"
+    return
+  fi
+
+  from_example=$(get_example_value "$key")
+  echo "$from_example"
+}
+
 set_yaml_value() {
   local key="$1"
   local value="$2"
@@ -108,24 +132,10 @@ set_yaml_list_strings() {
 remove_yaml_block() {
   local key="$1"
   awk -v k="${key}:" '
-    # When we see the key, start skipping
-    $0 ~ "^"k {
-      skip=1
-      next
-    }
-
-    # If skipping, skip lines that are indented (part of the block)
-    skip && /^[[:space:]]+/ {
-      next
-    }
-
-    # If skipping and we hit a non-indented line, stop skipping
-    skip {
-      skip=0
-    }
-
-    # Print everything else
-    { print }
+    $0 ~ "^"k {skip=1; next}
+    skip && /^[[:space:]]+/ {next}
+    skip {skip=0}
+    {print}
   ' "$ALL_YML" > "$ALL_YML.tmp"
   mv "$ALL_YML.tmp" "$ALL_YML"
 }
@@ -167,58 +177,177 @@ prompt_bool() {
 # ---------------------------------------------------------------------------
 
 add_message "Welcome to the AnarchyHPC configuration TUI."
-add_message "You will be asked a few questions; defaults are shown in brackets."
+add_message "Defaults come from all.yml (if present) or all.yml.example."
 show_message
 
 echo "Gathering cluster basics" > /dev/tty
-anarchy_domain=$(prompt_default "Cluster internal domain name" "$(get_yaml_value anarchy_domain cluster.local)")
-project_id=$(prompt_default "Project ID" "$(get_yaml_value project_id 000000)")
+anarchy_domain=$(prompt_default "Cluster internal domain name" "$(get_default anarchy_domain)")
+project_id=$(prompt_default "Project ID" "$(get_default project_id)")
 
 echo "Gathering controller settings" > /dev/tty
-anarchy_ctrl1_hostname=$(prompt_default "Controller hostname" "$(get_yaml_value anarchy_ctrl1_hostname controller1)")
-anarchy_ctrl1_ip=$(prompt_default "Controller IP address" "$(get_yaml_value anarchy_ctrl1_ip 10.0.0.11)")
+anarchy_ctrl1_hostname=$(prompt_default "Controller hostname" "$(get_default anarchy_ctrl1_hostname)")
+anarchy_ctrl1_ip=$(prompt_default "Controller IP address" "$(get_default anarchy_ctrl1_ip)")
 
 echo "Gathering HA and external FQDN" > /dev/tty
-ha=$(prompt_bool "Enable High Availability (HA)" "$(get_yaml_value ha false)")
-anarchy_external_fqdn=$(prompt_default "External FQDN" "$(get_yaml_value anarchy_external_fqdn "")")
+ha=$(prompt_bool "Enable High Availability (HA)" "$(get_default ha)")
+anarchy_external_fqdn=$(prompt_default "External FQDN" "$(get_default anarchy_external_fqdn)")
 
 echo "Gathering DNS forwarders" > /dev/tty
-cur_dns1=$(grep -A5 anarchy_dns_forwarders "$ALL_YML" | grep -E '^\s*-\s*"' | sed -n '1p' | sed -E 's/.*"(.*)".*/\1/')
-cur_dns2=$(grep -A5 anarchy_dns_forwarders "$ALL_YML" | grep -E '^\s*-\s*"' | sed -n '2p' | sed -E 's/.*"(.*)".*/\1/')
-default_dns="${cur_dns1:-1.1.1.1},${cur_dns2:-1.0.0.1}"
-dns_input=$(prompt_default "DNS forwarders" "$default_dns")
-IFS=',' read -r -a dns_array <<< "$dns_input"
+default_dns=$(get_default anarchy_dns_forwarders)
+IFS=',' read -r -a dns_array <<< "$(prompt_default "DNS forwarders (comma-separated)" "$default_dns")"
 
 echo "Gathering feature toggles" > /dev/tty
-enable_selinux=$(prompt_bool "Enable SELinux" "$(get_yaml_value enable_selinux true)")
-enable_ood=$(prompt_bool "Enable Open OnDemand" "$(get_yaml_value enable_ood true)")
-enable_openhpc=$(prompt_bool "Enable OpenHPC" "$(get_yaml_value enable_openhpc true)")
-enable_easybuild=$(prompt_bool "Enable EasyBuild" "$(get_yaml_value enable_easybuild false)")
-enable_authentication=$(prompt_bool "Enable internal authentication" "$(get_yaml_value enable_authentication true)")
+enable_selinux=$(prompt_bool "Enable SELinux" "$(get_default enable_selinux)")
+enable_ood=$(prompt_bool "Enable Open OnDemand" "$(get_default enable_ood)")
+enable_openhpc=$(prompt_bool "Enable OpenHPC" "$(get_default enable_openhpc)")
+enable_easybuild=$(prompt_bool "Enable EasyBuild" "$(get_default enable_easybuild)")
+enable_authentication=$(prompt_bool "Enable internal authentication" "$(get_default enable_authentication)")
 
 echo "Gathering workload manager" > /dev/tty
-
-# Try to extract current workload manager, but don't die if it fails
-cur_wm=$(
-  grep -A5 "^workload_manager:" "$ALL_YML" 2>/dev/null \
-    | grep -E "^\s*-\s*['\"]" 2>/dev/null \
-    | head -n1 \
-    | sed -E "s/.*['\"](.*)['\"].*/\1/" \
-    || true
-)
-
-cur_wm=${cur_wm:-slurm}
-
-wm=$(prompt_default "Workload manager (slurm or k3s)" "$cur_wm")
-
-# Normalize
+wm=$(prompt_default "Workload manager (slurm or k3s)" "$(get_default workload_manager)")
 case "$wm" in
   k3s|K3S) wm="k3s" ;;
   *)       wm="slurm" ;;
 esac
 
+# NEW: cluster network prompts
+echo "Gathering cluster network settings" > /dev/tty
+anarchy_cluster_net=$(prompt_default "Cluster network" "$(get_default anarchy_cluster_net)")
+anarchy_cluster_netprefix=$(prompt_default "Cluster network prefix" "$(get_default anarchy_cluster_netprefix)")
+anarchy_cluster_dhcp_start=$(prompt_default "DHCP range start" "$(get_default anarchy_cluster_dhcp_start)")
+anarchy_cluster_dhcp_end=$(prompt_default "DHCP range end" "$(get_default anarchy_cluster_dhcp_end)")
+
+# NEW: BMC network prompts
+echo "Gathering BMC network settings" > /dev/tty
+anarchy_bmc_net=$(prompt_default "BMC network" "$(get_default anarchy_bmc_net)")
+anarchy_bmc_netprefix=$(prompt_default "BMC network prefix" "$(get_default anarchy_bmc_netprefix)")
+
 # ---------------------------------------------------------------------------
-# Write back
+# SSH setup (integrated ssh_bootstrap)
+# ---------------------------------------------------------------------------
+
+echo
+echo "=== AnarchyHPC SSH Setup ==="
+
+echo
+echo "Which LOCAL user should own the SSH key?"
+echo "(This user will manage the cluster after installation. Root can still use the key during install.)"
+read -r -p "Local username [$(logname)]: " LOCAL_USER
+LOCAL_USER=${LOCAL_USER:-$(logname)}
+
+LOCAL_HOME=$(eval echo "~${LOCAL_USER}")
+if [[ ! -d "$LOCAL_HOME" ]]; then
+  echo "ERROR: Local user '$LOCAL_USER' does not exist or has no home directory." >&2
+  exit 1
+fi
+
+DEFAULT_KEY_PATH="${LOCAL_HOME}/.ssh/anarchy_id_ed25519"
+
+echo
+echo "Controller hostname or IP: ${anarchy_ctrl1_ip}"
+CONTROLLER_HOST="${anarchy_ctrl1_ip}"
+
+read -r -p "SSH username for controller [${LOCAL_USER}]: " CONTROLLER_USER
+CONTROLLER_USER=${CONTROLLER_USER:-$LOCAL_USER}
+
+echo
+echo "Do you already have SSH key-based access to the controller?"
+read -r -p "[y/N]: " HAVE_KEY
+HAVE_KEY=${HAVE_KEY:-n}
+
+SSH_KEY_PATH=""
+
+if [[ "$HAVE_KEY" =~ ^[Yy]$ ]]; then
+  read -r -p "Path to your existing LOCAL SSH private key: " SSH_KEY_PATH
+  SSH_KEY_PATH=${SSH_KEY_PATH/#\~/$LOCAL_HOME}
+
+  if [[ ! -f "$SSH_KEY_PATH" ]]; then
+    echo "ERROR: Key '$SSH_KEY_PATH' not found." >&2
+    exit 1
+  fi
+
+  chmod 600 "$SSH_KEY_PATH" || true
+
+  echo
+  echo "Testing SSH access..."
+  if ! ssh -i "$SSH_KEY_PATH" -o BatchMode=yes -o ConnectTimeout=10 \
+      "${CONTROLLER_USER}@${CONTROLLER_HOST}" true 2>/dev/null; then
+    echo "ERROR: Unable to authenticate with the provided key." >&2
+    exit 1
+  fi
+else
+  echo
+  echo "Where should the new LOCAL SSH key be stored?"
+  echo "1) Default: ${DEFAULT_KEY_PATH}"
+  echo "2) Custom path"
+  read -r -p "Choose [1/2]: " KEY_CHOICE
+
+  case "$KEY_CHOICE" in
+    1|"")
+      SSH_KEY_PATH="$DEFAULT_KEY_PATH"
+      ;;
+    2)
+      read -r -p "Enter full path for new LOCAL SSH private key: " SSH_KEY_PATH
+      SSH_KEY_PATH=${SSH_KEY_PATH/#\~/$LOCAL_HOME}
+      ;;
+    *)
+      echo "Invalid choice." >&2
+      exit 1
+      ;;
+  esac
+
+  SSH_PUB_PATH="${SSH_KEY_PATH}.pub"
+  SSH_DIR=$(dirname "$SSH_KEY_PATH")
+
+  mkdir -p "$SSH_DIR"
+  chmod 700 "$SSH_DIR"
+  chown "$LOCAL_USER":"$LOCAL_USER" "$SSH_DIR"
+
+  if [[ -f "$SSH_KEY_PATH" ]]; then
+    echo
+    read -r -p "Key already exists at '$SSH_KEY_PATH'. Reuse it? [Y/n]: " REUSE
+    REUSE=${REUSE:-y}
+    if [[ ! "$REUSE" =~ ^[Yy]$ ]]; then
+      echo "Aborting to avoid overwriting existing key." >&2
+      exit 1
+    fi
+  else
+    echo
+    echo "Generating SSH key at '$SSH_KEY_PATH'..."
+    ssh-keygen -t ed25519 -f "$SSH_KEY_PATH" -N "" -C "anarchyhpc@${HOSTNAME}"
+
+    chown "$LOCAL_USER":"$LOCAL_USER" "$SSH_KEY_PATH" "$SSH_PUB_PATH"
+    chmod 600 "$SSH_KEY_PATH"
+    chmod 644 "$SSH_PUB_PATH"
+  fi
+
+  echo
+  echo "Installing public key on controller (you will be prompted for password)..."
+
+  SSH_PUB_PATH="${SSH_KEY_PATH}.pub"
+  if command -v ssh-copy-id >/dev/null 2>&1; then
+    ssh-copy-id -i "$SSH_PUB_PATH" "${CONTROLLER_USER}@${CONTROLLER_HOST}"
+  else
+    echo "ssh-copy-id not found, using fallback method."
+    scp "$SSH_PUB_PATH" "${CONTROLLER_USER}@${CONTROLLER_HOST}:/tmp/anarchyhpc_key.pub"
+    ssh "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
+      "mkdir -p ~/.ssh && cat /tmp/anarchyhpc_key.pub >> ~/.ssh/authorized_keys && rm -f /tmp/anarchyhpc_key.pub && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys"
+  fi
+
+  echo
+  echo "Testing SSH access with new key..."
+  if ! ssh -i "$SSH_KEY_PATH" -o BatchMode=yes -o ConnectTimeout=10 \
+      "${CONTROLLER_USER}@${CONTROLLER_HOST}" true 2>/dev/null; then
+    echo "ERROR: Key-based SSH login failed." >&2
+    exit 1
+  fi
+fi
+
+echo
+echo "=== SSH setup complete ==="
+
+# ---------------------------------------------------------------------------
+# Write back (MINIMAL CHANGES: only new variables added)
 # ---------------------------------------------------------------------------
 
 echo "Writing configuration to ${ALL_YML}" > /dev/tty
@@ -235,17 +364,27 @@ set_yaml_value "enable_openhpc" "$enable_openhpc"
 set_yaml_value "enable_easybuild" "$enable_easybuild"
 set_yaml_value "enable_authentication" "$enable_authentication"
 
+# NEW cluster network writes
+set_yaml_value "anarchy_cluster_net" "$anarchy_cluster_net"
+set_yaml_value "anarchy_cluster_netprefix" "$anarchy_cluster_netprefix"
+set_yaml_value "anarchy_cluster_dhcp_start" "$anarchy_cluster_dhcp_start"
+set_yaml_value "anarchy_cluster_dhcp_end" "$anarchy_cluster_dhcp_end"
+
+# NEW BMC writes
+set_yaml_value "anarchy_bmc_net" "$anarchy_bmc_net"
+set_yaml_value "anarchy_bmc_netprefix" "$anarchy_bmc_netprefix"
+
 remove_yaml_block "workload_manager"
 {
   echo "workload_manager:"
   echo "  - '${wm}'"
 } >> "$ALL_YML"
 
-# Fix DNS block
 set_yaml_list_strings "anarchy_dns_forwarders" "${dns_array[@]}"
 
-
 # ---------------------------------------------------------------------------
+# Regenerate inventory
+#
 # NOTE:
 # Ansible does NOT read controller IPs from group_vars/all.yml.
 # It uses the inventory file (hosts). The first time this TUI runs,
@@ -253,17 +392,18 @@ set_yaml_list_strings "anarchy_dns_forwarders" "${dns_array[@]}"
 # This block regenerates the inventory so Ansible connects to the
 # correct controller hostname and IP selected in the TUI.
 # ---------------------------------------------------------------------------
+
 echo "Writing inventory to ${HOSTS_FILE}" > /dev/tty
 {
   echo "[controllers]"
-  echo "${anarchy_ctrl1_hostname} ansible_host=${anarchy_ctrl1_ip}"
+  echo "${anarchy_ctrl1_hostname} ansible_host=${anarchy_ctrl1_ip} ansible_user=${CONTROLLER_USER} ansible_ssh_private_key_file=${SSH_KEY_PATH} ansible_become=true"
 } > "$HOSTS_FILE"
-
 
 echo "Configuration flow completed successfully" > /dev/tty
 add_message "Configuration complete."
 add_message "Updated:"
 add_message "  - ${ALL_YML}"
+add_message "  - ${HOSTS_FILE}"
 show_message
 
 exit 0

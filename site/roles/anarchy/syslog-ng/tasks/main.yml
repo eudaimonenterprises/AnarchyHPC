@@ -5,7 +5,7 @@
   include_vars: "{{ item }}"
   with_first_found:
     - "{{ ansible_os_family }}.yaml"
-  no_log: true
+  no_long: false
   ignore_errors: true
 
 - name: Install syslog-ng

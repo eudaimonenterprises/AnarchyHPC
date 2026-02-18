@@ -1,7 +1,7 @@
 ---
 - name: Get image path
   set_fact:
-    image_path: "{{ shared_images }}/{{ image_name }}"
+    image_path: "{{ anarchy_images }}/{{ image_name }}"
 
 - name: Create directory for image
   file:
