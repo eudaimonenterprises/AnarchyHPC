@@ -2,102 +2,107 @@
 - name: Load OS‑specific variables
   include_vars: "{{ package_arch }}/docker-{{ image_create_distribution }}.yaml"
 
+# ---------------------------------------------------------
+# Prepare directory structure
+# ---------------------------------------------------------
 - name: Prepare paths in image
   file:
     path: "/{{ item }}"
     state: directory
-  with_items:
-    - /etc/yum.repos.d
-    - /var/lib/rpm
-    - /etc/pki/rpm-gpg
-    - /dev/pts
+  loop:
+    - etc/zypp/repos.d
+    - var/lib/rpm
+    - etc/pki/rpm-gpg
+    - dev/pts
 
+# ---------------------------------------------------------
+# Create /dev and device nodes
+# ---------------------------------------------------------
 - name: Create /dev
   file:
-    path: /dev/
+    path: /dev
     state: directory
     mode: 0755
-    owner: root
-    group: root
 
 - name: Create basic /dev files
   command: "/usr/bin/mknod /dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }}"
   args:
     creates: "/dev/{{ item.dev }}"
-  with_items:
-    - {dev: "null",      mo: "666", t: 'c', ma: 1,   mi: 3}
-    - {dev: "zero",      mo: "666", t: 'c', ma: 1,   mi: 5}
-    - {dev: "random",    mo: "666", t: 'c', ma: 1,   mi: 8}
-    - {dev: "urandom",   mo: "666", t: 'c', ma: 1,   mi: 9}
-    - {dev: "console",   mo: "600", t: 'c', ma: 5,   mi: 1}
-    - {dev: "ptmx",      mo: "666", t: 'c', ma: 5,   mi: 2}
-    - {dev: "tty",       mo: "666", t: 'c', ma: 5,   mi: 0}
-    - {dev: "pts/0",     mo: "620", t: 'c', ma: 136, mi: 0}
-    - {dev: "pts/1",     mo: "620", t: 'c', ma: 136, mi: 1}
-    - {dev: "pts/ptmx",  mo: "000", t: 'c', ma: 5,   mi: 2}
+  loop:
+    - {dev: "null",    t: 'c', ma: 1,   mi: 3}
+    - {dev: "zero",    t: 'c', ma: 1,   mi: 5}
+    - {dev: "random",  t: 'c', ma: 1,   mi: 8}
+    - {dev: "urandom", t: 'c', ma: 1,   mi: 9}
+    - {dev: "console", t: 'c', ma: 5,   mi: 1}
+    - {dev: "ptmx",    t: 'c', ma: 5,   mi: 2}
+    - {dev: "tty",     t: 'c', ma: 5,   mi: 0}
 
-- name: Create /dev/fd
+- name: Create /dev/fd symlink
   file:
     src: /proc/self/fd
     dest: /dev/fd
-    force: true
     state: link
+    force: true
 
+# ---------------------------------------------------------
+# GPG keys
+# ---------------------------------------------------------
 - name: Copy the rpm gpg key to the image
   copy:
     src: /usr/share/distribution-gpg-keys/opensuse/RPM-GPG-KEY-openSUSE
     dest: /etc/pki/rpm-gpg/
 
-- name: Configure AnarchyHPC repos
-  ansible.builtin.yum_repository:
-    name: "{{ item.name }}"
-    description: "{{ item.name }}"
-    baseurl: "{{ item.repo }}"
-    gpgcheck: "{{ item.gpgcheck | default(False) }}"
-    gpgkey: "{{ 'file://' + item.gpgkey if item.gpgcheck else '' }}"
-  with_items: "{{ anarchyhpc_repositories }}"
+# ---------------------------------------------------------
+# Configure AnarchyHPC repos (openSUSE style)
+# ---------------------------------------------------------
+- name: Write AnarchyHPC repo files
+  template:
+    src: opensuse-repo.j2
+    dest: "/etc/zypp/repos.d/{{ item.name }}.repo"
+  loop: "{{ anarchyhpc_repositories }}"
   when: item.name is defined
   tags: repos
 
-- name: Collecting repo names for next task
-  set_fact:
-    _repos_inside_image_remove: "{{ _repos_inside_image_remove|default([]) + [ 'zypper rr '+item.name ] }}"
-    _repos_inside_image_add: "{{ _repos_inside_image_add|default([]) + [ 'zypper ar /etc/yum.repos.d/'+item.name+'.repo' ] }}"
-  with_items: "{{ anarchyhpc_repositories }}"
-  when: item.name is defined
+# ---------------------------------------------------------
+# Refresh repos and update
+# ---------------------------------------------------------
+- name: Refresh repositories
+  command: "zypper --non-interactive --gpg-auto-import-keys refresh"
 
-- name: Prepare zypper to work
-  block:
-    - name: Running shell commands inside image
-      shell: "{{ item }}"
-      with_items:
-        - "{{ _repos_inside_image_remove|default([]) }}"
-        - "{{ _repos_inside_image_add|default([]) }}"
-        - zypper --gpg-auto-import-keys refresh
-        - zypper up --replacefiles --no-confirm
+- name: Update system
+  command: "zypper --non-interactive up --replacefiles"
 
+# ---------------------------------------------------------
+# Install core packages
+# ---------------------------------------------------------
 - name: Install core packages
-  ansible.builtin.zypper:
+  zypper:
     name: "{{ item }}"
-  with_items: "{{ image_core_packages }}"
-  ignore_errors: true
+    state: present
+  loop: "{{ image_core_packages }}"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  ignore_errors: true
 
+# ---------------------------------------------------------
+# Reinstall packages (if needed)
+# ---------------------------------------------------------
 - name: Reinstall packages
-  ansible.builtin.zypper:
+  zypper:
     name: "{{ item }}"
+    state: present
     force: true
+  loop: "{{ image_reinstall_packages }}"
   ignore_errors: true
-  with_items: "{{ image_reinstall_packages }}"
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
 
+# ---------------------------------------------------------
+# Enable services
+# ---------------------------------------------------------
 - name: Enabling services
   service:
     name: "{{ item }}"
     enabled: true
-  with_items:
+  loop:
     - NetworkManager
     - sshd
   ignore_errors: true
