@@ -20,7 +20,7 @@
 - name: Generate controller SSH keypair if missing
   command: ssh-keygen -t rsa -b 4096 -f /root/.ssh/id_rsa -N ""
   args:
-    creates: /root/.ssh/id_rsa
+    creates: /root/.ssh/id_rsa.pub
 
 # ---------------------------------------------------------
 # CLUSTER SSH KEY GENERATION (HA ONLY)
@@ -31,7 +31,7 @@
     - name: Generate ssh cluster keys on the primary controller
       command: ssh-keygen -t rsa -b 4096 -f /root/.ssh/id_cluster_rsa -N ""
       args:
-        creates: /root/.ssh/id_cluster_rsa
+        creates: /root/.ssh/id_cluster_rsa.pub
 
     - name: Ensure ssh keys sync directory exists
       file:
