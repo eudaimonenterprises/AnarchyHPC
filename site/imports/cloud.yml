@@ -313,4 +313,4 @@
 
   environment:
     no_proxy: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }}"
-    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{
+    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }}"

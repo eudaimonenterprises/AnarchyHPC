@@ -12,6 +12,16 @@
     # ---------------------------------------------------------
     # Read controller's own SSH public key (must exist on controller)
     # ---------------------------------------------------------
+    - name: Ensure controller public key exists
+      stat:
+        path: /root/.ssh/id_rsa.pub
+      register: controller_pubkey_stat
+
+    - name: Fail if controller public key is missing
+      fail:
+        msg: "Controller public key /root/.ssh/id_rsa.pub does not exist. Controller key generation failed."
+      when: not controller_pubkey_stat.stat.exists
+
     - name: Read controller public key
       become: true
       command: cat /root/.ssh/id_rsa.pub
@@ -29,6 +39,19 @@
     # ---------------------------------------------------------
     # Read cluster key (only in HA mode)
     # ---------------------------------------------------------
+    - name: Ensure cluster public key exists (HA only)
+      stat:
+        path: /root/.ssh/id_cluster_rsa.pub
+      register: cluster_pubkey_stat
+      when: ha | default(False)
+
+    - name: Fail if cluster public key is missing (HA only)
+      fail:
+        msg: "Cluster public key /root/.ssh/id_cluster_rsa.pub does not exist. Cluster key generation failed."
+      when:
+        - ha | default(False)
+        - not cluster_pubkey_stat.stat.exists
+
     - name: Read cluster public key
       become: true
       command: cat /root/.ssh/id_cluster_rsa.pub
