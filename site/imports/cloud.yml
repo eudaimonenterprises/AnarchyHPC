@@ -101,6 +101,7 @@
                 cloud_psk_secret: "{{ lookup('file', '/etc/anarchy/passwords/psk/vpn.txt') }}"
 
             - name: Reading in ssh public key
+              become: true
               set_fact:
                 cloud_ssh_public_key: "{{ lookup('pipe', '/root/.ssh/id_rsa.pub') }}"
 

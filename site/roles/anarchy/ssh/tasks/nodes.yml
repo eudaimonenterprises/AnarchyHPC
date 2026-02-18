@@ -60,6 +60,7 @@
       state: directory
 
   - name: Add controller's key to authorized keys
+    become: true
     authorized_key:
       user: root
       state: present
@@ -67,6 +68,7 @@
       path: "{{ image_path }}/root/.ssh/authorized_keys"
   
   - name: Add cluster key to authorized keys
+    become: true
     authorized_key:
       user: root
       state: present

@@ -66,6 +66,7 @@
   # controller ssh ability, he has to add these across, or add 
   # the cluster key to authorized keys
 - name: Set authorized key
+  become: true
   authorized_key:
     user: root
     state: present
