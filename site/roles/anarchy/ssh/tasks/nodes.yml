@@ -1,41 +1,49 @@
+---
 - block:
-  - name: Make .ssh root directory
-    file:
-      path: "{{ image_path }}/root/.ssh"
-      mode: 0700
-      owner: root
-      group: root
-      state: directory
 
-  - name: Read controller public key
-    become: true
-    command: cat /root/.ssh/id_rsa.pub
-    register: controller_pubkey
-    changed_when: false
+    - name: Make .ssh root directory inside the image
+      file:
+        path: "{{ image_path }}/root/.ssh"
+        mode: 0700
+        owner: root
+        group: root
+        state: directory
 
-  - name: Add controller's key to authorized keys
-    become: true
-    authorized_key:
-      user: root
-      state: present
-      key: "{{ controller_pubkey.stdout }}"
-      path: "{{ image_path }}/root/.ssh/authorized_keys"
+    # ---------------------------------------------------------
+    # Read controller's own SSH public key (must exist on controller)
+    # ---------------------------------------------------------
+    - name: Read controller public key
+      become: true
+      command: cat /root/.ssh/id_rsa.pub
+      register: controller_pubkey
+      changed_when: false
 
-  - name: Read cluster public key
-    become: true
-    command: cat /root/.ssh/id_cluster_rsa.pub
-    register: cluster_pubkey
-    changed_when: false
-    when: ha | default(False)
+    - name: Add controller's key to authorized keys in the image
+      become: true
+      authorized_key:
+        user: root
+        state: present
+        key: "{{ controller_pubkey.stdout }}"
+        path: "{{ image_path }}/root/.ssh/authorized_keys"
 
-  - name: Add cluster key to authorized keys
-    become: true
-    authorized_key:
-      user: root
-      state: present
-      key: "{{ cluster_pubkey.stdout }}"
-      path: "{{ image_path }}/root/.ssh/authorized_keys"
-    when: ha | default(False)
+    # ---------------------------------------------------------
+    # Read cluster key (only in HA mode)
+    # ---------------------------------------------------------
+    - name: Read cluster public key
+      become: true
+      command: cat /root/.ssh/id_cluster_rsa.pub
+      register: cluster_pubkey
+      changed_when: false
+      when: ha | default(False)
+
+    - name: Add cluster key to authorized keys in the image
+      become: true
+      authorized_key:
+        user: root
+        state: present
+        key: "{{ cluster_pubkey.stdout }}"
+        path: "{{ image_path }}/root/.ssh/authorized_keys"
+      when: ha | default(False)
 
   when:
     - on_controller

@@ -1,12 +1,22 @@
 ---
 # tasks file for ssh
 
+- name: Ensure /root/.ssh exists
+  file:
+    path: /root/.ssh
+    state: directory
+    owner: root
+    group: root
+    mode: 0700
+
 - name: Generate ssh keys on the controller
   user:
     name: root
     generate_ssh_key: true
     ssh_key_bits: 4096
     ssh_key_type: rsa
+    ssh_key_file: "/root/.ssh/id_rsa"
+    force: true
 
 - block:
   - name: Generate ssh cluster keys on the primary controller
@@ -50,7 +60,7 @@
       - ['0600','0644']
   # -- end sync
 
-  - name: Update ssh and sshd configuration files
+  - name: Update ssh and sshd configuration files for cluster ssh
     copy:
       src: 'ssh_cluster_config'
       dest: '/root/.ssh/config'
@@ -61,24 +71,18 @@
     - not primary | default(False)
     - ha | default(False)
 
-# ---------------------------------------------------------
-# FIXED: Read controller public key from the remote host
-# ---------------------------------------------------------
-
 - name: Read controller public key
   become: true
   command: cat /root/.ssh/id_rsa.pub
   register: controller_pubkey
   changed_when: false
 
-- name: Set authorized key
+- name: Set authorized key for root on controller
   become: true
   authorized_key:
     user: root
     state: present
     key: "{{ controller_pubkey.stdout }}"
-
-# ---------------------------------------------------------
 
 - name: Update ssh and sshd configuration files
   copy:

@@ -80,7 +80,7 @@
         - block:
 
             # -------------------------------
-            # PSK SECRET HANDLING (FIXED)
+            # PSK SECRET HANDLING
             # -------------------------------
 
             - name: Verify if psk secret exists
@@ -120,7 +120,7 @@
                 cloud_psk_secret: "{{ cloud_psk_secret_cmd.stdout }}"
 
             # -------------------------------
-            # SSH KEY HANDLING (FIXED)
+            # SSH KEY HANDLING
             # -------------------------------
 
             - name: Read controller public key
@@ -178,7 +178,7 @@
               when: not cloud_terraform_done.stat.exists
 
             # -------------------------------
-            # TERRAFORM VARIABLE EXTRACTION (FIXED)
+            # TERRAFORM VARIABLE EXTRACTION
             # -------------------------------
 
             - name: Read terraform variables file
@@ -313,4 +313,4 @@
 
   environment:
     no_proxy: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }}"
-    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{ anarchy_ctrl2_hostname }}"
+    NO_PROXY: ".{{ anarchy_domain }},{{ anarchy_ctrl_ip }},{{ anarchy_external_fqdn }},{{ anarchy_ctrl_hostname }},{{ anarchy_ctrl1_hostname }},{{
