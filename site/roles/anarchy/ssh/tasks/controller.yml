@@ -32,7 +32,7 @@
     with_items:
       - id_cluster_rsa
       - id_cluster_rsa.pub
-  when: 
+  when:
     - primary | default(True)
     - ha | default(False)
   # -- end sync
@@ -57,20 +57,28 @@
       mode: '0644'
       owner: root
       group: root
-  when: 
+  when:
     - not primary | default(False)
     - ha | default(False)
 
+# ---------------------------------------------------------
+# FIXED: Read controller public key from the remote host
+# ---------------------------------------------------------
 
-  # we only add our own key. if the admin prefers to have cross
-  # controller ssh ability, he has to add these across, or add 
-  # the cluster key to authorized keys
+- name: Read controller public key
+  become: true
+  command: cat /root/.ssh/id_rsa.pub
+  register: controller_pubkey
+  changed_when: false
+
 - name: Set authorized key
   become: true
   authorized_key:
     user: root
     state: present
-    key: '{{ lookup("pipe", "/root/.ssh/id_rsa.pub") }}'
+    key: "{{ controller_pubkey.stdout }}"
+
+# ---------------------------------------------------------
 
 - name: Update ssh and sshd configuration files
   copy:

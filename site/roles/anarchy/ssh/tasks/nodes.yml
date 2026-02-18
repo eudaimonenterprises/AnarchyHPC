@@ -1,55 +1,3 @@
----
-
-- block:
-  - name: Make .ssh root directory
-    file:
-      path: "/root/.ssh"
-      mode: 0700
-      owner: root
-      group: root
-      state: directory
-
-  - name: Generate RSA SSH key
-    user:
-      name: root
-      generate_ssh_key: true
-      ssh_key_bits: 4096
-      ssh_key_type: rsa
-      ssh_key_file: "/root/.ssh/id_rsa"
-  
-  - name: Generate host SSH keys
-    shell: ssh-keygen -A
-    args:
-      creates: /etc/ssh/ssh_host_rsa_key
-  
-  - name: Disable host key check between nodes
-    blockinfile:
-      path: "/etc/ssh/ssh_config"
-      block: |
-        # Names without domain, such as node001
-        host  * !*.*
-                ForwardX11 yes
-                CheckHostIP no
-                HostbasedAuthentication no
-                StrictHostKeyChecking no
-                UserKnownHostsFile /dev/null
-  
-        # Our local domains
-        Host  *.cluster *.ib
-                ForwardX11 yes
-                CheckHostIP no
-                HostbasedAuthentication no
-                StrictHostKeyChecking no
-                UserKnownHostsFile /dev/null
-  
-  - name: Start and enable sshd daemon
-    service:
-      name: sshd
-      enabled: true
-    ignore_errors: true
-  when: in_image | default(False) or on_node | default(False)  
-
-
 - block:
   - name: Make .ssh root directory
     file:
@@ -59,22 +7,36 @@
       group: root
       state: directory
 
+  - name: Read controller public key
+    become: true
+    command: cat /root/.ssh/id_rsa.pub
+    register: controller_pubkey
+    changed_when: false
+
   - name: Add controller's key to authorized keys
     become: true
     authorized_key:
       user: root
       state: present
-      key: '{{ lookup("pipe", "/root/.ssh/id_rsa.pub") }}'
+      key: "{{ controller_pubkey.stdout }}"
       path: "{{ image_path }}/root/.ssh/authorized_keys"
-  
+
+  - name: Read cluster public key
+    become: true
+    command: cat /root/.ssh/id_cluster_rsa.pub
+    register: cluster_pubkey
+    changed_when: false
+    when: ha | default(False)
+
   - name: Add cluster key to authorized keys
     become: true
     authorized_key:
       user: root
       state: present
-      key: '{{ lookup("pipe", "/root/.ssh/id_cluster_rsa.pub") }}'
+      key: "{{ cluster_pubkey.stdout }}"
       path: "{{ image_path }}/root/.ssh/authorized_keys"
     when: ha | default(False)
+
   when:
     - on_controller
     - extend_image | default(False)
