@@ -428,5 +428,5 @@ add_message "  - ${ALL_YML}"
 add_message "  - ${HOSTS_FILE}"
 show_message
 
-echo "$REMOTE_OS_FAMILY"
+echo "$REMOTE_OS_FAMILY" >&3
 exit 0

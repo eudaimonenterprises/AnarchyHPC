@@ -61,7 +61,7 @@ if [ ! -x tui_configurator ]; then
     chmod 755 tui_configurator
 fi
 
-TARGET_OS=$(./tui_configurator)
+TARGET_OS=$(./tui_configurator 3>&1 1>/dev/tty 2>/dev/tty)
 TUI_RET=$?
 
 
