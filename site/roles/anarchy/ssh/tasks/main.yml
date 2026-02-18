@@ -1,11 +1,14 @@
 ---
+# Always load controller SSH tasks when running on the controller.
+# This ensures the controller keypair is generated before anything else needs it.
 
-- name: Loading controller ssh role
+- name: Load controller SSH tasks
   include_tasks: "controller.yml"
-  when: 
-    - on_controller
-    - not extend_image | default(False)
+  when: on_controller | default(false)
 
-- name: Loading ssh role for nodes, image and extend
+# Always load node/image SSH tasks when running on nodes or during image extension.
+# This ensures image injection and node provisioning always have the controller key available.
+
+- name: Load SSH tasks for nodes and image operations
   include_tasks: "nodes.yml"
-
+  when: not on_controller | default(false) or extend_image | default(false)
