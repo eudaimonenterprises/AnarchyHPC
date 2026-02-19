@@ -9,6 +9,11 @@
   vars:
     extend_image: true
 
+- name: Add initramfs-tools configuration
+  template:
+    src: anarchy-initramfs.conf.j2
+    dest: "{{ image_path }}/etc/initramfs-tools/conf.d/anarchy.conf"
+
 - name: Configuring resolv.conf
   copy:
     dest: "{{ image_path }}/etc/resolv.conf"

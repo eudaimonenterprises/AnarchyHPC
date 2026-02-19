@@ -4,28 +4,43 @@
   no_log: false
   ignore_errors: true
 
-- name: Configure repos
-  lineinfile:
-    path: /etc/apt/sources.list
-    line: "deb http://archive.ubuntu.com/ubuntu {{ ubuntu_distribution_release }} main universe"
-    state: present
-    create: yes
+# ---------------------------------------------------------
+# Configure AnarchyHPC repos (Ubuntu style)
+# ---------------------------------------------------------
+- name: Write AnarchyHPC repo files
+  template:
+    src: ubuntu-repo.j2
+    dest: "/etc/apt/sources.list.d/{{ item.name }}.list"
+  loop: "{{ anarchyhpc_repositories }}"
+  when: item.name is defined
+  tags: repos
 
-- name: Updating Apt
-  shell: "apt-get update"
-  ignore_errors: true
-  when: image_update_packages | default(True)
+# ---------------------------------------------------------
+# Prepare apt
+# ---------------------------------------------------------
+- name: Update apt cache
+  command: "apt-get update"
 
+# ---------------------------------------------------------
+# Install core packages
+# ---------------------------------------------------------
 - name: Install core packages
-  ansible.builtin.apt:
+  apt:
     name: "{{ item }}"
     state: present
-  with_items: "{{ image_core_packages }}"
+    update_cache: false
+  loop: "{{ image_core_packages }}"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
-- name: Disable tinysshd if it is there
+# ---------------------------------------------------------
+# Enable services
+# ---------------------------------------------------------
+- name: Enabling services
   service:
     name: "{{ item }}"
-    enabled: false
+    enabled: true
+  loop:
+    - network-manager
+    - ssh
   ignore_errors: true

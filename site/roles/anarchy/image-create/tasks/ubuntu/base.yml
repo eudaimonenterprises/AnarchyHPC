@@ -4,71 +4,135 @@
   no_log: false
   ignore_errors: true
 
-- name: Install required packages
-  yum:
+# ---------------------------------------------------------
+# Install required packages on the controller
+# ---------------------------------------------------------
+- name: Install required packages (controller)
+  become: true
+  apt:
     name: "{{ required_packages }}"
     state: present
+    update_cache: true
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
-- name: Gather debootstrap version
-  shell: "debootstrap --version | awk '{print $2}'"
-  register: debootstrap_version
-
-- name: Copy missing debootstrap files if they don't exist
-  copy:
-    src: "files/ubuntu/{{ item }}"
-    dest: "/usr/share/debootstrap/scripts/"
-    mode: 0755
-  with_items:
-    - focal
-    - jammy
-    - noble
-  when: debootstrap_version.stdout.startswith('1.0.136') or debootstrap_version.stdout.startswith('1.0.137')
-
-- name: Build basic Ubuntu image
-  shell: "debootstrap --variant=buildd {{ ubuntu_distribution_release }} {{ image_path }} {{ ubuntu_distribution_source }} | tee /tmp/debootstrap.log"
-  retries: 10
-  delay: 15
-  register: ubuntu_base_image_result
-  until: ubuntu_base_image_result.rc == 0
-
-- name: Verify logs
-  shell: "grep 'E:' /tmp/debootstrap.log | grep -v 'Tried to extract package' > /dev/null && echo fail || true"
-  register: ubuntu_base_image_verify
-
-- name: Verify build
-  fail:
-    msg: "Ubuntu basic image build failed. please rerun playbook or look at /tmp/debootstrap.log"
-  when: ubuntu_base_image_verify.stdout == 'fail'
-
-- name: Create image /dev
+# ---------------------------------------------------------
+# Prepare image directory structure
+# ---------------------------------------------------------
+- name: Prepare image directory structure
+  become: true
   file:
-    path: "{{ image_path }}/dev/"
+    path: "{{ image_path }}/{{ item }}"
     state: directory
-    mode: 0755
-    owner: root
-    group: root
+  loop:
+    - usr
+    - usr/lib
+    - dev
+    - dev/pts
+    - proc
+    - sys
+    - etc/apt
+    - etc/apt/sources.list.d
+    - etc/apt/trusted.gpg.d
+    - var/lib/apt/lists
 
+# ---------------------------------------------------------
+# Copy repo definition into the image
+# ---------------------------------------------------------
+- name: Configure Ubuntu repositories
+  become: true
+  template:
+    src: ubuntu-repo.j2
+    dest: "{{ image_path }}/etc/apt/sources.list.d/ubuntu.list"
+
+# ---------------------------------------------------------
+# Create /dev nodes FIRST (before any mounts)
+# ---------------------------------------------------------
 - name: Create basic /dev files
+  become: true
   command: "/usr/bin/mknod {{ image_path }}/dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }}"
   args:
     creates: "{{ image_path }}/dev/{{ item.dev }}"
-  with_items:
-    - {dev: "null",   mo: "666", t: 'c', ma: 1, mi: 3}
-    - {dev: "zero",   mo: "666", t: 'c', ma: 1, mi: 5}
-    - {dev: "random", mo: "666", t: 'c', ma: 1, mi: 8}
-    - {dev: "urandom",mo: "666", t: 'c', ma: 1, mi: 9}
-    - {dev: "console",mo: "600", t: 'c', ma: 5, mi: 1}
-    - {dev: "ptmx",   mo: "666", t: 'c', ma: 5, mi: 2}
-    - {dev: "tty",    mo: "666", t: 'c', ma: 5, mi: 0}
+  loop:
+    - {dev: "null",      t: 'c', ma: 1,   mi: 3}
+    - {dev: "zero",      t: 'c', ma: 1,   mi: 5}
+    - {dev: "random",    t: 'c', ma: 1,   mi: 8}
+    - {dev: "urandom",   t: 'c', ma: 1,   mi: 9}
+    - {dev: "console",   t: 'c', ma: 5,   mi: 1}
+    - {dev: "ptmx",      t: 'c', ma: 5,   mi: 2}
+    - {dev: "tty",       t: 'c', ma: 5,   mi: 0}
 
-- name: Ensure /dev/null is world writeable
+- name: Create /dev/fd symlink
+  become: true
   file:
-    path: "{{ image_path }}/dev/null"
-    mode: "0666"
+    src: /proc/self/fd
+    dest: "{{ image_path }}/dev/fd"
+    state: link
+    force: true
+
+# ---------------------------------------------------------
+# Bind mount required virtual filesystems
+# ---------------------------------------------------------
+- name: Bind mount /dev/pts
+  become: true
+  mount:
+    src: /dev/pts
+    path: "{{ image_path }}/dev/pts"
+    fstype: none
+    opts: bind
+    state: mounted
+
+- name: Bind mount /proc
+  become: true
+  mount:
+    src: /proc
+    path: "{{ image_path }}/proc"
+    fstype: none
+    opts: bind
+    state: mounted
+
+- name: Bind mount /sys
+  become: true
+  mount:
+    src: /sys
+    path: "{{ image_path }}/sys"
+    fstype: none
+    opts: bind
+    state: mounted
+
+# ---------------------------------------------------------
+# Bootstrap the image using apt inside chroot
+# ---------------------------------------------------------
+- name: Update apt cache in image
+  become: true
+  command: >
+    chroot {{ image_path }} apt-get update
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Install bootstrap packages in image
-  shell: "chroot {{ image_path }} apt-get install -y {{ item }}"
-  with_items:
-    - python3
+  become: true
+  command: >
+    chroot {{ image_path }} apt-get -y install {{ item }}
+  loop: "{{ image_bootstrap_packages }}"
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+# ---------------------------------------------------------
+# Install base system packages (Ubuntu equivalent of base pattern)
+# ---------------------------------------------------------
+- name: Install base system packages in image
+  become: true
+  command: >
+    chroot {{ image_path }} apt-get -y install {{ item }}
+  loop: "{{ image_base_packages | default([]) }}"
+
+# ---------------------------------------------------------
+# Copy GPG key
+# ---------------------------------------------------------
+- name: Copy the Ubuntu archive keyring to the image
+  become: true
+  copy:
+    src: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+    dest: "{{ image_path }}/etc/apt/trusted.gpg.d/ubuntu-archive-keyring.gpg"
+    remote_src: true

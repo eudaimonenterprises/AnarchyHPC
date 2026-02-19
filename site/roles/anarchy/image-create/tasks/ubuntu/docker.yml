@@ -1,45 +1,108 @@
 ---
 - name: Load OS‑specific variables
   include_vars: "{{ package_arch }}/docker-{{ image_create_distribution }}.yaml"
-  no_log: false
-  ignore_errors: true
 
+# ---------------------------------------------------------
+# Prepare directory structure
+# ---------------------------------------------------------
+- name: Prepare paths in image
+  file:
+    path: "/{{ item }}"
+    state: directory
+  loop:
+    - etc/apt
+    - etc/apt/sources.list.d
+    - etc/apt/trusted.gpg.d
+    - var/lib/apt/lists
+    - dev/pts
+
+# ---------------------------------------------------------
+# Create /dev and device nodes
+# ---------------------------------------------------------
 - name: Create /dev
   file:
-    path: /dev/
+    path: /dev
     state: directory
     mode: 0755
-    owner: root
-    group: root
 
 - name: Create basic /dev files
   command: "/usr/bin/mknod /dev/{{ item.dev }} {{ item.t }} {{ item.ma }} {{ item.mi }}"
   args:
     creates: "/dev/{{ item.dev }}"
-  with_items:
-    - {dev: "null",   mo: "666", t: 'c', ma: 1, mi: 3}
-    - {dev: "zero",   mo: "666", t: 'c', ma: 1, mi: 5}
-    - {dev: "random", mo: "666", t: 'c', ma: 1, mi: 8}
-    - {dev: "urandom",mo: "666", t: 'c', ma: 1, mi: 9}
-    - {dev: "console",mo: "600", t: 'c', ma: 5, mi: 1}
-    - {dev: "ptmx",   mo: "666", t: 'c', ma: 5, mi: 2}
-    - {dev: "tty",    mo: "666", t: 'c', ma: 5, mi: 0}
+  loop:
+    - {dev: "null",    t: 'c', ma: 1,   mi: 3}
+    - {dev: "zero",    t: 'c', ma: 1,   mi: 5}
+    - {dev: "random",  t: 'c', ma: 1,   mi: 8}
+    - {dev: "urandom", t: 'c', ma: 1,   mi: 9}
+    - {dev: "console", t: 'c', ma: 5,   mi: 1}
+    - {dev: "ptmx",    t: 'c', ma: 5,   mi: 2}
+    - {dev: "tty",     t: 'c', ma: 5,   mi: 0}
 
-- name: Ensure /dev/null is world writeable
+- name: Create /dev/fd symlink
   file:
-    path: /dev/null
-    mode: "0666"
+    src: /proc/self/fd
+    dest: /dev/fd
+    state: link
+    force: true
 
-- name: Updating Apt
-  shell: "apt-get update"
-  ignore_errors: true
-  when: image_update_packages | default(True)
+# ---------------------------------------------------------
+# GPG keys
+# ---------------------------------------------------------
+- name: Copy the Ubuntu archive keyring
+  copy:
+    src: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+    dest: /etc/apt/trusted.gpg.d/ubuntu-archive-keyring.gpg
+    remote_src: true
 
+# ---------------------------------------------------------
+# Configure AnarchyHPC repos (Ubuntu style)
+# ---------------------------------------------------------
+- name: Write AnarchyHPC repo files
+  template:
+    src: ubuntu-repo.j2
+    dest: "/etc/apt/sources.list.d/{{ item.name }}.list"
+  loop: "{{ anarchyhpc_repositories }}"
+  when: item.name is defined
+  tags: repos
+
+# ---------------------------------------------------------
+# Refresh repos and update
+# ---------------------------------------------------------
+- name: Update apt cache
+  command: "apt-get update"
+
+- name: Upgrade system
+  command: "apt-get -y dist-upgrade"
+
+# ---------------------------------------------------------
+# Install core packages
+# ---------------------------------------------------------
 - name: Install core packages
-  ansible.builtin.apt:
+  apt:
     name: "{{ item }}"
     state: present
-  ignore_errors: true
-  with_items: "{{ image_core_packages }}"
+    update_cache: false
+  loop: "{{ image_core_packages }}"
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+  ignore_errors: true
+
+# ---------------------------------------------------------
+# Reinstall packages (if needed)
+# ---------------------------------------------------------
+- name: Reinstall packages
+  command: "apt-get -y install --reinstall {{ item }}"
+  loop: "{{ image_reinstall_packages }}"
+  ignore_errors: true
+
+# ---------------------------------------------------------
+# Enable services
+# ---------------------------------------------------------
+- name: Enabling services
+  service:
+    name: "{{ item }}"
+    enabled: true
+  loop:
+    - network-manager
+    - ssh
+  ignore_errors: true

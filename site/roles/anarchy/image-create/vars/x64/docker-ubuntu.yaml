@@ -1,37 +1,88 @@
 ---
-
-required_packages:
-  - "debootstrap"
-  - "zstd"
-
-ubuntu_distribution_source: https://ftp.nluug.nl/pub/os/Linux/distr/ubuntu/
-
-ubuntu_distribution_release: jammy
-
 image_core_packages:
-  - python3
-  - mc
-  - e2fsprogs
-  - xfsprogs
-  - net-tools
+  - network-manager
+  - auditd
+  - bash
+  - coreutils
+  - initramfs-tools
+  - gettext-base
+  - base-files
+  - firewalld
+  - libnss-systemd
+  - libnss-myhostname
+  - libnss-wrapper
+  - libc6
+  - hostname
+  - iproute2
+  - iputils-ping
+  - irqbalance
+  - kbd
+  - kexec-tools
+  - ncurses-bin
   - tar
   - bzip2
   - lbzip2
   - parted
   - gpg
-  - ipmitool
-  - linux-image-generic
-  - ssh
-  - curl
+  - net-tools
   - less
-  - aria2
+  - mc
+  - openssh-client
+  - openssh-server
+  - sudo
+  - systemd
+  - curl
+  - wget
+  - e2fsprogs
+  - xfsprogs
+  - ipmitool
+  - util-linux
+  - rsyslog
   - vim
-  - coreutils
-  - tpm2-tools
-  - grepcidr
-  - iputils-ping
-  - netplan.io
-  - dosfstools
-  - efibootmgr
-  - rsync
+  - cron
+  - sssd
+  - sssd-kcm
   - lshw
+  - lsscsi
+  - sg3-utils
+  - rdma-core
+  - grub-efi-amd64
+  - shim-signed
+  - bind9-dnsutils
+  - efibootmgr
+  - dosfstools
+  - lvm2
+  - mdadm
+  - dmidecode
+  - tpm2-tools
+  - tpm2-tss
+  - aria2
+  - linux-image-generic
+  - linux-firmware
+  - systemd-sysv
+
+initramfs_extras:
+  - "/usr/sbin/mkswap"
+  - "/usr/sbin/swapon"
+  - "/usr/sbin/swaplabel"
+  - "/usr/sbin/mkfs.vfat"
+  - "/usr/sbin/mkfs.fat"
+  - "/usr/sbin/mkdosfs"
+  - "/usr/sbin/dosfslabel"
+  - "/usr/sbin/fatlabel"
+  - "/etc/mke2fs.conf"
+  - "/usr/sbin/mdadm"
+  - "/usr/bin/top"
+  - "/usr/sbin/fdisk"
+  - "/usr/sbin/lspci"
+  - "/usr/share/hwdata/pci.ids"
+  - "/usr/bin/lsblk"
+  - "/usr/bin/lsscsi"
+  - "/usr/bin/tee"
+  - "/usr/bin/lbzip2"
+  - "/usr/bin/tpm2_pcrread"
+  - "/usr/bin/aria2c"
+  - "/usr/sbin/dmidecode"
+
+image_reinstall_packages:
+  - "linux-image-generic"

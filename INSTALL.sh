@@ -99,7 +99,7 @@ case "$TARGET_OS" in
 esac
 
 echo
-add_message "Ansible Playbooks will now run"
+add_message "The following Ansible Playbooks will now run: $PLAYBOOKS"
 add_message "BECOME password is the REMOTE user password on the controller"
 show_message
 count_down 5
