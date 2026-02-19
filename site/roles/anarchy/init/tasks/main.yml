@@ -503,10 +503,18 @@
       - not enable_selinux|default(True)
       - init_selinux_state.stdout is defined
       - init_selinux_state.stdout == 'Enforcing'
-  when: on_controller
+  when:
+    - on_controller
+    - ansible_selinux is defined
+    - ansible_selinux.status != "missing"
+
 
 - name: Toggle selinux state
   selinux:
     state: "{{ 'permissive' if enable_selinux else 'disabled' }}"
     policy: 'targeted'
-  when: ansible_facts['os_family'] == "RedHat"
+  when:
+    - ansible_facts['os_family'] == "RedHat"
+    - ansible_selinux is defined
+    - ansible_selinux.status != "missing"
+

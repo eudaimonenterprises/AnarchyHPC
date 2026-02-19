@@ -1,6 +1,6 @@
 ---
 - name: Configure HPC Controller Node
-  hosts: controller
+  hosts: controllers
   become: yes
 
   roles:

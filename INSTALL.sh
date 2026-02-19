@@ -37,16 +37,16 @@ echo
 add_message "Welcome to AnarchyHPC"
 add_message "The system will now be prepared first..."
 show_message
-count_down 5
-bash prepare.sh
-PREP_RET=$?
+count_down 3
+# bash prepare.sh
+# PREP_RET=$?
 
-if [ "$PREP_RET" != "0" ]; then
-    add_message "prepare.sh failed with exit code $PREP_RET."
-    add_message "Installation cannot continue."
-    show_message
-    exit 1
-fi
+# if [ "$PREP_RET" != "0" ]; then
+#     add_message "prepare.sh failed with exit code $PREP_RET."
+#     add_message "Installation cannot continue."
+#     show_message
+#     exit 1
+# fi
 
 cd site
 
@@ -102,5 +102,5 @@ echo
 add_message "The following Ansible Playbooks will now run: $PLAYBOOKS"
 add_message "BECOME password is the REMOTE user password on the controller"
 show_message
-count_down 5
+count_down 3
 ansible-playbook -K $PLAYBOOKS

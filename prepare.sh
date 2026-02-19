@@ -240,5 +240,5 @@ fi
 add_message "Please configure the network before starting Ansible"
 
 # mark prepare done (in /etc → sudo)
-sudo touch /etc/anarchy/prepare.done
+#sudo touch /etc/anarchy/prepare.done
 show_message
