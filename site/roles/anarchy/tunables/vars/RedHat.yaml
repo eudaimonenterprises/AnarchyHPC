@@ -1,0 +1,18 @@
+---
+tunables_packages:
+  - tuned
+  - tuned-profiles-cpu-partitioning
+  - tuned-profiles-realtime
+  - tuned-profiles-compat
+  - tuned-profiles-mssql
+  - tuned-profiles-sap-hana
+  - tuned-profiles-sap
+  - tuned-profiles-virtual-host
+  - tuned-profiles-virtual-guest
+  - sysstat
+  - numactl
+  - lvm2
+  - ethtool
+
+compute_tuned_profile: "hpc-compute"
+controller_tuned_profile: "throughput-performance"

@@ -2,10 +2,12 @@
 # This file contains variables that are global to all playbooks
 # in this repository.
 
+# Automatically determine whether this host is a controller
+on_controller: "{{ 'controllers' in group_names }}"
 
 # Any alerts, events and notifications will be sent to this email address:
-
 administrator_email: 'root@localhost'
+
 
 
 # -----------------------------------------------------------------------

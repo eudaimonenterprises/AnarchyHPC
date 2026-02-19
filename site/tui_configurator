@@ -30,20 +30,13 @@ trap cleanup EXIT
 # -----------------------------------------------------------------------------
 # DEFAULT SOURCE SELECTION
 # -----------------------------------------------------------------------------
-# IMPORTANT CHANGE:
-#   We NO LONGER create all.yml or hosts at the start.
-#   We ONLY choose which file to READ defaults from.
-#   Writing happens once at the end.
-# -----------------------------------------------------------------------------
 
-# Choose YAML default source
 if [[ -f "$ALL_YML" ]]; then
   DEFAULT_FILE="$ALL_YML"
 else
   DEFAULT_FILE="$ALL_YML_EXAMPLE"
 fi
 
-# Choose hosts default source
 if [[ -f "$HOSTS_FILE" ]]; then
   HOSTS_DEFAULT="$HOSTS_FILE"
 else
@@ -53,21 +46,13 @@ fi
 echo "Using defaults from ${DEFAULT_FILE} (YAML) and ${HOSTS_DEFAULT} (hosts)" > /dev/tty
 
 # -----------------------------------------------------------------------------
-# YAML READER — REPLACEMENT get_default()
-# -----------------------------------------------------------------------------
-# This replaces ALL previous YAML-reading helpers.
-# It:
-#   - Reads from DEFAULT_FILE only
-#   - Supports simple scalars and simple lists
-#   - Strips ALL quotation marks (per your instruction)
-#   - Stays pure Bash + awk + sed
+# YAML READER
 # -----------------------------------------------------------------------------
 
 get_default() {
   local key="$1"
   local val
 
-  # Extract block for list-style values
   local block
   block=$(awk -v k="^${key}:" '
     $0 ~ k {inblock=1; next}
@@ -75,7 +60,6 @@ get_default() {
     inblock {exit}
   ' "$DEFAULT_FILE")
 
-  # If no list block → scalar
   if [[ -z "$block" ]]; then
     val=$(awk -v k="^${key}:" '
       $0 ~ k {
@@ -85,60 +69,40 @@ get_default() {
       }
     ' "$DEFAULT_FILE")
 
-    # Strip ALL quotes
     val="${val//\"/}"
     val="${val//\'/}"
-
     echo "$val"
     return
   fi
 
-  # List case → extract items, strip quotes, join with commas
   echo "$block" \
     | sed -n 's/^[[:space:]]*-[[:space:]]*//p' \
     | sed 's/"//g; s/'"'"'//g' \
     | paste -sd "," -
 }
 
-# -----------------------------------------------------------------------------
-# EXTRACT DEFAULT SSH KEY PATH FROM hosts / hosts.example
-# -----------------------------------------------------------------------------
-# This is used ONLY for:
-#   "Path to your existing LOCAL SSH private key"
-#
-# You will ensure hosts.example always contains a valid entry.
-# No fallback logic is needed.
-# -----------------------------------------------------------------------------
-
 get_default_ssh_key_from_hosts() {
   local val
-
   val=$(grep -Eo 'ansible_ssh_private_key_file=[^ ]+' "$HOSTS_DEFAULT" \
         | head -n1 \
         | cut -d= -f2-)
-
-  # Strip ALL quotes
   val="${val//\"/}"
   val="${val//\'/}"
-
   echo "$val"
 }
 
 get_default_ssh_user_from_hosts() {
-    local val
-    val=$(grep -Eo 'ansible_user=[^ ]+' "$HOSTS_DEFAULT" \
-          | head -n1 \
-          | cut -d= -f2-)
-
-    # Strip quotes
-    val="${val//\"/}"
-    val="${val//\'/}"
-
-    echo "$val"
+  local val
+  val=$(grep -Eo 'ansible_user=[^ ]+' "$HOSTS_DEFAULT" \
+        | head -n1 \
+        | cut -d= -f2-)
+  val="${val//\"/}"
+  val="${val//\'/}"
+  echo "$val"
 }
 
 # -----------------------------------------------------------------------------
-# PROMPT HELPERS (unchanged)
+# PROMPT HELPERS
 # -----------------------------------------------------------------------------
 
 prompt_default() {
@@ -168,6 +132,7 @@ prompt_bool() {
     esac
   done
 }
+
 # -----------------------------------------------------------------------------
 # GATHER VALUES
 # -----------------------------------------------------------------------------
@@ -188,6 +153,11 @@ echo "Gathering HA and external FQDN" > /dev/tty
 ha=$(prompt_bool "Enable High Availability (HA)" "$(get_default ha)")
 anarchy_external_fqdn=$(prompt_default "External FQDN" "$(get_default anarchy_external_fqdn)")
 
+# Fallback if user leaves it blank
+if [[ -z "$anarchy_external_fqdn" ]]; then
+  anarchy_external_fqdn="${anarchy_ctrl1_hostname}.${anarchy_domain}"
+fi
+
 echo "Gathering DNS forwarders" > /dev/tty
 default_dns=$(get_default anarchy_dns_forwarders)
 IFS=',' read -r -a dns_array <<< "$(prompt_default "DNS forwarders (comma-separated)" "$default_dns")"
@@ -206,10 +176,6 @@ case "$wm" in
   *)       wm="slurm" ;;
 esac
 
-# -----------------------------------------------------------------------------
-# NETWORK SETTINGS (unchanged behavior, corrected defaults)
-# -----------------------------------------------------------------------------
-
 echo "Gathering cluster network settings" > /dev/tty
 anarchy_cluster_net=$(prompt_default "Cluster network" "$(get_default anarchy_cluster_net)")
 anarchy_cluster_netprefix=$(prompt_default "Cluster network prefix" "$(get_default anarchy_cluster_netprefix)")
@@ -219,13 +185,9 @@ anarchy_cluster_dhcp_end=$(prompt_default "DHCP range end" "$(get_default anarch
 echo "Gathering BMC network settings" > /dev/tty
 anarchy_bmc_net=$(prompt_default "BMC network" "$(get_default anarchy_bmc_net)")
 anarchy_bmc_netprefix=$(prompt_default "BMC network prefix" "$(get_default anarchy_bmc_netprefix)")
+
 # -----------------------------------------------------------------------------
-# SSH SETUP (integrated ssh_bootstrap)
-# -----------------------------------------------------------------------------
-# IMPORTANT CHANGE:
-#   The default existing SSH key path now comes from HOSTS_DEFAULT.
-#   You will ensure hosts.example always contains a valid key path.
-#   No fallback logic is used.
+# SSH SETUP
 # -----------------------------------------------------------------------------
 
 echo
@@ -233,7 +195,6 @@ echo "=== AnarchyHPC SSH Setup ==="
 
 echo
 echo "Which LOCAL user should own the SSH key?"
-echo "(This user will manage the cluster after installation. Root can still use the key during install.)"
 read -r -p "Local username [$(logname)]: " LOCAL_USER
 LOCAL_USER=${LOCAL_USER:-$(logname)}
 
@@ -262,9 +223,6 @@ HAVE_KEY=${HAVE_KEY:-n}
 SSH_KEY_PATH=""
 
 if [[ "$HAVE_KEY" =~ ^[Yy]$ ]]; then
-  # ---------------------------------------------------------------------------
-  # NEW DEFAULT: Extract existing key path from hosts/hosts.example
-  # ---------------------------------------------------------------------------
   DEFAULT_EXISTING_KEY="$(get_default_ssh_key_from_hosts)"
 
   echo
@@ -288,10 +246,6 @@ if [[ "$HAVE_KEY" =~ ^[Yy]$ ]]; then
   fi
 
 else
-  # ---------------------------------------------------------------------------
-  # NEW KEY GENERATION PATH (unchanged behavior)
-  # ---------------------------------------------------------------------------
-
   echo
   echo "Where should the new LOCAL SSH key be stored?"
   echo "1) Default: ${DEFAULT_KEY_PATH}"
@@ -299,9 +253,7 @@ else
   read -r -p "Choose [1/2]: " KEY_CHOICE
 
   case "$KEY_CHOICE" in
-    1|"")
-      SSH_KEY_PATH="$DEFAULT_KEY_PATH"
-      ;;
+    1|"") SSH_KEY_PATH="$DEFAULT_KEY_PATH" ;;
     2)
       read -r -p "Enter full path for new LOCAL SSH private key: " SSH_KEY_PATH
       SSH_KEY_PATH=${SSH_KEY_PATH/#\~/$LOCAL_HOME}
@@ -344,7 +296,6 @@ else
   if command -v ssh-copy-id >/dev/null 2>&1; then
     ssh-copy-id -i "$SSH_PUB_PATH" "${CONTROLLER_USER}@${CONTROLLER_HOST}"
   else
-    echo "ssh-copy-id not found, using fallback method."
     scp "$SSH_PUB_PATH" "${CONTROLLER_USER}@${CONTROLLER_HOST}:/tmp/anarchyhpc_key.pub"
     ssh "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
       "mkdir -p ~/.ssh && cat /tmp/anarchyhpc_key.pub >> ~/.ssh/authorized_keys && rm -f /tmp/anarchyhpc_key.pub && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys"
@@ -358,9 +309,6 @@ else
     exit 1
   fi
 fi
-# -----------------------------------------------------------------------------
-# DETECT REMOTE CONTROLLER OS (unchanged behavior)
-# -----------------------------------------------------------------------------
 
 REMOTE_OS=$(ssh -i "$SSH_KEY_PATH" -o BatchMode=yes \
     "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
@@ -369,77 +317,62 @@ REMOTE_OS=$(ssh -i "$SSH_KEY_PATH" -o BatchMode=yes \
 REMOTE_OS_FAMILY=$(echo "$REMOTE_OS" | tr '[:upper:]' '[:lower:]')
 
 case "$REMOTE_OS_FAMILY" in
-    rhel|centos|rocky|almalinux)
-        REMOTE_OS_FAMILY="redhat"
-        ;;
-    opensuse*|suse*)
-        REMOTE_OS_FAMILY="opensuse"
-        ;;
-    ubuntu)
-        REMOTE_OS_FAMILY="ubuntu"
-        ;;
+    rhel|centos|rocky|almalinux) REMOTE_OS_FAMILY="redhat" ;;
+    opensuse*|suse*)             REMOTE_OS_FAMILY="opensuse" ;;
+    ubuntu)                      REMOTE_OS_FAMILY="ubuntu" ;;
 esac
 
 echo
 echo "=== SSH setup complete ==="
 
 # -----------------------------------------------------------------------------
-# WRITE all.yml FROM SCRATCH (NEW BEHAVIOR)
-# -----------------------------------------------------------------------------
-# IMPORTANT:
-#   - No incremental editing
-#   - No sed/awk patching
-#   - No early creation
-#   - This is the ONLY write to all.yml
+# WRITE all.yml BY COPYING EXAMPLE AND PATCHING VALUES
 # -----------------------------------------------------------------------------
 
 echo "Writing configuration to ${ALL_YML}" > /dev/tty
 
-{
-cat <<EOF
-anarchy_domain: "$anarchy_domain"
-project_id: "$project_id"
-anarchy_ctrl1_hostname: "$anarchy_ctrl1_hostname"
-anarchy_ctrl1_ip: "$anarchy_ctrl1_ip"
-ha: $ha
-anarchy_external_fqdn: "$anarchy_external_fqdn"
-enable_selinux: $enable_selinux
-enable_ood: $enable_ood
-enable_openhpc: $enable_openhpc
-enable_easybuild: $enable_easybuild
-enable_authentication: $enable_authentication
+cp "$ALL_YML_EXAMPLE" "$ALL_YML"
 
-anarchy_cluster_net: "$anarchy_cluster_net"
-anarchy_cluster_netprefix: "$anarchy_cluster_netprefix"
-anarchy_cluster_dhcp_start: "$anarchy_cluster_dhcp_start"
-anarchy_cluster_dhcp_end: "$anarchy_cluster_dhcp_end"
+set_yaml() {
+  local key="$1"
+  local value="$2"
+  value=$(printf '%s\n' "$value" | sed 's/[\/&]/\\&/g')
+  sed -i "s|^${key}:.*|${key}: ${value}|" "$ALL_YML"
+}
 
-anarchy_bmc_net: "$anarchy_bmc_net"
-anarchy_bmc_netprefix: "$anarchy_bmc_netprefix"
+set_yaml "anarchy_domain" "\"$anarchy_domain\""
+set_yaml "project_id" "\"$project_id\""
+set_yaml "anarchy_ctrl1_hostname" "\"$anarchy_ctrl1_hostname\""
+set_yaml "anarchy_ctrl1_ip" "\"$anarchy_ctrl1_ip\""
+set_yaml "ha" "$ha"
+set_yaml "anarchy_external_fqdn" "\"$anarchy_external_fqdn\""
+set_yaml "enable_selinux" "$enable_selinux"
+set_yaml "enable_ood" "$enable_ood"
+set_yaml "enable_openhpc" "$enable_openhpc"
+set_yaml "enable_easybuild" "$enable_easybuild"
+set_yaml "enable_authentication" "$enable_authentication"
 
-anarchy_dns_forwarders:
-EOF
+set_yaml "anarchy_cluster_net" "\"$anarchy_cluster_net\""
+set_yaml "anarchy_cluster_netprefix" "\"$anarchy_cluster_netprefix\""
+set_yaml "anarchy_cluster_dhcp_start" "\"$anarchy_cluster_dhcp_start\""
+set_yaml "anarchy_cluster_dhcp_end" "\"$anarchy_cluster_dhcp_end\""
 
-# Write DNS list items
+set_yaml "anarchy_bmc_net" "\"$anarchy_bmc_net\""
+set_yaml "anarchy_bmc_netprefix" "\"$anarchy_bmc_netprefix\""
+
+# Replace DNS block safely
+sed -i "/^anarchy_dns_forwarders:/,/^[^[:space:]]/c\
+anarchy_dns_forwarders:" "$ALL_YML"
 for dns in "${dns_array[@]}"; do
-  echo "  - \"$dns\""
+  echo "  - \"$dns\"" >> "$ALL_YML"
 done
 
-cat <<EOF
-
-workload_manager:
-  - "$wm"
-EOF
-
-} > "$ALL_YML"
+# Replace workload manager block
+sed -i "/^workload_manager:/,/^[^[:space:]]/c\
+workload_manager:\n  - \"$wm\"" "$ALL_YML"
 
 # -----------------------------------------------------------------------------
-# WRITE hosts FROM SCRATCH (NEW BEHAVIOR)
-# -----------------------------------------------------------------------------
-# IMPORTANT:
-#   - No early copying from hosts.example
-#   - No incremental editing
-#   - This is the ONLY write to hosts
+# WRITE hosts FILE
 # -----------------------------------------------------------------------------
 
 echo "Writing inventory to ${HOSTS_FILE}" > /dev/tty
@@ -450,7 +383,7 @@ echo "Writing inventory to ${HOSTS_FILE}" > /dev/tty
 } > "$HOSTS_FILE"
 
 # -----------------------------------------------------------------------------
-# FINAL MESSAGES (unchanged)
+# FINAL MESSAGES
 # -----------------------------------------------------------------------------
 
 echo "Configuration flow completed successfully" > /dev/tty
@@ -460,7 +393,6 @@ add_message "  - ${ALL_YML}"
 add_message "  - ${HOSTS_FILE}"
 show_message
 
-# Output OS family to FD 3 (unchanged behavior)
 echo "$REMOTE_OS_FAMILY" >&3
 
 exit 0

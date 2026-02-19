@@ -1,33 +1,74 @@
 ---
-- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+###############################################################################
+# 1. Load OS‑specific pacemaker vars
+###############################################################################
+
+- name: Load OS‑specific pacemaker vars
   include_vars: "{{ item }}"
   with_first_found:
-    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
-    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version }}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version }}.yaml"
+    - "{{ ansible_os_family }}.yaml"     # FALLBACK: RedHat.yaml, Suse.yaml, Debian.yaml
+    - "default.yaml"
   no_log: false
-  ignore_errors: true
 
-- name: Install H/A packages
-  yum:
-    name: '{{ ha_packages }}'
+###############################################################################
+# 2. Install HA packages (multi‑OS)
+###############################################################################
+
+# SUSE
+- name: Install HA packages (SUSE)
+  zypper:
+    name: "{{ ha_packages }}"
     state: present
-    enablerepo: 
+  when: ansible_os_family == "Suse"
+
+- name: Install additional packages (SUSE)
+  zypper:
+    name: "{{ additional_packages }}"
+    state: present
+  when: ansible_os_family == "Suse"
+
+# Debian / Ubuntu
+- name: Update apt cache
+  apt:
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Install HA packages (Debian/Ubuntu)
+  apt:
+    name: "{{ ha_packages }}"
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Install additional packages (Debian/Ubuntu)
+  apt:
+    name: "{{ additional_packages }}"
+    state: present
+  when: ansible_os_family == "Debian"
+
+# RedHat
+- name: Install HA packages (RHEL/Rocky/Alma)
+  yum:
+    name: "{{ ha_packages }}"
+    state: present
+    enablerepo:
       - ha
       - highavailability
       - resilientstorage
       - rhel-8-for-x86_64-highavailability-rpms
       - rhel-9-for-x86_64-highavailability-rpms
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
+  when: ansible_os_family == "RedHat"
 
-- name: Install additional packages
+- name: Install additional packages (RHEL/Rocky/Alma)
   yum:
-    name: '{{ additional_packages }}'
+    name: "{{ additional_packages }}"
     state: present
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
+  when: ansible_os_family == "RedHat"
 
-# --- start syncing keys ---
+###############################################################################
+# 3. Corosync key generation + sync
+###############################################################################
 
 - name: Verify if corosync key exists
   stat:
@@ -38,7 +79,7 @@
   command: "corosync-keygen -l"
   args:
     creates: '/etc/corosync/authkey'
-  when: 
+  when:
     - not stat_corosync_key.stat.exists
     - primary
 
@@ -56,8 +97,7 @@
       mode: 0640
       owner: root
       group: root
-  when: 
-    - primary
+  when: primary
 
 - name: Copy corosync key from sync
   copy:
@@ -67,10 +107,11 @@
     mode: 0640
     owner: root
     group: root
-  when: 
-    - not primary
+  when: not primary
 
-# --- end syncing keys ---
+###############################################################################
+# 4. Configure corosync
+###############################################################################
 
 - name: Configure corosync
   template:
@@ -85,34 +126,43 @@
     enabled: true
   when: corosync_config.changed
 
-# TODO: better way than below
-- name: Install PCS
+###############################################################################
+# 5. Install PCS (RedHat only) or crmsh (SUSE/Debian)
+###############################################################################
+
+# RedHat PCS
+- name: Install PCS via pip (RHEL only)
   ansible.builtin.shell: |
     source {{ anarchy_local }}/python/bin/activate
     pip3 install --upgrade {{ pcs_noarch_pip_repository }}/{{ pcs_pip }}
     exit $?
   args:
     executable: /bin/bash
-  when: pcs_pip is defined
+  when:
+    - ansible_os_family == "RedHat"
+    - pcs_pip is defined
 
-# TODO: better way than below
-- name: Install PCS
+- name: Install PCS via pip (fallback)
   ansible.builtin.shell: |
     source {{ anarchy_local }}/python/bin/activate
     pip3 install --upgrade -i {{ pcs_noarch_pip_repository }}/ pcs
     exit $?
   args:
     executable: /bin/bash
-  when: pcs_pip is not defined
+  when:
+    - ansible_os_family == "RedHat"
+    - pcs_pip is not defined
 
-- name: Get python libdir
-  shell: "echo {{ anarchy_local }}/python/lib/python*"
-  register: python_runtime_dir
-  changed_when: false
+# SUSE + Debian use crmsh
+- name: Install crmsh (SUSE/Debian)
+  package:
+    name: crmsh
+    state: present
+  when: ansible_os_family in ["Suse", "Debian"]
 
-- name: Install ruby gems
-  shell: "/bin/bash {{ python_runtime_dir.stdout }}/site-packages/pcs/cv/gems.sh"
-  ignore_errors: true
+###############################################################################
+# 6. PCS wrapper (RHEL only)
+###############################################################################
 
 - name: Install PCS wrapper
   template:
@@ -121,6 +171,11 @@
     owner: root
     group: root
     mode: 0755
+  when: ansible_os_family == "RedHat"
+
+###############################################################################
+# 7. Corosync service.d
+###############################################################################
 
 - name: Ensure corosync service.d directory exists
   file:
@@ -134,7 +189,9 @@
   with_items:
     - pcmk
 
-# ---------------------- Add custom resource agents ----------
+###############################################################################
+# 8. Custom resource agents
+###############################################################################
 
 - name: Ensure custom resource agents exist
   copy:
@@ -149,7 +206,9 @@
     - iscsi
   ignore_errors: true
 
-# ---------------------- start pacemaker and corosync --------
+###############################################################################
+# 9. Start services
+###############################################################################
 
 - name: Start pacemaker service
   service:
@@ -163,15 +222,23 @@
     state: started
     enabled: true
 
-- name: set property 'standby' to 'on' for non primary node (standby)
+###############################################################################
+# 10. Standby non‑primary nodes
+###############################################################################
+
+- name: set property 'standby' to 'on' for non primary node
   pcs_property:
     name: 'standby'
     node: '{{ ansible_hostname }}'
     value: 'on'
   ignore_errors: true
-  when: not primary
+  when:
+    - not primary
+    - ansible_os_family == "RedHat"
 
-# ---------------------- resources and config ----------------
+###############################################################################
+# 11. Pacemaker resources (primary only)
+###############################################################################
 
 - block:
   - name: Set pacemaker properties
@@ -202,15 +269,16 @@
       options: 'ip={{ anarchy_ctrl_external_floating_ip }} nic={{ anarchy_ctrl_external_nic }} cidr_netmask={{ anarchy_external_netprefix }} op monitor interval=29s --group Anarchy'
       state: present
     when:
-      - anarchy_ctrl_external_floating_ip is defined
-      - anarchy_ctrl_external_floating_ip != ''
-      - anarchy_external_netprefix is defined
-      - anarchy_external_netprefix != ''
-      - anarchy_ctrl_external_nic is defined
-      - anarchy_ctrl_external_nic != ''
-  when: primary
+      - anarchy_ctrl_external_floating_ip | default('') != ''
+      - anarchy_external_netprefix | default('') != ''
+      - anarchy_ctrl_external_nic | default('') != ''
+  when:
+    - primary
+    - ansible_os_family == "RedHat"
 
-# --------------------- fencing ----------------------------
+###############################################################################
+# 12. Fencing (primary only)
+###############################################################################
 
 - block:
   - name: Toggle pacemaker stonith property
@@ -238,5 +306,7 @@
         state: present
       with_items: '{{ all_ctrl_hostname }}'
     when: fence_ipmilan_enabled
-  when: primary
+  when:
+    - primary
+    - ansible_os_family == "RedHat"
   tags: fencing

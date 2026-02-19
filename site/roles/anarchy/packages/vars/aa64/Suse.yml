@@ -1,16 +1,14 @@
----
-
 install_packages:
-  - OpenIPMI
+  - ipmitool                 # replaces OpenIPMI
   - bash-completion
   - bc
   - bind-utils
   - bison
   - byacc
   - bzip2
-  - createrepo
+  - createrepo_c             # replaces createrepo
   - curl
-  - dejavu-sans-fonts
+  - dejavu-fonts             # replaces dejavu-sans-fonts
   - dmidecode
   - ethtool
   - gawk
@@ -22,42 +20,41 @@ install_packages:
   - hdparm
   - htop
   - hwloc
-  - hwloc-libs
   - hwloc-devel
   - infiniband-diags
   - iperf3
-  - ipmitool
-  - kernel-devel
-  - kernel-headers
-  - kernel-tools
+  - kernel-default-devel     # replaces kernel-devel
+  - kernel-default-headers   # replaces kernel-headers
+  - kernel-default           # replaces kernel-tools
   - less
-  - libevent
+  - libevent-2_1-7
   - libevent-devel
   - libfabric
-  - libgfortran
-  - libibverbs
-  - libpcap
-  - libpciaccess
-  - librdmacm
-  - libtool-ltdl
+  - libgfortran5             # version may vary
+  - libibverbs1
+  - libpcap1
+  - libpciaccess0
+  - librdmacm1
+  - libtool
   - lm_sensors
   - lsof
   - make
+  - mcelog
   - minicom
+  - msr-tools
   - mtr
-  - nc
+  - netcat-openbsd           # replaces nc
   - ncurses-term
   - net-tools
   - numactl
-  - numactl-libs
+  - libnuma1
   - numactl-devel
-  - openssh-clients
+  - openssh
   - openssh-server
   - parted
   - patch
   - pciutils
   - perf
-  - python3-policycoreutils
   - psmisc
   - rsync
   - screen
@@ -77,17 +74,15 @@ install_packages:
   - util-linux
   - vim
   - wget
-  - xorg-x11-xauth
-  - yum-plugin-versionlock
-  - yum-utils
+  - xauth                    # replaces xorg-x11-xauth
   - mc
   - automake
   - expect
   - mkpasswd
   - unzip
   - dosfstools
-  - grub2-efi-aa64
-  - shim-aa64
+  - grub2-x86_64-efi         # replaces grub2-efi-x64
+  - shim                     # replaces shim-x64
   - efibootmgr
   - lbzip2
   - tar
@@ -95,4 +90,3 @@ install_packages:
   - jq
   - postfix
   - s-nail
-

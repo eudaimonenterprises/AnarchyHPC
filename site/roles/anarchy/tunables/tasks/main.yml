@@ -1,23 +1,63 @@
 ---
 # Install additional packages and tunables
 
-- name: Load a variable file based on the OS type, or a default if not found. Using free-form to specify the file.
+###############################################################################
+# 1. Load OS‑specific tunables vars
+###############################################################################
+
+- name: Load OS‑specific tunables vars
   include_vars: "{{ item }}"
   with_first_found:
-    - "{{ ansible_distribution }}{{ ansible_distribution_major_version}}.yaml"
-    - "{{ ansible_os_family }}{{ ansible_distribution_major_version}}.yaml"
+    - "{{ ansible_distribution }}{{ ansible_distribution_major_version }}.yaml"
+    - "{{ ansible_os_family }}{{ ansible_distribution_major_version }}.yaml"
+    - "{{ ansible_os_family }}.yaml"        # FALLBACK (RedHat.yaml, Suse.yaml, Debian.yaml)
+    - "default.yaml"
   no_log: false
-  ignore_errors: true
 
-- name: Install additional packages
+###############################################################################
+# 2. Install tunables packages (multi‑OS)
+###############################################################################
+
+# SUSE
+- name: Install tunables packages (SUSE)
+  zypper:
+    name: "{{ tunables_packages }}"
+    state: present
+  when: ansible_os_family == "Suse"
+  tags: install-only
+
+# Debian / Ubuntu
+- name: Update apt cache
+  apt:
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Install tunables packages (Debian/Ubuntu)
+  apt:
+    name: "{{ tunables_packages }}"
+    state: present
+  when: ansible_os_family == "Debian"
+  tags: install-only
+
+# RedHat
+- name: Install tunables packages (RHEL/Rocky/Alma)
   yum:
     name: "{{ tunables_packages }}"
     state: present
-    enablerepo: powertools
+    enablerepo:
+      - powertools
+      - crb
+      - codeready-builder-for-rhel-*-x86_64-rpm
+      - codeready-builder-for-rhel-*-aarch64-rpm
     disable_gpg_check: true
+  when: ansible_os_family == "RedHat"
   tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+
+###############################################################################
+# 3. Limits and sysctl
+###############################################################################
 
 - name: Copy 91-hpc-limits.conf to /etc/security/limits.d
   template:
@@ -37,6 +77,10 @@
     backup: true
   notify: activate sysctls
 
+###############################################################################
+# 4. tuned-adm profiles
+###############################################################################
+
 - name: Setting compute performance tuned profile
   shell: "tuned-adm profile {{ compute_tuned_profile | default('hpc-compute') }}"
   when: in_image
@@ -47,9 +91,17 @@
   when: on_controller
   ignore_errors: true
 
+###############################################################################
+# 5. NFS thread tuning (controller only)
+###############################################################################
+
 - block:
   - name: gather info of current configured nfs threads
-    shell: "grep -A100 \"\\[nfsd\\]\" /etc/nfs.conf|grep '# threads' || echo ''"
+    shell: "grep -A100 \"\
+
+\[nfsd\\]
+
+\" /etc/nfs.conf | grep '# threads' || echo ''"
     register: nfs_threads
 
   - name: Increasing NFS threads on controller
@@ -57,5 +109,6 @@
       path: /etc/nfs.conf
       regexp: '^{{ nfs_threads.stdout }}'
       line: 'threads=256'
-    when: nfs_threads is defined and nfs_threads.stdout_lines|length == 1
+    when: nfs_threads is defined and nfs_threads.stdout_lines | length == 1
+
   when: on_controller

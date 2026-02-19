@@ -1,0 +1,11 @@
+---
+tunables_packages:
+  - tuned
+  - tuned-utils
+  - sysstat
+  - numactl
+  - lvm2
+  - ethtool
+
+compute_tuned_profile: "hpc-compute"
+controller_tuned_profile: "throughput-performance"

@@ -1,0 +1,92 @@
+install_packages:
+  - ipmitool
+  - bash-completion
+  - bc
+  - dnsutils              # replaces bind-utils
+  - bison
+  - byacc
+  - bzip2
+  - createrepo-c          # available in Ubuntu
+  - curl
+  - fonts-dejavu-core     # replaces dejavu-sans-fonts
+  - dmidecode
+  - ethtool
+  - gawk
+  - gcc
+  - gdisk
+  - git
+  - gzip
+  - haveged
+  - hdparm
+  - htop
+  - hwloc
+  - hwloc-nox             # libs
+  - hwloc-dev
+  - infiniband-diags
+  - iperf3
+  - linux-headers-generic # replaces kernel-devel / headers
+  - linux-tools-common    # replaces kernel-tools
+  - less
+  - libevent-2.1-7
+  - libevent-dev
+  - libfabric1
+  - libgfortran5
+  - libibverbs1
+  - libpcap0.8
+  - libpciaccess0
+  - librdmacm1
+  - libltdl-dev           # replaces libtool-ltdl
+  - lm-sensors
+  - lsof
+  - make
+  - mcelog
+  - minicom
+  - msr-tools
+  - mtr
+  - netcat-openbsd        # replaces nc
+  - ncurses-term
+  - net-tools
+  - numactl
+  - libnuma1
+  - numactl-dev
+  - openssh-client
+  - openssh-server
+  - parted
+  - patch
+  - pciutils
+  - linux-tools-generic   # perf
+  - psmisc
+  - rsync
+  - screen
+  - sg3-utils
+  - smartmontools
+  - sshpass
+  - strace
+  - sudo
+  - sysstat
+  - tcpdump
+  - telnet
+  - tftp
+  - time
+  - tmux
+  - tree
+  - usbutils
+  - util-linux
+  - vim
+  - wget
+  - xauth
+  - mc
+  - automake
+  - expect
+  - whois                 # provides mkpasswd
+  - unzip
+  - dosfstools
+  - grub-efi-amd64-bin    # replaces grub2-efi-x64
+  - shim-signed           # replaces shim-x64
+  - efibootmgr
+  - lbzip2
+  - tar
+  - dos2unix
+  - jq
+  - postfix
+  - s-nail

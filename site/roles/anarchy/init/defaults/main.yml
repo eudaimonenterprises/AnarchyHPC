@@ -1,12 +1,16 @@
 ---
 # defaults for the init role
 
+# Whether SELinux should be enabled on systems that support it.
+# This does NOT force SELinux on systems that lack it.
 enable_selinux: false
 
+# Base packages required everywhere.
+# SELinux-specific packages are installed conditionally in tasks.
 init_packages:
-  - python3-libselinux
   - bind-utils
 
+# Cloud provider support
 cloud_support: ['azure', 'aws', 'gcp']
 
 cloud_vpn_namekey:
@@ -16,4 +20,3 @@ cloud_vpn_namekey:
 
 cloud_vpn_pskkey:
   aws: vpn_tunnel1_preshared_key
-

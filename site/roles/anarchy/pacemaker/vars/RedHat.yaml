@@ -1,0 +1,20 @@
+---
+# NOTE:
+# RHEL 8/9 requires the Red Hat High Availability Add-On subscription:
+# https://www.redhat.com/en/store/high-availability-add
+
+ha_packages:
+  - pacemaker
+  - corosync
+  - pcs
+  - fence-agents-all
+
+additional_packages:
+  - python3
+  - python3-pip
+  - python3-setuptools
+  - python3-wheel
+  - policycoreutils-python-utils
+  - libtool
+  - lvm2
+  - resource-agents
