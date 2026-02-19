@@ -1,13 +1,37 @@
 ---
 # tasks file for chrony
 
-- name: Install chrony packages
+# ---------------------------------------------------------------------------
+# Install chrony packages (OS‑specific)
+# ---------------------------------------------------------------------------
+
+- name: Install chrony on SUSE
+  zypper:
+    name: "{{ chrony_packages }}"
+    state: present
+  when: ansible_os_family == "Suse"
+  tags: install-only
+
+- name: Install chrony on RHEL
   yum:
     name: "{{ chrony_packages }}"
     state: present
+  when: ansible_os_family == "RedHat"
   tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
+
+- name: Install chrony on Debian/Ubuntu
+  apt:
+    name: "{{ chrony_packages }}"
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+  tags: install-only
+
+# ---------------------------------------------------------------------------
+# Configure chrony
+# ---------------------------------------------------------------------------
 
 - name: Update chrony configuration file
   template:
@@ -18,10 +42,14 @@
     mode: 0644
   notify: restart chrony
 
+# ---------------------------------------------------------------------------
+# Enable and start chrony
+# ---------------------------------------------------------------------------
+
 - name: Enable chrony service
   systemd:
     name: chronyd
-    enabled: 'yes'
+    enabled: yes
 
 - name: Start chrony service
   service:

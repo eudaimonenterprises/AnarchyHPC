@@ -96,19 +96,11 @@
 ###############################################################################
 
 - block:
-  - name: gather info of current configured nfs threads
-    shell: "grep -A100 \"\
-
-\[nfsd\\]
-
-\" /etc/nfs.conf | grep '# threads' || echo ''"
-    register: nfs_threads
-
-  - name: Increasing NFS threads on controller
+  - name: Ensure NFS threads are set to 256
     lineinfile:
       path: /etc/nfs.conf
-      regexp: '^{{ nfs_threads.stdout }}'
+      regexp: '^threads='
       line: 'threads=256'
-    when: nfs_threads is defined and nfs_threads.stdout_lines | length == 1
+      create: yes
 
   when: on_controller

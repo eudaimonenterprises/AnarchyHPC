@@ -3,21 +3,19 @@
 ssl_cert_path: '/etc/ssl/certs'
 
 # Certificate subject information
-# Only CN/SAN is required for functionality; the rest may be blank
 ssl_cert_country: ''
 ssl_cert_state: ''
 ssl_cert_locality: ''
-ssl_cert_organization: ''     # intentionally left blank
+ssl_cert_organization: ''
 ssl_cert_altname: 'controller.cluster'
 
 # Certificate lifetime (in days)
 ssl_cert_days: '3650'
 
 # Ownership of generated certificates and keys
+# Root owns the certs; no UID/GID variables so Ansible never tries to create them
 ssl_cert_owner: 'root'
-ssl_cert_owner_id: 0
 ssl_cert_group: 'root'
-ssl_cert_group_id: 0
 
 # CA trust store locations for different Linux families
 ssl_ca_cert_store:

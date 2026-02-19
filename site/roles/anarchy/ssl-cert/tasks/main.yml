@@ -1,57 +1,70 @@
 ---
-# Create certificate owner/group if needed
+###############################################################################
+# 1. Create certificate owner/group (portable, no UID/GID issues)
+###############################################################################
+
 - block:
 
-  - name: Ensure '{{ ssl_cert_owner }}' user exists
+  - name: Ensure certificate owner user exists (non-root)
     user:
-      name: '{{ ssl_cert_owner }}'
-      uid: '{{ ssl_cert_owner_id }}'
+      name: "{{ ssl_cert_owner }}"
       system: yes
-    when: ssl_cert_owner not in 'root'
+      state: present
+    when:
+      - ssl_cert_owner != 'root'
 
-  - name: Ensure '{{ ssl_cert_group }}' group exists
+  - name: Ensure certificate group exists (non-root)
     group:
-      name: '{{ ssl_cert_group }}'
-      gid: '{{ ssl_cert_group_id }}'
+      name: "{{ ssl_cert_group }}"
       system: yes
+      state: present
+    when:
+      - ssl_cert_group != 'root'
 
   when: on_controller | default(False) or in_login_image | default(False)
 
 
-# Generate cluster CA (only on primary controller or image build)
+###############################################################################
+# 2. Generate cluster CA (primary controller or image build)
+###############################################################################
+
 - block:
 
-  - name: Ensure {{ ssl_cert_path }} exists
+  - name: Ensure certificate directory exists
     file:
-      path: '{{ ssl_cert_path }}'
+      path: "{{ ssl_cert_path }}"
       state: directory
-      setype: cert_t
-      seuser: system_u
+      owner: "{{ ssl_cert_owner }}"
+      group: "{{ ssl_cert_group }}"
+      mode: "0750"
 
-  - name: Generate a certificate authority for the cluster
+  - name: Generate cluster CA
     command: >
       openssl req -newkey rsa:4096
         -nodes -sha512 -x509
         -days {{ ssl_cert_days }}
         -subj "/CN=cluster-ca"
-        -out '{{ ssl_ca_cert }}'
-        -keyout '{{ ssl_ca_key }}'
+        -out "{{ ssl_ca_cert }}"
+        -keyout "{{ ssl_ca_key }}"
     args:
-      creates: '{{ ssl_ca_cert }}'
+      creates: "{{ ssl_ca_cert }}"
 
   when: in_login_image | default(False) or
         ((primary | default(True) or in_cloud | default(False)) and on_controller | default(False))
 
 
-# Sync CA from primary controller
+###############################################################################
+# 3. Sync CA from primary controller
+###############################################################################
+
 - name: Copy cluster CA certificate from sync
   copy:
     remote_src: true
-    src: '{{ anarchy_sync }}/ssl/{{ item }}'
-    dest: '{{ ssl_cert_path }}'
-  with_items:
-    - '{{ ssl_ca_cert | basename }}'
-    - '{{ ssl_ca_key | basename }}'
+    src: "{{ anarchy_sync }}/ssl/{{ item }}"
+    dest: "{{ ssl_cert_path }}"
+  loop:
+    - "{{ ssl_ca_cert | basename }}"
+    - "{{ ssl_ca_key | basename }}"
   when:
     - not in_cloud | default(False)
     - not primary | default(False)
@@ -59,108 +72,112 @@
     - not in_image
 
 
-# Generate node certificates
+###############################################################################
+# 4. Generate node certificates
+###############################################################################
+
 - block:
 
-  - name: Render subjectAltName configuration
+  - name: Render SAN configuration
     template:
-      src: 'san.conf.j2'
-      dest: '{{ ssl_cert_path }}/san.conf'
-      mode: '0660'
+      src: "san.conf.j2"
+      dest: "{{ ssl_cert_path }}/san.conf"
+      mode: "0660"
 
   - block:
-      - name: Fetch list of existing certificate artifacts
+      - name: Find existing certs for backup
         find:
           paths: "{{ ssl_cert_path }}"
-          patterns: '{{ ansible_fqdn }}.*'
+          patterns: "{{ ansible_fqdn }}.*"
         register: ssl_existing_cert
 
       - name: Ensure backup directory exists
         file:
-          path: '{{ ssl_cert_path }}/backup'
+          path: "{{ ssl_cert_path }}/backup"
           state: directory
 
-      - name: Backup existing certificate
-        command: 'mv -f {{ item.path }} {{ ssl_cert_path }}/backup/'
-        with_items: "{{ ssl_existing_cert.files }}"
+      - name: Backup existing certificate artifacts
+        command: "mv -f {{ item.path }} {{ ssl_cert_path }}/backup/"
+        loop: "{{ ssl_existing_cert.files }}"
     when: override | default(False)
 
-  - name: Create a certificate request for this controller
+  - name: Create CSR for this node
     command: >
       openssl req -new -nodes -sha512
-        -subj '/C={{ ssl_cert_country }}/ST={{ ssl_cert_state }}/L={{ ssl_cert_locality }}/O={{ ssl_cert_organization }}/CN={{ ansible_fqdn }}'
-        -out '{{ ssl_cert_path }}/{{ ansible_fqdn }}.csr'
-        -keyout '{{ ssl_cert_path }}/{{ ansible_fqdn }}.key'
-        -config '{{ ssl_cert_path }}/san.conf'
+        -subj "/C={{ ssl_cert_country }}/ST={{ ssl_cert_state }}/L={{ ssl_cert_locality }}/O={{ ssl_cert_organization }}/CN={{ ansible_fqdn }}"
+        -out "{{ ssl_cert_path }}/{{ ansible_fqdn }}.csr"
+        -keyout "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+        -config "{{ ssl_cert_path }}/san.conf"
     args:
-      creates: '{{ ssl_cert_path }}/{{ ansible_fqdn }}.csr'
+      creates: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.csr"
 
-  - name: Sign the certificate request
+  - name: Sign CSR with cluster CA
     command: >
       openssl x509 -req
         -days {{ ssl_cert_days }}
-        -in '{{ ssl_cert_path }}/{{ ansible_fqdn }}.csr'
-        -CA '{{ ssl_ca_cert }}'
-        -CAkey '{{ ssl_ca_key }}'
-        -out '{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt'
+        -in "{{ ssl_cert_path }}/{{ ansible_fqdn }}.csr"
+        -CA "{{ ssl_ca_cert }}"
+        -CAkey "{{ ssl_ca_key }}"
+        -out "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
         -extensions req_ext
-        -extfile '{{ ssl_cert_path }}/san.conf'
+        -extfile "{{ ssl_cert_path }}/san.conf"
         -set_serial {{ ansible_date_time.epoch }}
     args:
-      creates: '{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt'
+      creates: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
 
-  - name: Create symlink for floating H/A controller
+  - name: Create symlinks for floating H/A controller
     file:
-      src: '{{ ssl_cert_path }}/{{ ansible_fqdn }}.{{ item }}'
-      dest: '{{ ssl_cert_path }}/{{ anarchy_ctrl_hostname }}.{{ item }}'
+      src: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.{{ item }}"
+      dest: "{{ ssl_cert_path }}/{{ anarchy_ctrl_hostname }}.{{ item }}"
       state: link
-    with_items:
+    loop:
       - crt
       - key
     when: ha | default(False)
 
-  - name: Fetch list of private keys
+  - name: Find private keys
     find:
       paths: "{{ ssl_cert_path }}"
-      patterns: '*.key'
+      patterns: "*.key"
     register: ssl_private_keys
 
-  - name: Restrict access permissions to private keys
+  - name: Restrict private key permissions
     file:
-      path: '{{ item.path }}'
-      mode: '0640'
-    with_items: "{{ ssl_private_keys.files }}"
+      path: "{{ item.path }}"
+      mode: "0640"
+    loop: "{{ ssl_private_keys.files }}"
 
-  - name: Update ownership of certificate directory
+  - name: Fix ownership of certificate directory
     file:
-      path: '{{ ssl_cert_path }}'
-      owner: '{{ ssl_cert_owner }}'
-      group: '{{ ssl_cert_group }}'
-      setype: cert_t
-      seuser: system_u
+      path: "{{ ssl_cert_path }}"
+      owner: "{{ ssl_cert_owner }}"
+      group: "{{ ssl_cert_group }}"
       recurse: yes
 
   when:
     - in_login_image | default(False) or (on_controller | default(False) and not in_image)
 
 
-# Sync CA to secondary controllers
+###############################################################################
+# 5. Sync CA to secondary controllers
+###############################################################################
+
 - block:
 
-  - name: Ensure ssl sync directory exists
+  - name: Ensure SSL sync directory exists
     file:
-      path: '{{ anarchy_sync }}/ssl'
+      path: "{{ anarchy_sync }}/ssl"
       state: directory
 
-  - name: Add CA certificate to sync
+  - name: Copy CA to sync directory
     copy:
       remote_src: true
-      src: '{{ ssl_cert_path }}/{{ item }}'
-      dest: '{{ anarchy_sync }}/ssl/{{ item }}'
-      mode: '0640'
-    with_items:
-      - '{{ ssl_ca_cert | basename }}'
-      - '{{ ssl_ca_key | basename }}'
+      src: "{{ ssl_cert_path }}/{{ item }}"
+      dest: "{{ anarchy_sync }}/ssl/{{ item }}"
+      mode: "0640"
+    loop:
+      - "{{ ssl_ca_cert | basename }}"
+      - "{{ ssl_ca_key | basename }}"
 
   when:
     - primary | default(True)
@@ -169,17 +186,20 @@
     - not in_image
 
 
-# Install CA into OS trust store
-- name: Add CA certificate to default trust store
+###############################################################################
+# 6. Install CA into OS trust store
+###############################################################################
+
+- name: Add CA certificate to OS trust store
   copy:
-    src: '{{ ssl_ca_cert }}'
-    dest: '{{ item.location }}/{{ ssl_ca_cert | basename }}'
+    src: "{{ ssl_ca_cert }}"
+    dest: "{{ item.location }}/{{ ssl_ca_cert | basename }}"
   register: cert_copy
-  with_items: "{{ ssl_ca_cert_store }}"
+  loop: "{{ ssl_ca_cert_store }}"
   when: item.name == ansible_facts['os_family']
 
-- name: Update certificate trust store
+- name: Update OS trust store
   shell: "{{ item.update_trust }}"
   changed_when: cert_copy.changed
-  with_items: "{{ ssl_ca_cert_store }}"
+  loop: "{{ ssl_ca_cert_store }}"
   when: item.name == ansible_facts['os_family']

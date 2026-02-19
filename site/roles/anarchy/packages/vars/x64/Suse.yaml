@@ -1,14 +1,14 @@
 install_packages:
-  - ipmitool                 # replaces OpenIPMI
+  - ipmitool
   - bash-completion
   - bc
   - bind-utils
   - bison
   - byacc
   - bzip2
-  - createrepo_c             # replaces createrepo
+  - createrepo_c
   - curl
-  - dejavu-fonts             # replaces dejavu-sans-fonts
+  - dejavu-fonts
   - dmidecode
   - ethtool
   - gawk
@@ -22,33 +22,30 @@ install_packages:
   - hwloc
   - hwloc-devel
   - infiniband-diags
-  - iperf3
-  - kernel-default-devel     # replaces kernel-devel
-  - kernel-default-headers   # replaces kernel-headers
-  - kernel-default           # replaces kernel-tools
+  - iperf            # SUSE does NOT ship iperf3
+  - kernel-default-devel
+  - kernel-default   # SUSE does NOT ship kernel-default-headers
   - less
   - libevent-2_1-7
   - libevent-devel
   - libfabric
-  - libgfortran5             # version may vary
+  - libgfortran5
   - libibverbs1
   - libpcap1
   - libpciaccess0
   - librdmacm1
   - libtool
-  - lm_sensors
+  - sensors          # replaces lm_sensors
   - lsof
   - make
   - mcelog
-  - minicom
-  - msr-tools
+  - picocom          # replaces minicom
   - mtr
-  - netcat-openbsd           # replaces nc
-  - ncurses-term
+  - netcat-openbsd
   - net-tools
   - numactl
   - libnuma1
-  - numactl-devel
+  - libnuma-devel    # replaces numactl-devel
   - openssh
   - openssh-server
   - parted
@@ -74,19 +71,18 @@ install_packages:
   - util-linux
   - vim
   - wget
-  - xauth                    # replaces xorg-x11-xauth
+  - xauth
   - mc
   - automake
-  - expect
-  - mkpasswd
+  - expect           # provides mkpasswd.tcl
   - unzip
   - dosfstools
-  - grub2-x86_64-efi         # replaces grub2-efi-x64
-  - shim                     # replaces shim-x64
+  - grub2-x86_64-efi
+  - shim
   - efibootmgr
-  - lbzip2
+  - pbzip2           # replaces lbzip2
   - tar
   - dos2unix
   - jq
   - postfix
-  - s-nail
+  - mailx            # replaces s-nail
