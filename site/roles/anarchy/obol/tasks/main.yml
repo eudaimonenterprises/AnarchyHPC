@@ -1,34 +1,70 @@
 ---
-# tasks file for obol
-#
-- block:
-  - name: Generate openldap root password and save it to /etc/anarchy/passwords
-    set_fact:
-      tmp_pwd: "{{ lookup('password',
-                          '/etc/anarchy/passwords/openldap/root.txt
-                           chars=ascii_letters,digits,hexdigits') }}"
+###############################################################################
+# OBOL: PASSWORD GENERATION (REMOTE‑SAFE)
+###############################################################################
 
-  - name: Get openldap root password from /etc/anarchy/passwords
-    set_fact:
-      openldap_root_pwd: "{{ lookup('password',
-                          '/etc/anarchy/passwords/openldap/root.txt
-                           chars=ascii_letters,digits,hexdigits') }}"
+# Ensure password directories exist
+- name: Ensure password directories exist
+  file:
+    path: "/etc/anarchy/passwords/{{ 'ds389' if obol_use_ds389 | default(False) else 'openldap' }}"
+    state: directory
+    mode: 0700
+
+###############################################################################
+# OpenLDAP password path
+###############################################################################
+- set_fact:
+    obol_pwd_path: "/etc/anarchy/passwords/openldap/root.txt"
   when: not obol_use_ds389 | default(True)
 
-- block:
-  - name: Generate ds389 root password and save it to /etc/anarchy/passwords
-    set_fact:
-      tmp_pwd: "{{ lookup('password',
-                          '/etc/anarchy/passwords/ds389/root.txt
-                           chars=ascii_letters,digits,hexdigits') }}"
-
-  - name: Get ds389 root password from /etc/anarchy/passwords
-    set_fact:
-      ds389_root_pwd: "{{ lookup('password',
-                          '/etc/anarchy/passwords/ds389/root.txt
-                           chars=ascii_letters,digits,hexdigits') }}"
+###############################################################################
+# DS389 password path
+###############################################################################
+- set_fact:
+    obol_pwd_path: "/etc/anarchy/passwords/ds389/root.txt"
   when: obol_use_ds389 | default(False)
 
+###############################################################################
+# Generate password if missing
+###############################################################################
+
+- name: Check if password file exists
+  stat:
+    path: "{{ obol_pwd_path }}"
+  register: obol_pwd_stat
+
+- name: Generate password if missing
+  command: "openssl rand -hex 16"
+  register: obol_generated_pwd
+  when: not obol_pwd_stat.stat.exists
+
+- name: Save generated password
+  copy:
+    content: "{{ obol_generated_pwd.stdout }}"
+    dest: "{{ obol_pwd_path }}"
+    mode: 0600
+  when: not obol_pwd_stat.stat.exists
+
+###############################################################################
+# Read password on all nodes
+###############################################################################
+
+- name: Read OBOL password
+  slurp:
+    src: "{{ obol_pwd_path }}"
+  register: obol_pwd_file
+
+- set_fact:
+    openldap_root_pwd: "{{ obol_pwd_file.content | b64decode }}"
+  when: not obol_use_ds389 | default(True)
+
+- set_fact:
+    ds389_root_pwd: "{{ obol_pwd_file.content | b64decode }}"
+  when: obol_use_ds389 | default(False)
+
+###############################################################################
+# Install obol dependency packages
+###############################################################################
 
 - name: Install obol dependency packages
   become: false
@@ -39,6 +75,10 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
+###############################################################################
+# Install obol script
+###############################################################################
+
 - name: Install obol to /usr/local/sbin
   template:
     src: 'obol.j2'
@@ -46,6 +86,10 @@
     owner: 'root'
     group: 'root'
     mode: '0750'
+
+###############################################################################
+# Install obol configuration
+###############################################################################
 
 - name: Add default configuration to {{ obol_conf_path }}
   template:

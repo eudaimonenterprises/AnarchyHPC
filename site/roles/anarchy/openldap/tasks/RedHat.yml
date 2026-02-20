@@ -10,44 +10,42 @@
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
-# --- sync password from primary (HA, non‑primary)
-- block:
-    - name: Ensure password location exists
-      file:
-        path: /etc/anarchy/passwords/openldap
-        state: directory
-        mode: 0700
+###############################################################################
+# PASSWORD GENERATION (REMOTE‑SAFE, HA‑COMPATIBLE)
+###############################################################################
 
-    - name: Copy openldap password from sync
-      copy:
-        remote_src: true
-        src: "{{ anarchy_sync }}/openldap/root.txt"
-        dest: /etc/anarchy/passwords/openldap/
+# Ensure password directory exists on all nodes
+- name: Ensure password directory exists
+  file:
+    path: /etc/anarchy/passwords/openldap
+    state: directory
+    mode: 0700
+
+# Generate password only on primary (HA)
+- name: Generate openldap root password on primary
+  command: "openssl rand -hex 16"
+  register: generated_pwd
   when:
-    - not primary | default(false)
+    - primary | default(true)
     - ha | default(false)
 
-# --- generate / read password
-- name: Generate openldap root password and save it
-  set_fact:
-    tmp_pwd: "{{ lookup('password',
-                        '/etc/anarchy/passwords/openldap/root.txt
-                         chars=ascii_letters,digits,hexdigits') }}"
+- name: Save generated password on primary
+  copy:
+    content: "{{ generated_pwd.stdout }}"
+    dest: /etc/anarchy/passwords/openldap/root.txt
+    mode: 0600
+  when:
+    - primary | default(true)
+    - ha | default(false)
 
-- name: Get openldap root password
-  set_fact:
-    openldap_root_pwd: "{{ lookup('password',
-                        '/etc/anarchy/passwords/openldap/root.txt
-                         chars=ascii_letters,digits,hexdigits') }}"
-
-# --- sync password to others (HA, primary)
+# Sync password to secondaries
 - block:
     - name: Ensure openldap sync directory exists
       file:
         path: "{{ anarchy_sync }}/openldap"
         state: directory
 
-    - name: Add openldap password to sync
+    - name: Sync password to cluster
       copy:
         remote_src: true
         src: /etc/anarchy/passwords/openldap/root.txt
@@ -57,7 +55,31 @@
     - primary | default(true)
     - ha | default(false)
 
-# --- packages
+# Secondaries pull password from sync
+- block:
+    - name: Copy openldap password from sync
+      copy:
+        remote_src: true
+        src: "{{ anarchy_sync }}/openldap/root.txt"
+        dest: /etc/anarchy/passwords/openldap/root.txt
+        mode: 0600
+  when:
+    - not primary | default(false)
+    - ha | default(false)
+
+# Read password on all nodes
+- name: Read openldap root password
+  slurp:
+    src: /etc/anarchy/passwords/openldap/root.txt
+  register: openldap_pwd_file
+
+- set_fact:
+    openldap_root_pwd: "{{ openldap_pwd_file.content | b64decode }}"
+
+###############################################################################
+# PACKAGE INSTALLATION
+###############################################################################
+
 - name: Install OpenLDAP packages (RedHat)
   yum:
     name: "{{ openldap_packages }}"
@@ -77,7 +99,10 @@
     msg: "OpenLDAP release {{ openldap_version.stdout }}"
   when: openldap_version is defined
 
-# --- SELinux
+###############################################################################
+# SELINUX
+###############################################################################
+
 - block:
     - name: Selinux fcontext on files
       sefcontext:
@@ -85,7 +110,10 @@
         setype: slapd_db_t
   when: ansible_selinux.status == "enabled"
 
-# --- TLS + defaults
+###############################################################################
+# TLS + DEFAULTS
+###############################################################################
+
 - name: Hash OpenLDAP root password
   command: slappasswd -h {SSHA} -s {{ openldap_root_pwd }}
   register: openldap_root_pwd_hash
@@ -109,7 +137,10 @@
     path: /etc/openldap/slapd.d
   register: default_openldap_path
 
-# --- relocate slapd.d if needed
+###############################################################################
+# SLAPD.D RELOCATION
+###############################################################################
+
 - block:
     - name: Ensure OpenLDAP configuration directory exists
       file:
@@ -152,7 +183,10 @@
     openldap_server_conf_path | string not in '/etc/openldap/slapd.d'
     and default_openldap_path.stat.isdir
 
-# --- TLS CA
+###############################################################################
+# TLS CA
+###############################################################################
+
 - name: Add cluster CA certificate to /etc/openldap/certs
   copy:
     remote_src: true
@@ -164,7 +198,10 @@
     name: "{{ openldap_default_user }}"
     groups: "{{ ssl_cert_group }}"
 
-# --- destroy existing DB if requested
+###############################################################################
+# DESTROY EXISTING DB IF REQUESTED
+###############################################################################
+
 - block:
     - name: Verifying for data existence
       stat:
@@ -197,14 +234,20 @@
     - override | default(false)
     - primary | default(true)
 
-# --- non‑HA enable
+###############################################################################
+# NON‑HA ENABLE
+###############################################################################
+
 - name: Enable OpenLDAP service (non‑HA)
   systemd:
     name: slapd
     enabled: true
   when: not ha | default(false)
 
-# --- initial data + schemas (primary)
+###############################################################################
+# INITIAL DATA + SCHEMAS (PRIMARY)
+###############################################################################
+
 - block:
     - name: Ensure OpenLDAP data directory exists
       file:
@@ -234,7 +277,10 @@
         - local_schema.ldif
   when: primary | default(true)
 
-# --- openldap <= 2.4
+###############################################################################
+# OPENLDAP <= 2.4
+###############################################################################
+
 - block:
     - name: Load OpenLDAP schemas (<= 2.4)
       command: ldapadd -c -Y EXTERNAL -H ldapi:/// -Q -f /etc/openldap/schema/{{ item }}.ldif
@@ -302,7 +348,10 @@
     - openldap_version is defined
     - openldap_version.stdout | int < 25
 
-# --- openldap 2.5+
+###############################################################################
+# OPENLDAP 2.5+
+###############################################################################
+
 - block:
     - name: Load OpenLDAP schemas (2.5+)
       command: ldapadd -c -Y EXTERNAL -H ldapi:/// -Q -f /etc/openldap/schema/{{ item }}.ldif
@@ -378,7 +427,10 @@
     - openldap_version is defined
     - openldap_version.stdout | int > 24
 
-# --- HA integration with Pacemaker
+###############################################################################
+# HA INTEGRATION
+###############################################################################
+
 - block:
     - name: Disable OpenLDAP service for H/A
       systemd:

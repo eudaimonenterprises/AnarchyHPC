@@ -12,37 +12,33 @@
     state: present
 
 ###############################################################################
-# Password sync (same logic as RedHat)
+# SUSE: Password generation (remote-safe)
 ###############################################################################
 
-- block:
-    - name: Ensure password directory exists
-      file:
-        path: /etc/anarchy/passwords/openldap
-        state: directory
-        mode: 0700
+- name: Ensure password directory exists
+  file:
+    path: /etc/anarchy/passwords/openldap
+    state: directory
+    mode: 0700
 
-    - name: Copy openldap password from sync
-      copy:
-        remote_src: true
-        src: "{{ anarchy_sync }}/openldap/root.txt"
-        dest: /etc/anarchy/passwords/openldap/
+# Generate password only on primary
+- name: Generate openldap root password on primary
+  command: "openssl rand -hex 16"
+  register: generated_pwd
   when:
-    - not primary | default(false)
+    - primary | default(true)
     - ha | default(false)
 
-- name: Generate openldap root password
-  set_fact:
-    tmp_pwd: "{{ lookup('password',
-                        '/etc/anarchy/passwords/openldap/root.txt
-                         chars=ascii_letters,digits,hexdigits') }}"
+- name: Save generated password on primary
+  copy:
+    content: "{{ generated_pwd.stdout }}"
+    dest: /etc/anarchy/passwords/openldap/root.txt
+    mode: 0600
+  when:
+    - primary | default(true)
+    - ha | default(false)
 
-- name: Read openldap root password
-  set_fact:
-    openldap_root_pwd: "{{ lookup('password',
-                        '/etc/anarchy/passwords/openldap/root.txt
-                         chars=ascii_letters,digits,hexdigits') }}"
-
+# Sync password to secondaries
 - block:
     - name: Ensure sync directory exists
       file:
@@ -58,6 +54,26 @@
   when:
     - primary | default(true)
     - ha | default(false)
+
+- block:
+    - name: Copy openldap password from sync
+      copy:
+        remote_src: true
+        src: "{{ anarchy_sync }}/openldap/root.txt"
+        dest: /etc/anarchy/passwords/openldap/root.txt
+        mode: 0600
+  when:
+    - not primary | default(false)
+    - ha | default(false)
+
+# Read password on all nodes
+- name: Read openldap root password
+  slurp:
+    src: /etc/anarchy/passwords/openldap/root.txt
+  register: openldap_pwd_file
+
+- set_fact:
+    openldap_root_pwd: "{{ openldap_pwd_file.content | b64decode }}"
 
 ###############################################################################
 # SUSE: TLS + defaults
