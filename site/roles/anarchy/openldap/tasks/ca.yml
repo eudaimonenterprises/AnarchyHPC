@@ -1,0 +1,156 @@
+---
+###############################################################################
+# UNIVERSAL CLUSTER CA GENERATION (REMOTE‑SAFE, HA‑AWARE)
+###############################################################################
+
+# Working directory where we generate the CA on the remote machine
+- name: Ensure working CA directory exists
+  file:
+    path: /etc/anarchy/ca
+    state: directory
+    mode: 0700
+
+- name: Check if CA certificate exists in working directory
+  stat:
+    path: /etc/anarchy/ca/cluster-ca.crt
+  register: ca_stat
+
+###############################################################################
+# OS‑SPECIFIC TRUST ANCHOR PATHS
+###############################################################################
+
+- name: Set trust anchor directory per OS family
+  set_fact:
+    ca_anchor_dir: >-
+      {% if ansible_os_family == 'Suse' %}
+        /etc/pki/trust/anchors
+      {% elif ansible_os_family == 'RedHat' %}
+        /etc/pki/ca-trust/source/anchors
+      {% elif ansible_os_family == 'Debian' %}
+        /usr/local/share/ca-certificates
+      {% else %}
+        /etc/pki/trust/anchors
+      {% endif %}
+
+- name: Set trust update command per OS family
+  set_fact:
+    ca_update_cmd: >-
+      {% if ansible_os_family == 'Suse' %}
+        update-ca-certificates
+      {% elif ansible_os_family == 'RedHat' %}
+        update-ca-trust
+      {% elif ansible_os_family == 'Debian' %}
+        update-ca-certificates
+      {% else %}
+        update-ca-certificates
+      {% endif %}
+
+###############################################################################
+# HA MODE — PRIMARY GENERATES CA
+###############################################################################
+
+- block:
+    - name: Generate CA private key (HA primary)
+      command: openssl genrsa -out /etc/anarchy/ca/cluster-ca.key 4096
+
+    - name: Generate self-signed CA certificate (HA primary)
+      command: >
+        openssl req -x509 -new -nodes
+        -key /etc/anarchy/ca/cluster-ca.key
+        -sha256 -days 3650
+        -subj "/CN=Anarchy Cluster CA"
+        -out /etc/anarchy/ca/cluster-ca.crt
+
+    - name: Secure CA key permissions
+      file:
+        path: /etc/anarchy/ca/cluster-ca.key
+        mode: 0600
+  when:
+    - ha | default(false)
+    - primary | default(true)
+    - not ca_stat.stat.exists
+
+###############################################################################
+# HA MODE — SYNC CA TO CLUSTER
+###############################################################################
+
+- block:
+    - name: Ensure CA sync directory exists
+      file:
+        path: "{{ anarchy_sync }}/ca"
+        state: directory
+
+    - name: Sync CA certificate and key
+      copy:
+        remote_src: true
+        src: "/etc/anarchy/ca/{{ item }}"
+        dest: "{{ anarchy_sync }}/ca/"
+        mode: 0600
+      loop:
+        - cluster-ca.crt
+        - cluster-ca.key
+  when:
+    - ha | default(false)
+    - primary | default(true)
+
+###############################################################################
+# HA MODE — SECONDARIES PULL CA
+###############################################################################
+
+- block:
+    - name: Copy CA from sync
+      copy:
+        remote_src: true
+        src: "{{ anarchy_sync }}/ca/{{ item }}"
+        dest: "/etc/anarchy/ca/{{ item }}"
+        mode: 0600
+      loop:
+        - cluster-ca.crt
+        - cluster-ca.key
+  when:
+    - ha | default(false)
+    - not primary | default(false)
+
+###############################################################################
+# NON‑HA MODE — GENERATE CA IF MISSING
+###############################################################################
+
+- block:
+    - name: Generate CA private key (non‑HA)
+      command: openssl genrsa -out /etc/anarchy/ca/cluster-ca.key 4096
+
+    - name: Generate self-signed CA certificate (non‑HA)
+      command: >
+        openssl req -x509 -new -nodes
+        -key /etc/anarchy/ca/cluster-ca.key
+        -sha256 -days 3650
+        -subj "/CN=Anarchy Cluster CA"
+        -out /etc/anarchy/ca/cluster-ca.crt
+
+    - name: Secure CA key permissions
+      file:
+        path: /etc/anarchy/ca/cluster-ca.key
+        mode: 0600
+  when:
+    - not ha | default(false)
+    - not ca_stat.stat.exists
+
+###############################################################################
+# INSTALL CA INTO OS TRUST STORE
+###############################################################################
+
+- name: Ensure trust anchor directory exists
+  file:
+    path: "{{ ca_anchor_dir }}"
+    state: directory
+    mode: 0755
+
+- name: Install CA certificate into trust store
+  copy:
+    remote_src: true
+    src: /etc/anarchy/ca/cluster-ca.crt
+    dest: "{{ ca_anchor_dir }}/anarchy-cluster-ca.crt"
+    mode: 0644
+
+- name: Update system trust store
+  command: "{{ ca_update_cmd }}"

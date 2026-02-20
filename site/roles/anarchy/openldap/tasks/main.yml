@@ -7,6 +7,15 @@
     - "{{ ansible_os_family }}.yaml"
     - "default.yaml"
 
+###############################################################################
+# Ensure OpenSSL is installed (required for CA generation)
+###############################################################################
+
+- name: Ensure OpenSSL is installed
+  package:
+    name: openssl
+    state: present
+
 - name: Run OpenLDAP stack for RedHat
   include_tasks: RedHat.yml
   when: ansible_os_family == "RedHat"

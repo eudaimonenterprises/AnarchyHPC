@@ -26,26 +26,14 @@
 - include_tasks: ca.yml
 
 ###############################################################################
-# Debian: TLS configuration
+# Debian: TLS configuration (correct, modern)
 ###############################################################################
 
-- name: Ensure Debian CA directory exists
-  file:
-    path: /etc/ldap/certs
-    state: directory
-    mode: 0755
-
-- name: Install cluster CA certificate into Debian path
-  copy:
-    remote_src: true
-    src: /etc/openldap/certs/cluster-ca.crt
-    dest: /etc/ldap/certs/cluster-ca.crt
-    mode: 0644
-
-- name: Configure client TLS CA
+- name: Configure client TLS CA (Debian/Ubuntu)
   lineinfile:
     path: /etc/ldap/ldap.conf
-    line: "TLS_CACERT /etc/ldap/certs/cluster-ca.crt"
+    regexp: '^TLS_CACERT'
+    line: 'TLS_CACERT /etc/ssl/certs/ca-certificates.crt'
 
 ###############################################################################
 # Debian: slapd.d relocation (optional)

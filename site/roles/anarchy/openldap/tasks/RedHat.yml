@@ -63,7 +63,7 @@
 - include_tasks: ca.yml
 
 ###############################################################################
-# TLS + DEFAULTS
+# TLS + DEFAULTS (RedHat)
 ###############################################################################
 
 - name: Hash OpenLDAP root password
@@ -79,28 +79,11 @@
     regexp: '^SLAPD_URLS='
     line: 'SLAPD_URLS="{{ openldap_endpoints }}"'
 
-- name: Adjust OpenLDAP client TLS configuration
+- name: Adjust OpenLDAP client TLS configuration (RedHat)
   lineinfile:
     path: /etc/openldap/ldap.conf
-    line: 'TLS_CACERT   /etc/openldap/certs/cluster-ca.crt'
-
-- name: Ensure CA directory exists
-  file:
-    path: /etc/openldap/certs
-    state: directory
-    mode: 0755
-
-- name: Install cluster CA certificate
-  copy:
-    remote_src: true
-    src: /etc/openldap/certs/cluster-ca.crt
-    dest: /etc/openldap/certs/cluster-ca.crt
-    mode: 0644
-
-- name: Ensure OpenLDAP has access to the ssl certificates
-  user:
-    name: "{{ openldap_default_user }}"
-    groups: "{{ ssl_cert_group }}"
+    regexp: '^TLS_CACERT'
+    line: 'TLS_CACERT   /etc/pki/tls/certs/ca-bundle.crt'
 
 ###############################################################################
 # SLAPD.D RELOCATION

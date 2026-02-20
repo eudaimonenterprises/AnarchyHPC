@@ -11,18 +11,18 @@
 # OBOL: LDAP CA CONSUMPTION (client trust only)
 ###############################################################################
 
-- name: Ensure Obol CA directory exists
-  file:
-    path: /etc/obol/certs
-    state: directory
-    mode: 0755
-
-- name: Install LDAP cluster CA certificate for Obol
-  copy:
-    remote_src: true
-    src: /etc/openldap/certs/cluster-ca.crt
-    dest: /etc/obol/certs/cluster-ca.crt
-    mode: 0644
+- name: Set Obol CA bundle path per OS
+  set_fact:
+    obol_ldap_cacert: >-
+      {% if ansible_os_family == 'Suse' %}
+        /etc/ssl/ca-bundle.pem
+      {% elif ansible_os_family == 'RedHat' %}
+        /etc/pki/tls/certs/ca-bundle.crt
+      {% elif ansible_os_family == 'Debian' %}
+        /etc/ssl/certs/ca-certificates.crt
+      {% else %}
+        /etc/ssl/certs/ca-certificates.crt
+      {% endif %}
 
 ###############################################################################
 # OBOL: Install dependency packages
@@ -61,7 +61,7 @@
     mode: '0600'
   vars:
     obol_ldap_password: "{{ ldap_root_password }}"
-    obol_ldap_cacert: "/etc/obol/certs/cluster-ca.crt"
+    obol_ldap_cacert: "{{ obol_ldap_cacert }}"
 
 - name: Add link to the configuration file in /etc
   file:
