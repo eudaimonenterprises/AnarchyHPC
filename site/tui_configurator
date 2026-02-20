@@ -330,11 +330,12 @@ echo "Checking for SFTP/SCP support on controller..."
 # -----------------------------------------------------------------------------
 
 # Universal SFTP test (no sudo, no config reading)
-SFTP_ENABLED=$(
-  sftp -oBatchMode=yes -oConnectTimeout=5 \
-       "${CONTROLLER_USER}@${CONTROLLER_HOST}" </dev/null >/dev/null 2>&1 \
-  && echo yes || echo no
-)
+read -r -p "Enable SFTP fixes (opensuse bug)? [y/N] " answer
+if [[ "$answer" =~ ^[Yy]$ ]]; then
+    SFTP_ENABLED="no"
+else
+    SFTP_ENABLED="yes"
+fi
 
 if [[ "$SFTP_ENABLED" == "no" ]]; then
     echo "Fixing SFTP/SCP support on controller..."

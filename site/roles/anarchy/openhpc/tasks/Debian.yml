@@ -1,0 +1,26 @@
+---
+- name: Add OpenHPC repo for Debian
+  apt_repository:
+    repo: "deb [trusted=yes] http://your-debian-openhpc-mirror stable main"
+    state: present
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install OpenHPC base packages
+  apt:
+    name:
+      - ohpc-base
+      - ohpc-base-compute
+    state: present
+
+- name: Install lmod
+  apt:
+    name: lmod
+    state: present
+
+- name: Install pdsh
+  apt:
+    name: pdsh
+    state: present

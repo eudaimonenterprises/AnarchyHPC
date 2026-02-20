@@ -1,0 +1,26 @@
+---
+- name: Add OpenHPC repo for SUSE
+  community.general.zypper_repository:
+    name: openhpc
+    repo: "https://download.opensuse.org/repositories/science/{{ ansible_distribution }}_{{ ansible_distribution_version }}/"
+    auto_import_keys: yes
+
+- name: Refresh zypper
+  command: zypper --non-interactive refresh
+
+- name: Install OpenHPC base patterns
+  community.general.zypper:
+    name:
+      - patterns-hpc-ohpc-base
+      - patterns-hpc-ohpc-compute
+    state: present
+
+- name: Install lmod
+  community.general.zypper:
+    name: lmod
+    state: present
+
+- name: Install pdsh
+  community.general.zypper:
+    name: pdsh
+    state: present

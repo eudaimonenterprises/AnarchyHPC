@@ -1,150 +1,47 @@
 ---
+# Detect whether OpenHPC is available on this OS
+- name: Check OpenHPC availability
+  block:
 
-- block:
-  - name: Detect openhpc structure
-    stat:
-      path: '{{ openhpc_home }}'
-    register: openhpc_structure
+    # RedHat-family check
+    - name: Check for OpenHPC repo (RedHat)
+      when: ansible_os_family == "RedHat"
+      stat:
+        path: "/etc/yum.repos.d/openhpc*.repo"
+      register: ohpc_repo_rh
 
-  - name: Remove deprecated openhpc directory
-    file:
-      path: '{{ openhpc_home }}'
-      state: absent
-    when:
-      - openhpc_structure.stat.islnk is defined
-      - not openhpc_structure.stat.islnk
+    # SUSE check
+    - name: Check for OpenHPC repo (SUSE)
+      when: ansible_os_family == "Suse"
+      command: zypper lr openhpc
+      register: ohpc_repo_suse
+      failed_when: false
+      changed_when: false
 
-  - name: Remove deprecated mount path
-    ansible.posix.mount:
-      path: '{{ openhpc_home }}'
-      state: absent_from_fstab
-  when: in_image
+    # Debian check
+    - name: Check for OpenHPC repo (Debian)
+      when: ansible_os_family == "Debian"
+      command: grep -R "openhpc" /etc/apt/sources.list /etc/apt/sources.list.d/ || true
+      register: ohpc_repo_deb
+      changed_when: false
 
-- name: Create anarchy/ohpc dir for opt link to point at
-  file:
-    path: '{{ anarchy_ohpc }}'
-    owner: root
-    group: root
-    state: directory
-    mode: '0755'
+    # Decide availability
+    - name: Set OpenHPC availability flag
+      set_fact:
+        openhpc_available: >-
+          {{
+            (ansible_os_family == "RedHat" and ohpc_repo_rh.stat.exists) or
+            (ansible_os_family == "Suse" and ('openhpc' in ohpc_repo_suse.stdout)) or
+            (ansible_os_family == "Debian" and ohpc_repo_deb.stdout != '')
+          }}
 
-- name: Create link so openhpc ends up on /anarchy filesystem
-  file:
-    src: '{{ anarchy_ohpc }}'
-    path: '{{ openhpc_home }}'
-    owner: root
-    group: root
-    state: link
+# Skip message if not available
+- name: Skipping OpenHPC install — not available
+  debug:
+    msg: "OpenHPC not available for {{ ansible_distribution }} {{ ansible_distribution_version }} — skipping installation."
+  when: not openhpc_available
 
-- name: Configure OpenHPC repos
-  ansible.builtin.yum_repository:
-    name: "openhpc-{{ item.name }}"
-    description: "openhpc-{{ item.name }}"
-    baseurl: "{{ item.repo }}"
-    gpgcheck: "{{ item.gpgcheck | default(False) }}"
-    gpgkey: "{{ item.gpgkey | default('') }}"
-  with_items: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repositories') }}"
-
-- name: Ensure conflicting rpms from legacy AnarchyHPC are not installed
-  yum:
-    name:
-      - pdsh
-      - Lmod
-      - lmod
-      - environment-modules
-    state: removed
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-- name: Install ohpc-base
-  yum:
-    name: ohpc-base
-    state: installed
-    enablerepo: powertools
-  when: on_controller
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-- name: Install ohpc-base-compute
-  yum:
-    name: ohpc-base-compute
-    state: installed
-  when: on_controller
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-- block:
-  - name: Install pdsh-mod-genders-ohpc
-    yum:
-      name: pdsh-mod-genders-ohpc
-      state: installed
-    retries: "{{ rpm_retries | default(3) }}"
-    delay: "{{ rpm_delay | default(15) }}"
-
-  - name: Get /etc/genders status
-    stat:
-      path: '/etc/genders'
-    register: default_genders_path
-
-  - block:
-    - name: Ensure {{ genders_conf_path }} exists
-      file:
-        path: '{{ genders_conf_path }}'
-        state: directory
-
-    - name: Create empty pdsh genders file
-      file:
-        path: '{{ genders_conf_path }}/genders'
-        state: touch
-
-    - name: Replace default configuration path with symlink to {{ genders_conf_path }}
-      file:
-        src: '{{ genders_conf_path }}/genders'
-        dest: '/etc/genders'
-        state: link
-        force: true
-      when: genders_conf_path != '/etc'
-    when: default_genders_path.stat.exists == false
-  when: on_controller
-
-- name: Install lmod dependencies on non-controller nodes
-  yum:
-    name:
-      - lua-filesystem
-      - lua-posix
-    enablerepo: powertools
-    state: installed
-  when: in_image
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-- name: Create symlinks for pdsh and pdcp
-  file:
-    dest: "/usr/bin/{{ item }}"
-    src: "{{ openhpc_home }}/admin/pdsh/bin/{{ item }}"
-    state: link
-    force: true
-    follow: false
-  with_items:
-    - pdsh
-    - pdcp
-
-- name: Install lmod-ohpc
-  yum:
-    name: lmod-ohpc
-    state: installed
-    enablerepo: powertools
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-- name: Install profile for modules
-  template:
-    src: z_anarchyhpc.sh.j2
-    dest: /etc/profile.d/z_anarchyhpc.sh
-
-- name: Remove deprecated openhpc export
-  file:
-    path: '/etc/exports.d/ohpc.exports'
-    state: absent
-  notify: Export NFS
-  when: on_controller
+# Run OS-specific tasks only if available
+- name: Include OS-specific OpenHPC tasks
+  include_tasks: "{{ ansible_os_family }}.yml"
+  when: openhpc_available
