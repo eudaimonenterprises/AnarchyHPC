@@ -1,5 +1,10 @@
 ---
-
+- name: Ensure /root/.bashrc exists
+  file:
+    path: /root/.bashrc
+    state: touch
+    mode: '0644'
+  when: on_controller
 
 - name: History Preservation Across Logins
   blockinfile:

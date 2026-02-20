@@ -1,21 +1,21 @@
 ---
-# tasks file for environment-modules
+# Load OS-specific variables
+- name: Load OS-specific vars
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_os_family }}.yml"
+    - "{{ ansible_distribution }}.yml"
+    - "default.yml"
 
-- name: Install environment module packages
-  yum:
-    name: '{{ envmodules_packages }}'
-    state: present
-    enablerepo:
-      - powertools
-  tags: install-only
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
+# Dispatch to OS-specific tasks
+- name: Run OS-specific OpenHPC setup
+  include_tasks: "{{ ansible_os_family }}.yml"
 
+# Shared tasks across all OSes
 - name: Install profile for modules
   template:
     src: z_modules.sh.j2
     dest: /etc/profile.d/z_modules.sh
-  tags: install-only
 
 - name: Install dummy module
   template:

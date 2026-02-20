@@ -194,6 +194,7 @@
   copy:
     src: "{{ ssl_ca_cert }}"
     dest: "{{ item.location }}/{{ ssl_ca_cert | basename }}"
+    remote_src: true
   register: cert_copy
   loop: "{{ ssl_ca_cert_store }}"
   when: item.name == ansible_facts['os_family']

@@ -1,48 +1,58 @@
-[ req ]                   
-distinguished_name = req_distinguished_name         
-req_extensions     = req_ext                        
-[ req_distinguished_name ]                          
-countryName         = Country Name (2 letter code)  
-stateOrProvinceName = State or Province Name (full name)                                                 
-localityName        = Locality Name (eg, city)      
-organizationName    = Organization Name (eg, company)                                                    
-commonName          = Common Name (e.g. server FQDN)                                        
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions     = req_ext
 
-[ req_ext ]               
-subjectAltName = @alt_names                         
+[ req_distinguished_name ]
+countryName         = Country Name (2 letter code)
+stateOrProvinceName = State or Province Name (full name)
+localityName        = Locality Name (eg, city)
+organizationName    = Organization Name (eg, company)
+commonName          = Common Name (e.g. server FQDN)
 
-[alt_names]
-{% set all_ssl_cert_altname = [] %}
-{% for alt_list in ssl_cert_altname -%}
-{% if alt_list is iterable and alt_list is not string -%}
-{% for alt_name in alt_list -%}
-{% if all_ssl_cert_altname.append(alt_name) -%}
-{% endif -%}
-{% endfor -%}
-{% else -%}
-{% if all_ssl_cert_altname.append(alt_list) -%}
-{% endif -%}
-{% endif -%}
-{% endfor -%}
-{% for alt_name in all_ssl_cert_altname|unique -%}
-DNS.{{ loop.index }} = {{ alt_name }}
-{% endfor -%}
-{% set all_ssl_cert_altip = [] %}
-{% for alt_list in ssl_cert_altip -%}
-{% if alt_list is iterable and alt_list is not string -%}
-{% for alt_ip in alt_list -%}
-{% if alt_ip|length > 0 -%}
-{% if all_ssl_cert_altip.append(alt_ip) -%}
-{% endif -%}
-{% endif -%}
-{% endfor -%}
-{% else -%}
-{% if alt_list|length > 0 -%}
-{% if all_ssl_cert_altip.append(alt_list) -%}
-{% endif -%}
-{% endif -%}
-{% endif -%}
-{% endfor -%}
-{% for alt_ip in all_ssl_cert_altip|unique -%}
-IP.{{ loop.index }} = {{ alt_ip }}
-{% endfor -%}
+[ req_ext ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+{# ----------------------------- #}
+{# Normalize DNS SANs to a list #}
+{# ----------------------------- #}
+{% set dns_list = [] %}
+
+{% if ssl_cert_altname is string %}
+  {% set _ = dns_list.append(ssl_cert_altname) %}
+{% elif ssl_cert_altname is iterable %}
+  {% for item in ssl_cert_altname %}
+    {% if item is string and item|length > 0 %}
+      {% set _ = dns_list.append(item) %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{# Emit DNS SANs #}
+{% for name in dns_list|unique %}
+DNS.{{ loop.index }} = {{ name }}
+{% endfor %}
+
+{# ---------------------------- #}
+{# Normalize IP SANs to a list #}
+{# ---------------------------- #}
+{% set ip_list = [] %}
+
+{% if ssl_cert_altip is defined %}
+  {% if ssl_cert_altip is string %}
+    {% if ssl_cert_altip|length > 0 %}
+      {% set _ = ip_list.append(ssl_cert_altip) %}
+    {% endif %}
+  {% elif ssl_cert_altip is iterable %}
+    {% for item in ssl_cert_altip %}
+      {% if item is string and item|length > 0 %}
+        {% set _ = ip_list.append(item) %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+{% endif %}
+
+{# Emit IP SANs #}
+{% for ip in ip_list|unique %}
+IP.{{ loop.index }} = {{ ip }}
+{% endfor %}
