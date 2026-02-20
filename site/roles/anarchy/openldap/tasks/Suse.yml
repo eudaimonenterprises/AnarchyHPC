@@ -12,75 +12,19 @@
     state: present
 
 ###############################################################################
-# SUSE: Password generation (remote-safe)
+# SUSE: Password handling (shared include)
 ###############################################################################
 
-- name: Ensure password directory exists
-  file:
-    path: /etc/anarchy/passwords/openldap
-    state: directory
-    mode: 0700
-
-# Generate password only on primary
-- name: Generate openldap root password on primary
-  command: "openssl rand -hex 16"
-  register: generated_pwd
-  when:
-    - primary | default(true)
-    - ha | default(false)
-
-- name: Save generated password on primary
-  copy:
-    content: "{{ generated_pwd.stdout }}"
-    dest: /etc/anarchy/passwords/openldap/root.txt
-    mode: 0600
-  when:
-    - primary | default(true)
-    - ha | default(false)
-
-# Sync password to secondaries
-- block:
-    - name: Ensure sync directory exists
-      file:
-        path: "{{ anarchy_sync }}/openldap"
-        state: directory
-
-    - name: Sync password to cluster
-      copy:
-        remote_src: true
-        src: /etc/anarchy/passwords/openldap/root.txt
-        dest: "{{ anarchy_sync }}/openldap/"
-        mode: 0640
-  when:
-    - primary | default(true)
-    - ha | default(false)
-
-- block:
-    - name: Copy openldap password from sync
-      copy:
-        remote_src: true
-        src: "{{ anarchy_sync }}/openldap/root.txt"
-        dest: /etc/anarchy/passwords/openldap/root.txt
-        mode: 0600
-  when:
-    - not primary | default(false)
-    - ha | default(false)
-
-# Read password on all nodes
-- name: Read openldap root password
-  slurp:
-    src: /etc/anarchy/passwords/openldap/root.txt
-  register: openldap_pwd_file
-
-- set_fact:
-    openldap_root_pwd: "{{ openldap_pwd_file.content | b64decode }}"
+- include_tasks: password.yml
+  vars:
+    password_type: "openldap"
 
 ###############################################################################
 # SUSE: TLS + defaults
 ###############################################################################
 
 - name: Hash OpenLDAP root password
-  command: slappasswd -h {SSHA} -s {{ openldap_root_pwd }}
+  command: slappasswd -h {SSHA} -s {{ ldap_root_password }}
   register: openldap_root_pwd_hash
   changed_when: false
   when: primary | default(true)
@@ -183,8 +127,8 @@
 # SUSE: Load schemas + overlays (same logic as RHEL)
 ###############################################################################
 
-# You can reuse the exact same <=2.4 and >=2.5 blocks from RedHat.yml
 # SUSE ships OpenLDAP 2.4.x in Leap 15, so only the <=2.4 block will run.
+# You can include the same <=2.4 and >=2.5 blocks from RedHat.yml here.
 
 ###############################################################################
 # SUSE: HA integration

@@ -12,69 +12,12 @@
     update_cache: yes
 
 ###############################################################################
-# Debian: Password generation (remote‑safe, HA‑compatible)
+# Debian: Password handling (shared include)
 ###############################################################################
 
-- name: Ensure password directory exists
-  file:
-    path: /etc/anarchy/passwords/openldap
-    state: directory
-    mode: 0700
-
-# Generate password only on primary in HA
-- name: Generate openldap root password on primary
-  command: "openssl rand -hex 16"
-  register: generated_pwd
-  when:
-    - primary | default(true)
-    - ha | default(false)
-
-- name: Save generated password on primary
-  copy:
-    content: "{{ generated_pwd.stdout }}"
-    dest: /etc/anarchy/passwords/openldap/root.txt
-    mode: 0600
-  when:
-    - primary | default(true)
-    - ha | default(false)
-
-# Sync password to cluster from primary
-- block:
-    - name: Ensure sync directory exists
-      file:
-        path: "{{ anarchy_sync }}/openldap"
-        state: directory
-
-    - name: Sync password to cluster
-      copy:
-        remote_src: true
-        src: /etc/anarchy/passwords/openldap/root.txt
-        dest: "{{ anarchy_sync }}/openldap/"
-        mode: 0640
-  when:
-    - primary | default(true)
-    - ha | default(false)
-
-# Secondaries pull password from sync
-- block:
-    - name: Copy openldap password from sync
-      copy:
-        remote_src: true
-        src: "{{ anarchy_sync }}/openldap/root.txt"
-        dest: /etc/anarchy/passwords/openldap/root.txt
-        mode: 0600
-  when:
-    - not primary | default(false)
-    - ha | default(false)
-
-# Read password on all nodes
-- name: Read openldap root password
-  slurp:
-    src: /etc/anarchy/passwords/openldap/root.txt
-  register: openldap_pwd_file
-
-- set_fact:
-    openldap_root_pwd: "{{ openldap_pwd_file.content | b64decode }}"
+- include_tasks: password.yml
+  vars:
+    password_type: "openldap"
 
 ###############################################################################
 # Debian: TLS configuration
@@ -220,7 +163,7 @@
 
     - name: Load local schema
       command: >
-        ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
+        ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ ldap_root_password }}
                                  -f /etc/ldap/schema/local_schema.ldif
       ignore_errors: true
       when: ldapsearch.rc == 32
