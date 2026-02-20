@@ -1,0 +1,7 @@
+---
+openhpc_repos: []
+
+openhpc_base_packages: []
+
+envmodules_packages:
+  - environment-modules

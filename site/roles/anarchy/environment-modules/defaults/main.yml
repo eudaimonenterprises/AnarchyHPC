@@ -1,8 +1,9 @@
 ---
-# vars file for environment-modules
+# Generic defaults (lowest precedence)
 
+# Safe fallback for all OSes
 envmodules_packages:
-  - Lmod
+  - environment-modules
 
 envmodules_files_path: '{{ anarchy_shared }}/modulefiles'
 

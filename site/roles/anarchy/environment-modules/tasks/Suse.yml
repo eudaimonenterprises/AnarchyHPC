@@ -1,0 +1,31 @@
+---
+- name: Enable SUSE HPC module (SLES only)
+  command: >
+    SUSEConnect -p sle-module-HPC/{{ ansible_distribution_version }}/x86_64
+  when: ansible_distribution == "SLES"
+
+- name: Add OpenHPC repo (openSUSE Leap)
+  zypper_repository:
+    name: "openhpc-{{ item.name }}"
+    description: "OpenHPC repo {{ item.name }}"
+    repo: "{{ item.repo }}"
+    autorefresh: yes
+  loop: "{{ openhpc_repos }}"
+  when: ansible_distribution == "openSUSE Leap"
+
+- name: Install OpenHPC base patterns
+  zypper:
+    name: "{{ openhpc_base_packages }}"
+    state: present
+
+- name: Install environment modules
+  zypper:
+    name: "{{ envmodules_packages }}"
+    state: present
+
+- name: Install pdsh and genders
+  zypper:
+    name:
+      - pdsh
+      - genders
+    state: present

@@ -1,0 +1,12 @@
+---
+openhpc_repos:
+  - name: hpc
+    repo: "https://download.opensuse.org/repositories/science/openSUSE_Leap_{{ ansible_distribution_version }}/"
+    gpgcheck: false
+
+openhpc_base_packages:
+  - patterns-hpc-ohpc-base
+  - patterns-hpc-ohpc-compute
+
+envmodules_packages:
+  - lmod

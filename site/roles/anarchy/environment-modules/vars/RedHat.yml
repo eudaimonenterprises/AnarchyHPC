@@ -1,0 +1,12 @@
+---
+openhpc_repos:
+  - name: base
+    repo: "http://repos.openhpc.community/OpenHPC/2/EL{{ ansible_distribution_major_version }}/x86_64"
+    gpgcheck: false
+
+openhpc_base_packages:
+  - ohpc-base
+  - ohpc-base-compute
+
+envmodules_packages:
+  - lmod-ohpc
