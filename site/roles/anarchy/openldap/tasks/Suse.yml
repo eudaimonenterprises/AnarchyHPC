@@ -1,0 +1,194 @@
+---
+###############################################################################
+# SUSE: Install packages
+###############################################################################
+
+- name: Install OpenLDAP packages (SUSE)
+  zypper:
+    name:
+      - openldap2
+      - openldap2-client
+      - cyrus-sasl
+    state: present
+
+###############################################################################
+# Password sync (same logic as RedHat)
+###############################################################################
+
+- block:
+    - name: Ensure password directory exists
+      file:
+        path: /etc/anarchy/passwords/openldap
+        state: directory
+        mode: 0700
+
+    - name: Copy openldap password from sync
+      copy:
+        remote_src: true
+        src: "{{ anarchy_sync }}/openldap/root.txt"
+        dest: /etc/anarchy/passwords/openldap/
+  when:
+    - not primary | default(false)
+    - ha | default(false)
+
+- name: Generate openldap root password
+  set_fact:
+    tmp_pwd: "{{ lookup('password',
+                        '/etc/anarchy/passwords/openldap/root.txt
+                         chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Read openldap root password
+  set_fact:
+    openldap_root_pwd: "{{ lookup('password',
+                        '/etc/anarchy/passwords/openldap/root.txt
+                         chars=ascii_letters,digits,hexdigits') }}"
+
+- block:
+    - name: Ensure sync directory exists
+      file:
+        path: "{{ anarchy_sync }}/openldap"
+        state: directory
+
+    - name: Sync password to cluster
+      copy:
+        remote_src: true
+        src: /etc/anarchy/passwords/openldap/root.txt
+        dest: "{{ anarchy_sync }}/openldap/"
+        mode: 0640
+  when:
+    - primary | default(true)
+    - ha | default(false)
+
+###############################################################################
+# SUSE: TLS + defaults
+###############################################################################
+
+- name: Hash OpenLDAP root password
+  command: slappasswd -h {SSHA} -s {{ openldap_root_pwd }}
+  register: openldap_root_pwd_hash
+  changed_when: false
+  when: primary | default(true)
+
+- name: Configure slapd URLs
+  lineinfile:
+    path: /etc/sysconfig/openldap
+    regexp: '^SLAPD_URLS='
+    line: 'SLAPD_URLS="{{ openldap_endpoints }}"'
+    create: true
+
+- name: Configure client TLS CA
+  lineinfile:
+    path: /etc/openldap/ldap.conf
+    line: 'TLS_CACERT /etc/openldap/certs/cluster-ca.crt'
+
+- name: Install cluster CA certificate
+  copy:
+    remote_src: true
+    src: "{{ openldap_tls_cacrt }}"
+    dest: /etc/openldap/certs/
+
+###############################################################################
+# SUSE: slapd.d relocation (same logic as RHEL)
+###############################################################################
+
+- name: Check default slapd.d path
+  stat:
+    path: /etc/openldap/slapd.d
+  register: default_openldap_path
+
+- block:
+    - name: Ensure custom config directory exists
+      file:
+        path: "{{ openldap_server_conf_path }}"
+        state: directory
+        owner: "{{ openldap_default_user }}"
+        group: "{{ openldap_default_group }}"
+
+    - name: Copy default slapd.d to custom path
+      shell: rsync -raW /etc/openldap/slapd.d/* {{ openldap_server_conf_path | quote }}
+      args:
+        creates: "{{ openldap_server_conf_path }}/cn=config.ldif"
+      when: primary | default(true)
+
+    - name: Remove default slapd.d
+      file:
+        path: /etc/openldap/slapd.d
+        state: absent
+
+    - name: Symlink slapd.d to custom path
+      file:
+        src: "{{ openldap_server_conf_path }}"
+        dest: /etc/openldap/slapd.d
+        state: link
+        force: true
+  when:
+    openldap_server_conf_path != '/etc/openldap/slapd.d'
+    and default_openldap_path.stat.isdir
+
+###############################################################################
+# SUSE: Start service (non‑HA)
+###############################################################################
+
+- name: Enable slapd (non‑HA)
+  systemd:
+    name: slapd
+    enabled: true
+  when: not ha | default(false)
+
+###############################################################################
+# SUSE: Initial schema + config load
+###############################################################################
+
+- block:
+    - name: Ensure data directory exists
+      file:
+        path: "{{ openldap_server_dir_path }}"
+        state: directory
+        owner: "{{ openldap_default_user }}"
+        group: "{{ openldap_default_group }}"
+
+    - name: Start slapd
+      systemd:
+        name: slapd
+        state: started
+        enabled: true
+
+    - name: Copy schemas
+      copy:
+        src: "{{ item }}"
+        dest: /etc/openldap/schema/
+      loop:
+        - rfc2307bis.ldif
+        - autoinc.ldif
+        - local_schema.ldif
+  when: primary | default(true)
+
+###############################################################################
+# SUSE: Load schemas + overlays (same logic as RHEL)
+###############################################################################
+
+# You can reuse the exact same <=2.4 and >=2.5 blocks from RedHat.yml
+# SUSE ships OpenLDAP 2.4.x in Leap 15, so only the <=2.4 block will run.
+
+###############################################################################
+# SUSE: HA integration
+###############################################################################
+
+- block:
+    - name: Disable slapd for HA
+      systemd:
+        name: slapd
+        state: "{{ 'started' if primary else 'stopped' }}"
+        enabled: false
+
+    - name: Add Pacemaker resource
+      pcs_resource:
+        name: openldap
+        resource_class: systemd
+        resource_type: systemd:slapd
+        options: "meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Anarchy-stack"
+        state: present
+      when: primary | default(true)
+  when: ha | default(false)
+
+- meta: flush_handlers

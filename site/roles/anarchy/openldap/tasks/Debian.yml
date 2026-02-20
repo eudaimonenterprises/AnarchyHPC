@@ -1,0 +1,236 @@
+---
+###############################################################################
+# Debian: Install packages
+###############################################################################
+
+- name: Install OpenLDAP packages (Debian/Ubuntu)
+  apt:
+    name:
+      - slapd
+      - ldap-utils
+    state: present
+    update_cache: yes
+
+###############################################################################
+# Password sync (same logic as RHEL/SUSE)
+###############################################################################
+
+- block:
+    - name: Ensure password directory exists
+      file:
+        path: /etc/anarchy/passwords/openldap
+        state: directory
+        mode: 0700
+
+    - name: Copy openldap password from sync
+      copy:
+        remote_src: true
+        src: "{{ anarchy_sync }}/openldap/root.txt"
+        dest: /etc/anarchy/passwords/openldap/
+  when:
+    - not primary | default(false)
+    - ha | default(false)
+
+- name: Generate openldap root password
+  set_fact:
+    tmp_pwd: "{{ lookup('password',
+                        '/etc/anarchy/passwords/openldap/root.txt
+                         chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Read openldap root password
+  set_fact:
+    openldap_root_pwd: "{{ lookup('password',
+                        '/etc/anarchy/passwords/openldap/root.txt
+                         chars=ascii_letters,digits,hexdigits') }}"
+
+- block:
+    - name: Ensure sync directory exists
+      file:
+        path: "{{ anarchy_sync }}/openldap"
+        state: directory
+
+    - name: Sync password to cluster
+      copy:
+        remote_src: true
+        src: /etc/anarchy/passwords/openldap/root.txt
+        dest: "{{ anarchy_sync }}/openldap/"
+        mode: 0640
+  when:
+    - primary | default(true)
+    - ha | default(false)
+
+###############################################################################
+# Debian: TLS configuration
+###############################################################################
+
+- name: Install cluster CA certificate
+  copy:
+    remote_src: true
+    src: "{{ openldap_tls_cacrt }}"
+    dest: /etc/ldap/certs/
+
+- name: Configure client TLS CA
+  lineinfile:
+    path: /etc/ldap/ldap.conf
+    line: "TLS_CACERT /etc/ldap/certs/cluster-ca.crt"
+
+###############################################################################
+# Debian: slapd.d relocation (optional)
+###############################################################################
+
+- name: Check default slapd.d path
+  stat:
+    path: /etc/ldap/slapd.d
+  register: default_openldap_path
+
+- block:
+    - name: Ensure custom config directory exists
+      file:
+        path: "{{ openldap_server_conf_path }}"
+        state: directory
+        owner: openldap
+        group: openldap
+
+    - name: Copy default slapd.d to custom path
+      shell: rsync -raW /etc/ldap/slapd.d/* {{ openldap_server_conf_path | quote }}
+      args:
+        creates: "{{ openldap_server_conf_path }}/cn=config.ldif"
+      when: primary | default(true)
+
+    - name: Remove default slapd.d
+      file:
+        path: /etc/ldap/slapd.d
+        state: absent
+
+    - name: Symlink slapd.d to custom path
+      file:
+        src: "{{ openldap_server_conf_path }}"
+        dest: /etc/ldap/slapd.d
+        state: link
+        force: true
+  when:
+    openldap_server_conf_path != '/etc/ldap/slapd.d'
+    and default_openldap_path.stat.isdir
+
+###############################################################################
+# Debian: Start service (non‑HA)
+###############################################################################
+
+- name: Enable slapd (non‑HA)
+  systemd:
+    name: slapd
+    enabled: true
+  when: not ha | default(false)
+
+###############################################################################
+# Debian: Initial schema + config load
+###############################################################################
+
+- block:
+    - name: Ensure data directory exists
+      file:
+        path: "{{ openldap_server_dir_path }}"
+        state: directory
+        owner: openldap
+        group: openldap
+
+    - name: Start slapd
+      systemd:
+        name: slapd
+        state: started
+        enabled: true
+
+    - name: Copy schemas
+      copy:
+        src: "{{ item }}"
+        dest: /etc/ldap/schema/
+      loop:
+        - rfc2307bis.ldif
+        - autoinc.ldif
+        - local_schema.ldif
+  when: primary | default(true)
+
+###############################################################################
+# Debian: Load schemas + overlays
+###############################################################################
+
+# Debian ships OpenLDAP 2.5+ in modern releases.
+# So only the 2.5+ block is needed.
+
+- block:
+    - name: Load OpenLDAP schemas (2.5+)
+      command: ldapadd -c -Y EXTERNAL -H ldapi:/// -Q -f /etc/ldap/schema/{{ item }}.ldif
+      args:
+        creates: "/etc/ldap/slapd.d/cn=config/cn=schema/cn={?}{{ item }}.ldif"
+      loop:
+        - cosine
+        - inetorgperson
+        - rfc2307bis
+        - autoinc
+
+    - name: Render OpenLDAP configuration (2.5+)
+      template:
+        src: "{{ item }}-25.j2"
+        dest: "/tmp/{{ item }}"
+      loop:
+        - config.ldif
+        - local.ldif
+        - proxy.ldif
+      changed_when: false
+
+    - name: Copy overlay configs
+      copy:
+        src: "{{ item }}"
+        dest: "/tmp/{{ item.split('-') | first }}"
+      loop:
+        - memberof.ldif-25
+
+    - name: Load global config
+      command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/config.ldif
+      notify: restart openldap
+
+    - name: Load local config
+      command: ldapmodify -c -Y EXTERNAL -H ldapi:/// -Q -f /tmp/{{ item }}
+      loop:
+        - config.ldif
+        - local.ldif
+        - proxy.ldif
+        - memberof.ldif
+      notify: restart openldap
+
+    - name: Check local schema
+      command: 'ldapsearch -H ldapi:// -Y EXTERNAL -b "dc=local" "cn=pwdDefaultPolicy,ou=Policies,dc=local"'
+      register: ldapsearch
+      failed_when: false
+      changed_when: false
+
+    - name: Load local schema
+      command: >
+        ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
+                                 -f /etc/ldap/schema/local_schema.ldif
+      ignore_errors: true
+      when: ldapsearch.rc == 32
+  when: primary | default(true)
+
+###############################################################################
+# Debian: HA integration
+###############################################################################
+
+- block:
+    - name: Disable slapd for HA
+      systemd:
+        name: slapd
+        state: "{{ 'started' if primary else 'stopped' }}"
+        enabled: false
+
+    - name: Add Pacemaker resource
+      pcs_resource:
+        name: openldap
+        resource_class: systemd
+        resource_type: systemd:slapd
+        options: "meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Anarchy-stack"
+        state: present
+      when: primary | default(true)
+  when: ha | default(false)
+
+- meta: flush_handlers

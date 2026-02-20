@@ -1,0 +1,16 @@
+# vars/Suse.yaml
+
+openldap_packages:
+  - openldap2
+  - openldap2-client
+  - cyrus-sasl
+
+openldap_default_user: ldap
+openldap_default_group: ldap
+
+openldap_server_conf_path: /etc/openldap/slapd.d
+openldap_server_dir_path: /var/lib/ldap
+openldap_server_defaults_file: /etc/sysconfig/openldap
+
+openldap_tls_cacrt: /etc/openldap/certs/cluster-ca.crt
+ssl_cert_group: trusted
