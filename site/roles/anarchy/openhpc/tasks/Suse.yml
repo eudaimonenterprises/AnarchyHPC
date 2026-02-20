@@ -1,26 +1,44 @@
 ---
-- name: Add OpenHPC repo for SUSE
-  community.general.zypper_repository:
-    name: openhpc
-    repo: "https://download.opensuse.org/repositories/science/{{ ansible_distribution }}_{{ ansible_distribution_version }}/"
-    auto_import_keys: yes
+- block:
 
-- name: Refresh zypper
-  command: zypper --non-interactive refresh
+    # Add OpenHPC repo for openSUSE Leap 15.x
+    - name: Add OpenHPC repo for openSUSE Leap 15.x
+      when:
+        - ansible_distribution == "openSUSE Leap"
+        - ansible_distribution_major_version == "15"
+      community.general.zypper_repository:
+        name: openhpc
+        repo: "https://repos.openhpc.community/OpenHPC/3/Leap_15"
+        auto_import_keys: yes
 
-- name: Install OpenHPC base patterns
-  community.general.zypper:
-    name:
-      - patterns-hpc-ohpc-base
-      - patterns-hpc-ohpc-compute
-    state: present
+    # Add OpenHPC repo for SLES 15 SPx
+    - name: Add OpenHPC repo for SLES 15
+      when:
+        - ansible_distribution in ["SUSE Linux Enterprise Server", "SLES"]
+        - ansible_distribution_major_version == "15"
+      community.general.zypper_repository:
+        name: openhpc
+        repo: "https://repos.openhpc.community/OpenHPC/3/SLE_15"
+        auto_import_keys: yes
 
-- name: Install lmod
-  community.general.zypper:
-    name: lmod
-    state: present
+    - name: Refresh zypper
+      command: zypper --non-interactive refresh
 
-- name: Install pdsh
-  community.general.zypper:
-    name: pdsh
-    state: present
+    - name: Install OpenHPC base patterns
+      community.general.zypper:
+        name:
+          - patterns-hpc-ohpc-base
+          - patterns-hpc-ohpc-compute
+        state: present
+
+    - name: Install lmod
+      community.general.zypper:
+        name: lmod
+        state: present
+
+    - name: Install pdsh
+      community.general.zypper:
+        name: pdsh
+        state: present
+
+  when: openhpc_available

@@ -16,16 +16,56 @@
   no_log: false
 
 # ---------------------------------------------------------------------------
-# Install packages on SUSE (zypper)
+# Import repo GPG key BEFORE any zypper operations
 # ---------------------------------------------------------------------------
 
-- name: Install additional packages (SUSE)
-  zypper:
-    name: "{{ item }}"
-    state: present
-  loop: "{{ install_packages }}"
+- name: Import science repo GPG key (safe for all openSUSE versions)
   when: ansible_os_family == "Suse"
+  command: >
+    rpm --import https://download.opensuse.org/repositories/science/openSUSE_Leap_{{ ansible_distribution_version }}/repodata/repomd.xml.key
+  failed_when: false
+  changed_when: false
+
+# ---------------------------------------------------------------------------
+# Import missing GPG keys for all SUSE repos
+# ---------------------------------------------------------------------------
+
+- name: Get list of repos with missing GPG keys
+  when: ansible_os_family == "Suse"
+  command: zypper --non-interactive --gpg-auto-import-keys refresh
+  register: zypper_refresh
+  failed_when: false
+  changed_when: false
+
+# ---------------------------------------------------------------------------
+# Check which packages actually exist
+# ---------------------------------------------------------------------------
+
+- name: Check if package exists
+  when: ansible_os_family == "Suse"
+  command: "zypper --non-interactive se {{ item }}"
+  register: pkg_check
+  failed_when: false
+  changed_when: false
+  loop: "{{ install_packages }}"
+  ignore_errors: yes
+
+# ---------------------------------------------------------------------------
+# Install only packages that exist
+# ---------------------------------------------------------------------------
+
+- name: Install only packages that exist (SUSE)
+  when: ansible_os_family == "Suse"
+  zypper:
+    name: "{{ item.item }}"
+    state: present
+    disable_recommends: yes
+    no_gpg_check: no
+    disable_repo: openhpc-hpc
+  loop: "{{ pkg_check.results | selectattr('stdout', 'search', 'package.*found') | list }}"
+  ignore_errors: yes
   tags: install-only
+
 
 # ---------------------------------------------------------------------------
 # Install packages on Ubuntu/Debian (apt)

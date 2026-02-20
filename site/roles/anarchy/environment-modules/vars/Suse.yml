@@ -1,8 +1,20 @@
 ---
 openhpc_repos:
+  # openSUSE Leap 15.x
   - name: hpc
-    repo: "https://download.opensuse.org/repositories/science/openSUSE_Leap_{{ ansible_distribution_version }}/"
+    repo: "https://repos.openhpc.community/OpenHPC/3/Leap_15"
     gpgcheck: false
+    when:
+      - ansible_distribution == "openSUSE Leap"
+      - ansible_distribution_major_version == "15"
+
+  # SLES 15 SPx
+  - name: hpc
+    repo: "https://repos.openhpc.community/OpenHPC/3/SLE_15"
+    gpgcheck: false
+    when:
+      - ansible_distribution in ["SUSE Linux Enterprise Server", "SLES"]
+      - ansible_distribution_major_version == "15"
 
 openhpc_base_packages:
   - patterns-hpc-ohpc-base
