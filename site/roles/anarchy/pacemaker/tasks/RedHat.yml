@@ -1,0 +1,205 @@
+---
+###############################################################################
+# RedHat: packages
+###############################################################################
+
+- name: Install HA packages (RHEL/Rocky/Alma)
+  yum:
+    name: "{{ ha_packages }}"
+    state: present
+    enablerepo:
+      - ha
+      - highavailability
+      - resilientstorage
+      - rhel-8-for-x86_64-highavailability-rpms
+      - rhel-9-for-x86_64-highavailability-rpms
+
+- name: Install additional packages (RHEL/Rocky/Alma)
+  yum:
+    name: "{{ additional_packages }}"
+    state: present
+
+###############################################################################
+# RedHat: corosync key
+###############################################################################
+
+- name: Verify if corosync key exists
+  stat:
+    path: /etc/corosync/authkey
+  register: stat_corosync_key
+
+- name: Create corosync key
+  command: "corosync-keygen -l"
+  args:
+    creates: '/etc/corosync/authkey'
+  when:
+    - not stat_corosync_key.stat.exists
+    - primary
+
+- block:
+    - name: Ensure corosync sync directory exists
+      file:
+        path: '{{ anarchy_sync }}/corosync'
+        state: directory
+
+    - name: Copy corosync key to sync
+      copy:
+        remote_src: true
+        src: '/etc/corosync/authkey'
+        dest: '{{ anarchy_sync }}/corosync/'
+        mode: 0640
+        owner: root
+        group: root
+  when: primary
+
+- name: Copy corosync key from sync
+  copy:
+    remote_src: true
+    src: '{{ anarchy_sync }}/corosync/authkey'
+    dest: '/etc/corosync/'
+    mode: 0640
+    owner: root
+    group: root
+  when: not primary
+
+###############################################################################
+# RedHat: corosync config
+###############################################################################
+
+- name: Configure corosync
+  template:
+    src: "corosync.conf.j2"
+    dest: "/etc/corosync/corosync.conf"
+  register: corosync_config
+  notify: restart corosync
+
+- name: Ensure corosync service.d directory exists
+  file:
+    path: /etc/corosync/service.d/
+    state: directory
+
+- name: Adding pcmk service to corosync
+  copy:
+    src: "pcmk"
+    dest: "/etc/corosync/service.d/"
+
+###############################################################################
+# RedHat: PCS + wrapper
+###############################################################################
+
+- name: Install PCS via pip (RHEL only)
+  shell: |
+    source {{ anarchy_local }}/python/bin/activate
+    pip3 install --upgrade {{ pcs_noarch_pip_repository }}/{{ pcs_pip }}
+    exit $?
+  args:
+    executable: /bin/bash
+  when:
+    - pcs_pip is defined
+
+- name: Install PCS via pip (fallback)
+  shell: |
+    source {{ anarchy_local }}/python/bin/activate
+    pip3 install --upgrade -i {{ pcs_noarch_pip_repository }}/ pcs
+    exit $?
+  args:
+    executable: /bin/bash
+  when:
+    - pcs_pip is not defined
+
+- name: Install PCS wrapper
+  template:
+    src: 'pcs.j2'
+    dest: '/usr/local/sbin/pcs'
+    owner: root
+    group: root
+    mode: 0755
+
+###############################################################################
+# RedHat: services
+###############################################################################
+
+- name: Enable pacemaker and corosync (RHEL)
+  service:
+    name: "{{ item }}"
+    enabled: true
+  loop:
+    - corosync
+    - pacemaker
+
+# corosync restart via handler
+
+###############################################################################
+# RedHat: cluster configuration (primary only)
+###############################################################################
+
+- block:
+    - name: Set pacemaker properties
+      pcs_property:
+        name: '{{ item.key }}'
+        value: '{{ item.value }}'
+      loop: "{{ pacemaker_properties | dict2items }}"
+
+    - name: Setup pacemaker resource defaults
+      command: pcs resource defaults '{{ item }}'
+      register: result
+      until: result.rc == 0
+      retries: 10
+      delay: 15
+      loop: '{{ pacemaker_resource_defaults }}'
+
+    - name: Add floating IP resource
+      pcs_resource:
+        name: 'anarchy-ip'
+        resource_type: 'ocf:heartbeat:IPaddr2'
+        options: 'ip={{ anarchy_ctrl_ip }} nic={{ anarchy_ctrl_interface }} cidr_netmask={{ anarchy_cluster_netprefix }} op monitor interval=29s --group Anarchy'
+        state: present
+
+    - name: Add external floating IP resource
+      pcs_resource:
+        name: 'anarchy-ip-external'
+        resource_type: 'ocf:heartbeat:IPaddr2'
+        options: 'ip={{ anarchy_ctrl_external_floating_ip }} nic={{ anarchy_ctrl_external_nic }} cidr_netmask={{ anarchy_external_netprefix }} op monitor interval=29s --group Anarchy'
+        state: present
+      when:
+        - anarchy_ctrl_external_floating_ip | default('') != ''
+        - anarchy_external_netprefix | default('') != ''
+        - anarchy_ctrl_external_nic | default('') != ''
+  when: primary
+
+- block:
+    - name: Toggle pacemaker stonith property
+      pcs_property:
+        name: stonith-enabled
+        value: false
+
+    - block:
+        - name: Configure fencing resources using the ipmilan fencing agent
+          pcs_resource:
+            name: 'fence-{{ item.0 }}'
+            resource_class: 'stonith'
+            resource_type: 'fence_ipmilan'
+            options: 'pcmk_host_check={{ fence_ipmilan_host_check }} pcmk_host_list={{ item.0 }} pcmk_host_map={{ item.0 }}:{{ item.1 }} ipaddr={{ item.1 }} method={{ fence_ipmilan_method }} lanplus={{ fence_ipmilan_lanplus }} login={{ fence_ipmilan_login }} passwd={{ fence_ipmilan_passwd }}'
+            state: present
+          with_together:
+            - '{{ all_ctrl_hostname }}'
+            - '{{ all_ctrl_bmcip }}'
+
+        - name: Add fencing location constraints
+          pcs_constraint_location:
+            resource: 'fence-{{ item }}'
+            node_name: '{{ item }}'
+            score: '-INFINITY'
+            state: present
+          loop: '{{ all_ctrl_hostname }}'
+      when: fence_ipmilan_enabled
+  when: primary
+  tags: fencing
+
+- name: set property 'standby' to 'on' for non primary node
+  pcs_property:
+    name: 'standby'
+    node: '{{ ansible_hostname }}'
+    value: 'on'
+  ignore_errors: true
+  when: not primary

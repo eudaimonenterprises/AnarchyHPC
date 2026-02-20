@@ -1,0 +1,85 @@
+---
+# Skip SUSE Leap 16+
+- name: Skip Pacemaker on unsupported SUSE versions
+  debug:
+    msg: "Pacemaker/Corosync not supported on SUSE {{ ansible_distribution_version }}"
+  when: ansible_distribution_major_version | int >= 16
+  tags: skip_suse16
+
+- name: Install HA packages (SUSE)
+  zypper:
+    name: "{{ ha_packages }}"
+    state: present
+  when: ansible_distribution_major_version | int <= 15
+
+- name: Install additional packages (SUSE)
+  zypper:
+    name: "{{ additional_packages }}"
+    state: present
+  when: ansible_distribution_major_version | int <= 15
+
+###############################################################################
+# Corosync key distribution
+###############################################################################
+
+- name: Check for corosync key
+  stat:
+    path: /etc/corosync/authkey
+  register: corosync_key
+
+- name: Generate corosync key (primary only)
+  command: corosync-keygen -l
+  when:
+    - primary
+    - not corosync_key.stat.exists
+
+- block:
+    - name: Ensure sync directory exists
+      file:
+        path: "{{ anarchy_sync }}/corosync"
+        state: directory
+
+    - name: Copy key to sync
+      copy:
+        remote_src: true
+        src: /etc/corosync/authkey
+        dest: "{{ anarchy_sync }}/corosync/"
+  when: primary
+
+- name: Copy corosync key from sync
+  copy:
+    remote_src: true
+    src: "{{ anarchy_sync }}/corosync/authkey"
+    dest: /etc/corosync/authkey
+  when: not primary
+
+###############################################################################
+# Corosync configuration
+###############################################################################
+
+- name: Deploy corosync.conf
+  template:
+    src: corosync.conf.j2
+    dest: /etc/corosync/corosync.conf
+  register: corosync_config
+  when: ansible_distribution_major_version | int <= 15
+  notify: restart corosync
+
+###############################################################################
+# crmsh + services
+###############################################################################
+
+- name: Install crmsh
+  package:
+    name: crmsh
+    state: present
+  when: ansible_distribution_major_version | int <= 15
+
+- name: Enable corosync and pacemaker
+  service:
+    name: "{{ item }}"
+    enabled: true
+  loop:
+    - corosync
+    - pacemaker
+  when: ansible_distribution_major_version | int <= 15

@@ -1,0 +1,43 @@
+---
+###############################################################################
+# Debian: packages
+###############################################################################
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install HA packages (Debian/Ubuntu)
+  apt:
+    name: "{{ ha_packages }}"
+    state: present
+
+- name: Install additional packages (Debian/Ubuntu)
+  apt:
+    name: "{{ additional_packages }}"
+    state: present
+
+###############################################################################
+# Debian: corosync key + config
+###############################################################################
+
+# (same pattern as SUSE/RedHat: keygen, sync, template corosync.conf, notify restart corosync)
+
+###############################################################################
+# Debian: crmsh
+###############################################################################
+
+- name: Install crmsh (Debian/Ubuntu)
+  package:
+    name: crmsh
+    state: present
+
+- name: Enable pacemaker and corosync (Debian/Ubuntu)
+  service:
+    name: "{{ item }}"
+    enabled: true
+  loop:
+    - corosync
+    - pacemaker
+
+# corosync restart via handler
