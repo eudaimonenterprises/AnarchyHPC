@@ -1,82 +1,43 @@
 ---
 ###############################################################################
-# OBOL: PASSWORD GENERATION (REMOTE‑SAFE)
+# OBOL: LDAP PASSWORD HANDLING (shared include)
 ###############################################################################
 
-# Ensure password directories exist
-- name: Ensure password directories exist
+- include_tasks: "{{ role_path }}/../openldap/tasks/password.yml"
+  vars:
+    password_type: "{{ 'ds389' if obol_use_ds389 | default(False) else 'openldap' }}"
+
+###############################################################################
+# OBOL: LDAP CA CONSUMPTION (client trust only)
+###############################################################################
+
+- name: Ensure Obol CA directory exists
   file:
-    path: "/etc/anarchy/passwords/{{ 'ds389' if obol_use_ds389 | default(False) else 'openldap' }}"
+    path: /etc/obol/certs
     state: directory
-    mode: 0700
+    mode: 0755
 
-###############################################################################
-# OpenLDAP password path
-###############################################################################
-- set_fact:
-    obol_pwd_path: "/etc/anarchy/passwords/openldap/root.txt"
-  when: not obol_use_ds389 | default(True)
-
-###############################################################################
-# DS389 password path
-###############################################################################
-- set_fact:
-    obol_pwd_path: "/etc/anarchy/passwords/ds389/root.txt"
-  when: obol_use_ds389 | default(False)
-
-###############################################################################
-# Generate password if missing
-###############################################################################
-
-- name: Check if password file exists
-  stat:
-    path: "{{ obol_pwd_path }}"
-  register: obol_pwd_stat
-
-- name: Generate password if missing
-  command: "openssl rand -hex 16"
-  register: obol_generated_pwd
-  when: not obol_pwd_stat.stat.exists
-
-- name: Save generated password
+- name: Install LDAP cluster CA certificate for Obol
   copy:
-    content: "{{ obol_generated_pwd.stdout }}"
-    dest: "{{ obol_pwd_path }}"
-    mode: 0600
-  when: not obol_pwd_stat.stat.exists
+    remote_src: true
+    src: /etc/openldap/certs/cluster-ca.crt
+    dest: /etc/obol/certs/cluster-ca.crt
+    mode: 0644
 
 ###############################################################################
-# Read password on all nodes
-###############################################################################
-
-- name: Read OBOL password
-  slurp:
-    src: "{{ obol_pwd_path }}"
-  register: obol_pwd_file
-
-- set_fact:
-    openldap_root_pwd: "{{ obol_pwd_file.content | b64decode }}"
-  when: not obol_use_ds389 | default(True)
-
-- set_fact:
-    ds389_root_pwd: "{{ obol_pwd_file.content | b64decode }}"
-  when: obol_use_ds389 | default(False)
-
-###############################################################################
-# Install obol dependency packages
+# OBOL: Install dependency packages
 ###############################################################################
 
 - name: Install obol dependency packages
-  become: false
   yum:
-    name: '{{ obol_packages }}'
+    name: "{{ obol_packages }}"
     state: present
   tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
 ###############################################################################
-# Install obol script
+# OBOL: Install obol script
 ###############################################################################
 
 - name: Install obol to /usr/local/sbin
@@ -88,7 +49,7 @@
     mode: '0750'
 
 ###############################################################################
-# Install obol configuration
+# OBOL: Install configuration
 ###############################################################################
 
 - name: Add default configuration to {{ obol_conf_path }}
@@ -98,6 +59,9 @@
     owner: 'root'
     group: 'root'
     mode: '0600'
+  vars:
+    obol_ldap_password: "{{ ldap_root_password }}"
+    obol_ldap_cacert: "/etc/obol/certs/cluster-ca.crt"
 
 - name: Add link to the configuration file in /etc
   file:

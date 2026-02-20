@@ -2,6 +2,10 @@
 - debug:
     msg: "{{ openldap_server_dir_path }}"
 
+###############################################################################
+# RedHat: Install dependencies
+###############################################################################
+
 - name: Install dependencies (RedHat)
   yum:
     name: python3-policycoreutils
@@ -11,70 +15,12 @@
   delay: "{{ rpm_delay | default(15) }}"
 
 ###############################################################################
-# PASSWORD GENERATION (REMOTE‑SAFE, HA‑COMPATIBLE)
+# PASSWORD HANDLING (shared include)
 ###############################################################################
 
-# Ensure password directory exists on all nodes
-- name: Ensure password directory exists
-  file:
-    path: /etc/anarchy/passwords/openldap
-    state: directory
-    mode: 0700
-
-# Generate password only on primary (HA)
-- name: Generate openldap root password on primary
-  command: "openssl rand -hex 16"
-  register: generated_pwd
-  when:
-    - primary | default(true)
-    - ha | default(false)
-
-- name: Save generated password on primary
-  copy:
-    content: "{{ generated_pwd.stdout }}"
-    dest: /etc/anarchy/passwords/openldap/root.txt
-    mode: 0600
-  when:
-    - primary | default(true)
-    - ha | default(false)
-
-# Sync password to secondaries
-- block:
-    - name: Ensure openldap sync directory exists
-      file:
-        path: "{{ anarchy_sync }}/openldap"
-        state: directory
-
-    - name: Sync password to cluster
-      copy:
-        remote_src: true
-        src: /etc/anarchy/passwords/openldap/root.txt
-        dest: "{{ anarchy_sync }}/openldap/"
-        mode: 0640
-  when:
-    - primary | default(true)
-    - ha | default(false)
-
-# Secondaries pull password from sync
-- block:
-    - name: Copy openldap password from sync
-      copy:
-        remote_src: true
-        src: "{{ anarchy_sync }}/openldap/root.txt"
-        dest: /etc/anarchy/passwords/openldap/root.txt
-        mode: 0600
-  when:
-    - not primary | default(false)
-    - ha | default(false)
-
-# Read password on all nodes
-- name: Read openldap root password
-  slurp:
-    src: /etc/anarchy/passwords/openldap/root.txt
-  register: openldap_pwd_file
-
-- set_fact:
-    openldap_root_pwd: "{{ openldap_pwd_file.content | b64decode }}"
+- include_tasks: password.yml
+  vars:
+    password_type: "openldap"
 
 ###############################################################################
 # PACKAGE INSTALLATION
@@ -111,11 +57,17 @@
   when: ansible_selinux.status == "enabled"
 
 ###############################################################################
+# CLUSTER CA HANDLING (shared include)
+###############################################################################
+
+- include_tasks: ca.yml
+
+###############################################################################
 # TLS + DEFAULTS
 ###############################################################################
 
 - name: Hash OpenLDAP root password
-  command: slappasswd -h {SSHA} -s {{ openldap_root_pwd }}
+  command: slappasswd -h {SSHA} -s {{ ldap_root_password }}
   register: openldap_root_pwd_hash
   changed_when: false
   when: primary | default(true)
@@ -132,14 +84,32 @@
     path: /etc/openldap/ldap.conf
     line: 'TLS_CACERT   /etc/openldap/certs/cluster-ca.crt'
 
-- name: Get /etc/openldap/slapd.d status
-  stat:
-    path: /etc/openldap/slapd.d
-  register: default_openldap_path
+- name: Ensure CA directory exists
+  file:
+    path: /etc/openldap/certs
+    state: directory
+    mode: 0755
+
+- name: Install cluster CA certificate
+  copy:
+    remote_src: true
+    src: /etc/openldap/certs/cluster-ca.crt
+    dest: /etc/openldap/certs/cluster-ca.crt
+    mode: 0644
+
+- name: Ensure OpenLDAP has access to the ssl certificates
+  user:
+    name: "{{ openldap_default_user }}"
+    groups: "{{ ssl_cert_group }}"
 
 ###############################################################################
 # SLAPD.D RELOCATION
 ###############################################################################
+
+- name: Get /etc/openldap/slapd.d status
+  stat:
+    path: /etc/openldap/slapd.d
+  register: default_openldap_path
 
 - block:
     - name: Ensure OpenLDAP configuration directory exists
@@ -182,21 +152,6 @@
   when:
     openldap_server_conf_path | string not in '/etc/openldap/slapd.d'
     and default_openldap_path.stat.isdir
-
-###############################################################################
-# TLS CA
-###############################################################################
-
-- name: Add cluster CA certificate to /etc/openldap/certs
-  copy:
-    remote_src: true
-    src: "{{ openldap_tls_cacrt }}"
-    dest: /etc/openldap/certs/
-
-- name: Ensure OpenLDAP has access to the ssl certificates
-  user:
-    name: "{{ openldap_default_user }}"
-    groups: "{{ ssl_cert_group }}"
 
 ###############################################################################
 # DESTROY EXISTING DB IF REQUESTED
@@ -339,7 +294,7 @@
 
     - name: Load OpenLDAP local schema
       command: >
-        ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
+        ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ ldap_root_password }}
                                  -f /etc/openldap/schema/local_schema.ldif
       ignore_errors: true
       when: ldapsearch.rc == 32
@@ -418,7 +373,7 @@
 
     - name: Load OpenLDAP local schema
       command: >
-        ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ openldap_root_pwd }}
+        ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ ldap_root_password }}
                                  -f /etc/openldap/schema/local_schema.ldif
       ignore_errors: true
       when: ldapsearch.rc == 32

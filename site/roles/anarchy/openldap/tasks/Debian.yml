@@ -20,14 +20,27 @@
     password_type: "openldap"
 
 ###############################################################################
+# Debian: Cluster CA handling (shared include)
+###############################################################################
+
+- include_tasks: ca.yml
+
+###############################################################################
 # Debian: TLS configuration
 ###############################################################################
 
-- name: Install cluster CA certificate
+- name: Ensure Debian CA directory exists
+  file:
+    path: /etc/ldap/certs
+    state: directory
+    mode: 0755
+
+- name: Install cluster CA certificate into Debian path
   copy:
     remote_src: true
-    src: "{{ openldap_tls_cacrt }}"
-    dest: /etc/ldap/certs/
+    src: /etc/openldap/certs/cluster-ca.crt
+    dest: /etc/ldap/certs/cluster-ca.crt
+    mode: 0644
 
 - name: Configure client TLS CA
   lineinfile:
