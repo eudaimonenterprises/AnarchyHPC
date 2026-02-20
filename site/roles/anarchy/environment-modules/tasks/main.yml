@@ -17,6 +17,13 @@
     src: z_modules.sh.j2
     dest: /etc/profile.d/z_modules.sh
 
+# NEW: Check if modulefiles directory exists
+- name: Check if modulefiles directory exists
+  stat:
+    path: "{{ anarchy_modulefiles }}"
+  register: modulefiles_dir
+
+# Install dummy module only if directory exists
 - name: Install dummy module
   template:
     src: dummy-module.lua.j2
@@ -24,3 +31,4 @@
   when:
     - on_controller
     - primary | default(True)
+    - modulefiles_dir.stat.exists

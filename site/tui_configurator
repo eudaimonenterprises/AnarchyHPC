@@ -325,65 +325,56 @@ esac
 echo
 echo "Checking for SFTP/SCP support on controller..."
 
-HAS_SFTP=$(ssh -i "$SSH_KEY_PATH" -o BatchMode=yes \
-    "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
-    "test -x /usr/lib/ssh/sftp-server || test -x /usr/libexec/openssh/sftp-server && echo yes || echo no")
+# -----------------------------------------------------------------------------
+# FIX SFTP/SCP SUPPORT ON REMOTE CONTROLLER (ALL DISTROS)
+# -----------------------------------------------------------------------------
 
-HAS_SCP=$(ssh -i "$SSH_KEY_PATH" -o BatchMode=yes \
-    "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
-    "command -v scp >/dev/null 2>&1 && echo yes || echo no")
+# Universal SFTP test (no sudo, no config reading)
+SFTP_ENABLED=$(
+  sftp -oBatchMode=yes -oConnectTimeout=5 \
+       "${CONTROLLER_USER}@${CONTROLLER_HOST}" </dev/null >/dev/null 2>&1 \
+  && echo yes || echo no
+)
 
-SFTP_ENABLED=$(ssh -i "$SSH_KEY_PATH" -o BatchMode=yes \
-    "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
-    "grep -q '^Subsystem[[:space:]]\+sftp' /etc/ssh/sshd_config && echo yes || echo no")
+if [[ "$SFTP_ENABLED" == "no" ]]; then
+    echo "Fixing SFTP/SCP support on controller..."
 
-if [[ "$REMOTE_OS_FAMILY" == "redhat" ]]; then
+    case "$REMOTE_OS_FAMILY" in
 
-    if [[ "$HAS_SFTP" == "no" || "$HAS_SCP" == "no" || "$SFTP_ENABLED" == "no" ]]; then
-        echo "Installing OpenSSH on RedHat-family system..."
-        ssh -i "$SSH_KEY_PATH" "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
-            "sudo yum install -y openssh-server openssh-clients"
+        redhat)
+            # Correct SFTP subsystem
+            #ssh -t -i "$SSH_KEY_PATH" \
+            #    -o PreferredAuthentications=keyboard-interactive,password \
+            #    -o PubkeyAuthentication=yes \
+            #    "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
+            #    "sudo sed -i 's|Subsystem[[:space:]]\+sftp.*|Subsystem sftp /usr/libexec/openssh/sftp-server|' /etc/ssh/sshd_config &&
+            #    sudo systemctl restart sshd"
+            ;;
 
-        ssh -i "$SSH_KEY_PATH" "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
-            "grep -q '^Subsystem sftp' /etc/ssh/sshd_config || \
-             echo 'Subsystem sftp /usr/libexec/openssh/sftp-server' | sudo tee -a /etc/ssh/sshd_config"
+        opensuse)
+            # Fix incorrect SFTP subsystem in SUSE's main sshd_config
+            ssh -t -i "$SSH_KEY_PATH" \
+                -o PreferredAuthentications=keyboard-interactive,password \
+                -o PubkeyAuthentication=yes \
+                "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
+                "sudo sed -i 's|/usr/libexec/openssh/sftp-server|/usr/libexec/ssh/sftp-server|' /etc/ssh/sshd_config &&
+                sudo systemctl restart sshd"
+            ;;
 
-        ssh -i "$SSH_KEY_PATH" "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
-            "sudo systemctl restart sshd"
-    fi
+        debian)
+            # Correct SFTP subsystem
+            #ssh -t -i "$SSH_KEY_PATH" \
+            #    -o PreferredAuthentications=keyboard-interactive,password \
+            #    -o PubkeyAuthentication=yes \
+            #    "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
+            #    "sudo sed -i 's|Subsystem[[:space:]]\+sftp.*|Subsystem sftp /usr/lib/openssh/sftp-server|' /etc/ssh/sshd_config &&
+            #    sudo systemctl restart sshd"
+            ;;
 
-elif [[ "$REMOTE_OS_FAMILY" == "opensuse" ]]; then
-
-    if [[ "$HAS_SFTP" == "no" || "$HAS_SCP" == "no" || "$SFTP_ENABLED" == "no" ]]; then
-        echo "Installing OpenSSH on openSUSE..."
-        ssh -i "$SSH_KEY_PATH" "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
-            "sudo zypper --non-interactive install openssh"
-
-        ssh -i "$SSH_KEY_PATH" "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
-            "grep -q '^Subsystem sftp' /etc/ssh/sshd_config || \
-             echo 'Subsystem sftp /usr/lib/ssh/sftp-server' | sudo tee -a /etc/ssh/sshd_config"
-
-        ssh -i "$SSH_KEY_PATH" "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
-            "sudo systemctl restart sshd"
-    fi
-
-elif [[ "$REMOTE_OS_FAMILY" == "debian" ]]; then
-
-    if [[ "$HAS_SFTP" == "no" || "$HAS_SCP" == "no" || "$SFTP_ENABLED" == "no" ]]; then
-        echo "Installing OpenSSH on Debian-family system..."
-        ssh -i "$SSH_KEY_PATH" "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
-            "sudo apt-get update && sudo apt-get install -y openssh-server openssh-client"
-
-        ssh -i "$SSH_KEY_PATH" "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
-            "grep -q '^Subsystem sftp' /etc/ssh/sshd_config || \
-             echo 'Subsystem sftp /usr/lib/openssh/sftp-server' | sudo tee -a /etc/ssh/sshd_config"
-
-        ssh -i "$SSH_KEY_PATH" "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
-            "sudo systemctl restart sshd"
-    fi
-
-else
-    echo "WARNING: Unknown OS family '$REMOTE_OS_FAMILY'. Skipping SFTP/SCP installation."
+        *)
+            echo "WARNING: Unknown OS family '$REMOTE_OS_FAMILY'. Skipping SFTP/SCP fix."
+            ;;
+    esac
 fi
 
 echo
