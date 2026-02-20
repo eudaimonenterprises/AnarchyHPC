@@ -10,6 +10,9 @@
 # Dispatch to OS-specific tasks
 - name: Run OS-specific OpenHPC setup
   include_tasks: "{{ ansible_os_family }}.yml"
+  when:
+    - ansible_os_family == "Suse"
+    - ansible_distribution_major_version | int <= 15
 
 # Shared tasks across all OSes
 - name: Install profile for modules

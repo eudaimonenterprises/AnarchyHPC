@@ -1,6 +1,4 @@
 ---
-# Install additional packages and tunables
-
 ###############################################################################
 # 1. Load OS‑specific tunables vars
 ###############################################################################
@@ -10,97 +8,22 @@
   with_first_found:
     - "{{ ansible_distribution }}{{ ansible_distribution_major_version }}.yaml"
     - "{{ ansible_os_family }}{{ ansible_distribution_major_version }}.yaml"
-    - "{{ ansible_os_family }}.yaml"        # FALLBACK (RedHat.yaml, Suse.yaml, Debian.yaml)
+    - "{{ ansible_os_family }}.yaml"        # RedHat.yaml, Suse.yaml, Debian.yaml
     - "default.yaml"
   no_log: false
 
 ###############################################################################
-# 2. Install tunables packages (multi‑OS)
+# 2. Dispatch to OS‑specific tasks
 ###############################################################################
 
-# SUSE
-- name: Install tunables packages (SUSE)
-  zypper:
-    name: "{{ tunables_packages }}"
-    state: present
+- name: Run SUSE tunables
+  include_tasks: Suse.yml
   when: ansible_os_family == "Suse"
-  tags: install-only
 
-# Debian / Ubuntu
-- name: Update apt cache
-  apt:
-    update_cache: yes
-  when: ansible_os_family == "Debian"
-
-- name: Install tunables packages (Debian/Ubuntu)
-  apt:
-    name: "{{ tunables_packages }}"
-    state: present
-  when: ansible_os_family == "Debian"
-  tags: install-only
-
-# RedHat
-- name: Install tunables packages (RHEL/Rocky/Alma)
-  yum:
-    name: "{{ tunables_packages }}"
-    state: present
-    enablerepo:
-      - powertools
-      - crb
-      - codeready-builder-for-rhel-*-x86_64-rpm
-      - codeready-builder-for-rhel-*-aarch64-rpm
-    disable_gpg_check: true
+- name: Run RedHat tunables
+  include_tasks: RedHat.yml
   when: ansible_os_family == "RedHat"
-  tags: install-only
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
 
-###############################################################################
-# 3. Limits and sysctl
-###############################################################################
-
-- name: Copy 91-hpc-limits.conf to /etc/security/limits.d
-  template:
-    src: '91-hpc-limits.conf.j2'
-    dest: '/etc/security/limits.d/91-hpc-limits.conf'
-    owner: 'root'
-    group: 'root'
-    mode: '0644'
-
-- name: Copy 91-hpc-sysctl.conf to /etc/sysctl.d/
-  template:
-    src: '91-hpc-sysctl.conf.j2'
-    dest: '/etc/sysctl.d/91-hpc-sysctl.conf'
-    owner: 'root'
-    group: 'root'
-    mode: '0644'
-    backup: true
-  notify: activate sysctls
-
-###############################################################################
-# 4. tuned-adm profiles
-###############################################################################
-
-- name: Setting compute performance tuned profile
-  shell: "tuned-adm profile {{ compute_tuned_profile | default('hpc-compute') }}"
-  when: in_image
-  ignore_errors: true
-
-- name: Setting controller performance tuned profile
-  shell: "tuned-adm profile {{ controller_tuned_profile | default('throughput-performance') }}"
-  when: on_controller
-  ignore_errors: true
-
-###############################################################################
-# 5. NFS thread tuning (controller only)
-###############################################################################
-
-- block:
-  - name: Ensure NFS threads are set to 256
-    lineinfile:
-      path: /etc/nfs.conf
-      regexp: '^threads='
-      line: 'threads=256'
-      create: yes
-
-  when: on_controller
+- name: Run Debian/Ubuntu tunables
+  include_tasks: Debian.yml
+  when: ansible_os_family == "Debian"

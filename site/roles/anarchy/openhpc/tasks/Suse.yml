@@ -1,36 +1,74 @@
 ---
 - block:
 
-    # Add OpenHPC repo for openSUSE Leap 15.x
+    ###########################################################################
+    # 1. Import OpenHPC GPG key (required before repo refresh)
+    ###########################################################################
+    - name: Import OpenHPC GPG key (Leap 15)
+      when:
+        - ansible_distribution == "openSUSE Leap"
+        - ansible_distribution_major_version | int == 15
+      command: >
+        rpm --import https://repos.openhpc.community/OpenHPC/3/Leap_15/repodata/repomd.xml.key
+      changed_when: false
+      failed_when: false
+
+    - name: Import OpenHPC GPG key (SLES 15)
+      when:
+        - ansible_distribution in ["SUSE Linux Enterprise Server", "SLES"]
+        - ansible_distribution_major_version | int == 15
+      command: >
+        rpm --import https://repos.openhpc.community/OpenHPC/3/SLE_15/repodata/repomd.xml.key
+      changed_when: false
+      failed_when: false
+
+
+    ###########################################################################
+    # 2. Add the correct OpenHPC repo
+    ###########################################################################
     - name: Add OpenHPC repo for openSUSE Leap 15.x
       when:
         - ansible_distribution == "openSUSE Leap"
-        - ansible_distribution_major_version == "15"
+        - ansible_distribution_major_version | int == 15
       community.general.zypper_repository:
         name: openhpc
         repo: "https://repos.openhpc.community/OpenHPC/3/Leap_15"
-        auto_import_keys: yes
+        autorefresh: yes
 
-    # Add OpenHPC repo for SLES 15 SPx
     - name: Add OpenHPC repo for SLES 15
       when:
         - ansible_distribution in ["SUSE Linux Enterprise Server", "SLES"]
-        - ansible_distribution_major_version == "15"
+        - ansible_distribution_major_version | int == 15
       community.general.zypper_repository:
         name: openhpc
         repo: "https://repos.openhpc.community/OpenHPC/3/SLE_15"
-        auto_import_keys: yes
+        autorefresh: yes
 
+
+    ###########################################################################
+    # 3. Refresh repos AFTER key import
+    ###########################################################################
     - name: Refresh zypper
       command: zypper --non-interactive refresh
+      changed_when: false
 
+
+    ###########################################################################
+    # 4. Install OpenHPC patterns
+    ###########################################################################
     - name: Install OpenHPC base patterns
-      community.general.zypper:
+      when:
+        - ansible_os_family == "Suse"
+        - ansible_distribution_major_version | int <= 15
+      zypper:
         name:
           - patterns-hpc-ohpc-base
           - patterns-hpc-ohpc-compute
         state: present
 
+    ###########################################################################
+    # 5. Install supporting tools
+    ###########################################################################
     - name: Install lmod
       community.general.zypper:
         name: lmod
@@ -41,4 +79,5 @@
         name: pdsh
         state: present
 
-  when: openhpc_available
+  # This block only runs when main.yml has already validated support
+  when: openhpc_supported

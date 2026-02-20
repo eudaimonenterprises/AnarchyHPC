@@ -1,0 +1,54 @@
+---
+# SUSE: install tunables packages only on ≤ 15
+- name: Install tunables packages (SUSE ≤ 15)
+  when:
+    - ansible_distribution_major_version | int <= 15
+  zypper:
+    name: "{{ tunables_packages }}"
+    state: present
+
+# SUSE: limits + sysctl only on ≤ 15
+- name: Copy 91-hpc-limits.conf to /etc/security/limits.d
+  when:
+    - ansible_distribution_major_version | int <= 15
+  template:
+    src: '91-hpc-limits.conf.j2'
+    dest: '/etc/security/limits.d/91-hpc-limits.conf'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+
+- name: Copy 91-hpc-sysctl.conf to /etc/sysctl.d/
+  when:
+    - ansible_distribution_major_version | int <= 15
+  template:
+    src: '91-hpc-sysctl.conf.j2'
+    dest: '/etc/sysctl.d/91-hpc-sysctl.conf'
+    owner: 'root'
+    group: 'root'
+    mode: '0644'
+    backup: true
+  notify: activate sysctls
+
+# SUSE: tuned-adm only on ≤ 15 (tuned removed in Leap 16)
+- name: Setting compute performance tuned profile (SUSE)
+  when:
+    - ansible_distribution_major_version | int <= 15
+  shell: "tuned-adm profile {{ compute_tuned_profile | default('hpc-compute') }}"
+  ignore_errors: true
+
+- name: Setting controller performance tuned profile (SUSE)
+  when:
+    - ansible_distribution_major_version | int <= 15
+  shell: "tuned-adm profile {{ controller_tuned_profile | default('throughput-performance') }}"
+  ignore_errors: true
+
+# SUSE: NFS tuning (controller only, all versions)
+- block:
+    - name: Ensure NFS threads are set to 256
+      lineinfile:
+        path: /etc/nfs.conf
+        regexp: '^threads='
+        line: 'threads=256'
+        create: yes
+  when: on_controller
