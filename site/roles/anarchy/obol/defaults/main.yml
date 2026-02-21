@@ -1,10 +1,8 @@
 ---
-# vars file for obol
+# Default values for Obol
 
-obol_packages:
-  - python3-pip
-  - python3-ldap
-  - openldap-devel
+# Fallback — overridden by OS-specific vars
+obol_packages: []
 
 users_home_path: '/home'
 obol_conf_path: '/etc'

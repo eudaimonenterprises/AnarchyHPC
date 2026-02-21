@@ -425,7 +425,7 @@ if [[ "$SFTP_ENABLED" == "no" ]]; then
               cn: Manager
               description: LDAP Administrator
               userPassword: $HASHED_PASS
-              EOF
+EOF
               )
 
               unset HASHED_PASS
@@ -502,7 +502,7 @@ if [[ "$SFTP_ENABLED" == "no" ]]; then
 
               [Install]
               WantedBy=multi-user.target
-              EOF
+EOF
 
               # 12. Ensure sysconfig contains correct values (SLAPD_OPTIONS REMOVED)
               grep -q "^SLAPD_URLS=" /etc/sysconfig/openldap \
@@ -553,12 +553,12 @@ if [[ "$SFTP_ENABLED" == "no" ]]; then
 
             ExecStart=
             ExecStart=/usr/sbin/slapd -h "ldap:/// ldapi:///" -F /etc/openldap/slapd.d
-            EOF
+EOF
 
                     sudo systemctl daemon-reload
                     sudo systemctl restart slapd
                     echo "Override created and slapd restarted."
-                '
+                    '
             else
                 echo "Systemd override skipped."
             fi

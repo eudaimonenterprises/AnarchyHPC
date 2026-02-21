@@ -31,6 +31,14 @@
                            chars=ascii_letters,digits,hexdigits') }}"
   when: sss_use_ds389 | default(False)
 
+- name: Ensure SSSD config directory exists
+  file:
+    path: "{{ sssd_config_location }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
 - name: Add configuration file to /etc/sssd/sssd.conf
   template:
     src: 'sssd.conf.j2'

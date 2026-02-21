@@ -1,4 +1,3 @@
----
 ###############################################################################
 # OBOL: LDAP PASSWORD HANDLING (shared include)
 ###############################################################################
@@ -25,11 +24,11 @@
       {% endif %}
 
 ###############################################################################
-# OBOL: Install dependency packages
+# OBOL: Install dependency packages (portable)
 ###############################################################################
 
 - name: Install obol dependency packages
-  yum:
+  package:
     name: "{{ obol_packages }}"
     state: present
   tags: install-only
@@ -47,6 +46,18 @@
     owner: 'root'
     group: 'root'
     mode: '0750'
+
+###############################################################################
+# OBOL: Ensure configuration directory exists
+###############################################################################
+
+- name: Ensure obol configuration directory exists
+  file:
+    path: "{{ obol_conf_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
 
 ###############################################################################
 # OBOL: Install configuration

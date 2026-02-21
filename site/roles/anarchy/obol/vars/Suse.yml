@@ -1,0 +1,4 @@
+obol_packages:
+  - python3
+  - python3-python-ldap
+  - openldap2-client

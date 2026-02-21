@@ -38,6 +38,7 @@
     # ------------------------------------------------------------
     - anarchy/ldap-backend-selector
     - anarchy/openldap        # You selected OpenLDAP
+    - anarchy/obol            # This must be installed before sssd
     - anarchy/sssd
     - anarchy/nscd
     - anarchy/password
@@ -55,7 +56,7 @@
     - anarchy/config-manager
     - anarchy/lock-check
     - anarchy/check-latest-kernel
-    - anarchy/obol
+
 
     # ------------------------------------------------------------
     # Storage & Shared Filesystems
