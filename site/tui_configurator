@@ -326,11 +326,10 @@ echo
 echo "Checking for SFTP/SCP support on controller..."
 
 # -----------------------------------------------------------------------------
-# FIX SFTP/SCP SUPPORT ON REMOTE CONTROLLER (ALL DISTROS)
+# FIX SUPPORT ON REMOTE CONTROLLER (ALL DISTROS)
 # -----------------------------------------------------------------------------
 
-# Universal SFTP test (no sudo, no config reading)
-read -r -p "Enable SFTP fixes (opensuse bug)? [y/N] " answer
+read -r -p "Enable controller operating system bug fixes? [y/N] " answer
 if [[ "$answer" =~ ^[Yy]$ ]]; then
     SFTP_ENABLED="no"
 else
@@ -338,7 +337,6 @@ else
 fi
 
 if [[ "$SFTP_ENABLED" == "no" ]]; then
-    echo "Fixing SFTP/SCP support on controller..."
 
     case "$REMOTE_OS_FAMILY" in
 
@@ -354,12 +352,216 @@ if [[ "$SFTP_ENABLED" == "no" ]]; then
 
         opensuse)
             # Fix incorrect SFTP subsystem in SUSE's main sshd_config
+            echo "Fixing SFTP/SCP support on controller..."
             ssh -t -i "$SSH_KEY_PATH" \
                 -o PreferredAuthentications=keyboard-interactive,password \
                 -o PubkeyAuthentication=yes \
                 "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
                 "sudo sed -i 's|/usr/libexec/openssh/sftp-server|/usr/libexec/ssh/sftp-server|' /etc/ssh/sshd_config &&
                 sudo systemctl restart sshd"
+
+            ###############################################################################
+            # OpenLDAP Automated Bootstrap Script
+            #
+            # This script connects to the target controller host over SSH and performs a
+            # complete, automated OpenLDAP bootstrap, including:
+            #
+            #   • Installing required OpenLDAP client utilities (slappasswd)
+            #   • Prompting the user for the LDAP admin password and hashing it securely
+            #   • Generating an initial LDIF containing the base DN and Manager entry
+            #   • Preparing slapd.conf and converting it into a slapd.d configuration
+            #   • Importing the initial database as the ldap user
+            #   • Correcting all ownership and permissions for slapd.d and the DB directory
+            #   • Cleaning up temporary files
+            #   • (Optionally) removing a stale ldapi socket if present
+            #       - This prevents slapd from failing with “address already in use”
+            #       - Only the socket is removed; the directory is preserved
+            #   • Installing a systemd service file with a hard‑coded ExecStart
+            #   • Updating /etc/sysconfig/openldap (removing SLAPD_OPTIONS)
+            #   • Reloading systemd and starting the slapd service
+            #
+            # The script is designed to be idempotent and safe to re-run. It ensures that
+            # slapd starts cleanly even after crashes, reboots, or partial configuration.
+            ###############################################################################
+
+
+            read -p "Run full OpenLDAP bootstrap on ${CONTROLLER_HOST}? [y/N]: " RUN_BOOTSTRAP
+            RUN_BOOTSTRAP=${RUN_BOOTSTRAP:-N}
+            if [[ "$RUN_BOOTSTRAP" =~ ^[Yy]$ ]]; then
+
+              echo "Starting OpenLDAP bootstrap on ${CONTROLLER_HOST}..."
+
+              ssh -tt -i "$SSH_KEY_PATH" \
+                  -o PreferredAuthentications=keyboard-interactive,password \
+                  -o PubkeyAuthentication=yes \
+                  "${CONTROLLER_USER}@${CONTROLLER_HOST}" '
+              set +o history
+              umask 077
+
+              # 0. Ensure slappasswd exists
+              if ! rpm -q openldap2_6-client >/dev/null 2>&1; then
+                  echo "Installing openldap2_6-client..."
+                  sudo zypper --non-interactive install openldap2_6-client
+              else
+                  echo "openldap2_6-client already installed."
+              fi
+
+              # 1. Let slappasswd handle password prompting + confirmation
+              echo "Please enter the LDAP admin password."
+              HASHED_PASS=$(/usr/sbin/slappasswd)
+
+              # 2. Build LDIF
+              LDIF_CONTENT=$(cat <<EOF
+              dn: dc=my-domain,dc=com
+              objectClass: top
+              objectClass: dcObject
+              objectClass: organization
+              o: My Organization
+              dc: my-domain
+
+              dn: cn=Manager,dc=my-domain,dc=com
+              objectClass: simpleSecurityObject
+              objectClass: organizationalRole
+              cn: Manager
+              description: LDAP Administrator
+              userPassword: $HASHED_PASS
+              EOF
+              )
+
+              unset HASHED_PASS
+
+              # 3. Write LDIF securely for ldap user
+              echo "$LDIF_CONTENT" | sudo tee /tmp/init.ldif >/dev/null
+              sudo chmod 600 /tmp/init.ldif
+              sudo chown ldap:ldap /tmp/init.ldif
+
+              # 4. Prepare slapd.conf → slapd.d
+              sudo sed -i "s|^#modulepath /usr/lib64/openldap|modulepath /usr/lib64/openldap|" /etc/openldap/slapd.conf
+              sudo sed -i "s|^#moduleload back_mdb.la|moduleload back_mdb.la|" /etc/openldap/slapd.conf
+              sudo sed -i "/^[[:space:]]*directory[[:space:]]\\+\\/var\\/lib\\/ldap/a maxsize      1073741824" /etc/openldap/slapd.conf
+
+              sudo chmod 770 /var/lib/ldap
+
+              # 4.1 Stop slapd cleanly before modifying DB/config
+              sudo systemctl stop slapd || true
+              sleep 1
+
+              # 4.2 Regenerate slapd.d from slapd.conf
+              sudo slaptest -f /etc/openldap/slapd.conf -F /etc/openldap/slapd.d
+
+              # 5. Temporarily give ldap access to slapd.d for slapadd
+              sudo chown -R ldap:ldap /etc/openldap/slapd.d
+
+              # 6. Ensure DB directory is writable by ldap BEFORE slapadd
+              sudo chown -R ldap:ldap /var/lib/ldap
+              sudo chmod 750 /var/lib/ldap
+
+              # 7. Import the database as ldap
+              sudo -u ldap slapadd -n 1 -F /etc/openldap/slapd.d -l /tmp/init.ldif
+
+              # 8. Restore slapd.d ownership AND correct permissions
+              sudo chown -R root:root /etc/openldap/slapd.d
+              sudo chmod 700 /etc/openldap/slapd.d
+              sudo chmod 700 /etc/openldap/slapd.d/cn=config
+              sudo chmod 600 /etc/openldap/slapd.d/cn=config.ldif
+
+              # 9. Fix DB permissions (runtime)
+              sudo chown -R ldap:ldap /var/lib/ldap
+              sudo chmod 750 /var/lib/ldap
+
+              # 10. Cleanup LDIF
+              sudo rm -f /tmp/init.ldif
+
+              # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+              # INSERTED BLOCK — CLEANUP STALE ldapi SOCKET (CORRECT VERSION)
+              # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+              # Delete ONLY the stale ldapi socket if it exists
+              if [ -S /run/slapd/ldapi ]; then
+                  sudo rm -f /run/slapd/ldapi
+              fi
+
+              # Ensure the directory exists (because /run is tmpfs)
+              if [ ! -d /run/slapd ]; then
+                  sudo mkdir -p /run/slapd
+                  sudo chown ldap:ldap /run/slapd
+              fi
+
+              # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+              # 11. Write a sysconfig-aware slapd.service with hard-coded ExecStart
+              sudo tee /usr/lib/systemd/system/slapd.service >/dev/null <<EOF
+              [Unit]
+              Description=OpenLDAP Server Daemon
+              After=syslog.target network.target
+
+              [Service]
+              Type=forking
+              EnvironmentFile=-/etc/sysconfig/openldap
+              ExecStart=/usr/sbin/slapd -h "ldap:/// ldapi:///" -F /etc/openldap/slapd.d
+
+              [Install]
+              WantedBy=multi-user.target
+              EOF
+
+              # 12. Ensure sysconfig contains correct values (SLAPD_OPTIONS REMOVED)
+              grep -q "^SLAPD_URLS=" /etc/sysconfig/openldap \
+                  && sudo sed -i "s|^SLAPD_URLS=.*|SLAPD_URLS=\"ldap:/// ldapi:///\"|" /etc/sysconfig/openldap \
+                  || echo "SLAPD_URLS=\"ldap:/// ldapi:///\"" | sudo tee -a /etc/sysconfig/openldap >/dev/null
+
+              grep -q "^SLAPD_CONFIG_BACKEND=" /etc/sysconfig/openldap \
+                  && sudo sed -i "s|^SLAPD_CONFIG_BACKEND=.*|SLAPD_CONFIG_BACKEND=\"config\"|" /etc/sysconfig/openldap \
+                  || echo "SLAPD_CONFIG_BACKEND=\"config\"" | sudo tee -a /etc/sysconfig/openldap >/dev/null
+
+              grep -q "^SLAPD_CONF=" /etc/sysconfig/openldap \
+                  && sudo sed -i "s|^SLAPD_CONF=.*|SLAPD_CONF=\"/etc/openldap/slapd.d\"|" /etc/sysconfig/openldap \
+                  || echo "SLAPD_CONF=\"/etc/openldap/slapd.d\"" | sudo tee -a /etc/sysconfig/openldap >/dev/null
+
+              # REMOVE SLAPD_OPTIONS ENTIRELY
+              sudo sed -i "/^SLAPD_OPTIONS=/d" /etc/sysconfig/openldap
+
+              # 13. Reload systemd and start slapd
+              sudo systemctl daemon-reload
+              sudo systemctl restart slapd
+              '
+            else
+              echo "OpenLDAP bootstrap skipped."
+            fi
+
+            # ======================================================================
+            # Create systemd override for slapd (persistent, SUSE-safe)
+            # This ensures slapd always starts with your custom ExecStart, without
+            # overwriting vendor files in /usr/lib/systemd/system.
+            # ======================================================================
+
+            read -p "Create systemd override for slapd? [y/N]: " RUN_OVERRIDE
+            RUN_OVERRIDE=${RUN_OVERRIDE:-N}
+
+            if [[ "$RUN_OVERRIDE" =~ ^[Yy]$ ]]; then
+                echo "Creating systemd override on ${CONTROLLER_HOST}..."
+
+                ssh -tt -i "$SSH_KEY_PATH" \
+                    -o PreferredAuthentications=keyboard-interactive,password \
+                    -o PubkeyAuthentication=yes \
+                    "${CONTROLLER_USER}@${CONTROLLER_HOST}" '
+                    sudo mkdir -p /etc/systemd/system/slapd.service.d
+
+                    sudo tee /etc/systemd/system/slapd.service.d/override.conf >/dev/null <<'"EOF"'
+            [Service]
+            Type=forking
+            EnvironmentFile=-/etc/sysconfig/openldap
+
+            ExecStart=
+            ExecStart=/usr/sbin/slapd -h "ldap:/// ldapi:///" -F /etc/openldap/slapd.d
+            EOF
+
+                    sudo systemctl daemon-reload
+                    sudo systemctl restart slapd
+                    echo "Override created and slapd restarted."
+                '
+            else
+                echo "Systemd override skipped."
+            fi
             ;;
 
         debian)
@@ -373,7 +575,7 @@ if [[ "$SFTP_ENABLED" == "no" ]]; then
             ;;
 
         *)
-            echo "WARNING: Unknown OS family '$REMOTE_OS_FAMILY'. Skipping SFTP/SCP fix."
+            echo "WARNING: Unknown OS family '$REMOTE_OS_FAMILY'. Skipping controller operating system bug fixes."
             ;;
     esac
 fi
