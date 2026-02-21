@@ -27,6 +27,22 @@
 # OBOL: Install dependency packages (portable)
 ###############################################################################
 
+- name: Verify python3 can import ldap (SUSE)
+  command: python3 -c "import ldap"
+  register: ldap_import
+  failed_when: false
+  changed_when: false
+  when: ansible_os_family == "Suse"
+
+- name: Warn if ldap module is missing before installation
+  debug:
+    msg: >
+      python3 cannot import ldap yet. Installing python313-ldap.
+  when:
+    - ansible_os_family == "Suse"
+    - ldap_import.rc != 0
+
+
 - name: Install obol dependency packages
   package:
     name: "{{ obol_packages }}"

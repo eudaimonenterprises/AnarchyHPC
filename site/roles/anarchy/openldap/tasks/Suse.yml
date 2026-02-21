@@ -35,6 +35,12 @@
   changed_when: false
   when: primary | default(true)
 
+- name: Set OpenLDAP root password facts
+  set_fact:
+    openldap_root_pwd: "{{ ldap_root_password }}"
+    openldap_root_pwd_hash: "{{ openldap_root_pwd_hash.stdout }}"
+  when: primary | default(true)
+
 - name: Configure slapd URLs
   lineinfile:
     path: /etc/sysconfig/openldap
