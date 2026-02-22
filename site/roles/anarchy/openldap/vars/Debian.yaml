@@ -16,3 +16,6 @@ openldap_schema_path: /etc/ldap/schema
 
 openldap_tls_cacrt: /etc/ldap/certs/cluster-ca.crt
 ssl_cert_group: ssl-cert
+
+openldap_server_module_path: /usr/lib/ldap
+openldap_db_backend: mdb
