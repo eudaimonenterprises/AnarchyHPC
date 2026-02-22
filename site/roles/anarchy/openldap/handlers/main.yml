@@ -1,9 +1,17 @@
 ---
 # handler file for openldap
 
+# Reload systemd when unit files or drop-ins change
+- name: daemon-reload
+  command: systemctl daemon-reload
+  listen: daemon-reload
+
+# Restart OpenLDAP after systemd reload
 - name: restart openldap
   service:
     name: slapd
     state: restarted
   retries: 10
   delay: 15
+  listen: restart openldap
+  notify: daemon-reload

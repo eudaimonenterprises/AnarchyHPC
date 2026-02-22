@@ -15,7 +15,7 @@ TLSCertificateKeyFile {{ openldap_tls_key }}
 database    {{ openldap_db_backend }}
 suffix      "dc=local"
 rootdn      "cn=Manager,dc=local"
-rootpw      {{ ldap_root_password_hash }}
+rootpw      {{ ldap_root_password_hash.stdout }}
 
 directory   {{ openldap_server_dir_path }}
 
@@ -40,4 +40,7 @@ ppolicy_hash_cleartext on
 ppolicy_use_lockout
 
 overlay memberof
-memberof_group_attr member
+memberof-group-oc groupOfNames
+memberof-member-ad member
+memberof-refint true
+

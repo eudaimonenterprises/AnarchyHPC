@@ -15,27 +15,23 @@
     group: root
     mode: '0644'
   register: slapd_conf_rendered
+  notify: restart openldap
 
 ###############################################################################
 # SUSE‑SAFE SLAPD.D REGENERATION
 # --------------------------------
-# SUSE’s OpenLDAP packaging does NOT overwrite existing slapd.d contents when
-# running slaptest. If slapd.d already contains a database definition (such as
-# an old suffix), slaptest will silently ignore the new slapd.conf database
-# section and keep the stale configuration. This leads to fatal errors during
-# slapadd such as:
-#
-#   "database #1 (dc=old,dc=suffix) not configured to hold dc=new"
-#
-# To guarantee a clean, authoritative configuration, slapd.d MUST be removed
-# before regeneration. This is safe and correct on all distros.
+# We only regenerate slapd.d when slapd.conf changed AND we are on the primary.
+# This avoids overwriting a live configuration on re-runs.
 ###############################################################################
 
 - name: Remove existing slapd.d directory (force clean regeneration)
   file:
     path: "{{ openldap_server_conf_path }}"
     state: absent
-  when: primary | default(true)
+  when:
+    - primary | default(true)
+    - slapd_conf_rendered.changed
+  notify: restart openldap
 
 - name: Recreate slapd.d directory
   file:
@@ -44,11 +40,16 @@
     owner: root
     group: root
     mode: '0750'
-  when: primary | default(true)
+  when:
+    - primary | default(true)
+    - slapd_conf_rendered.changed
 
 # Convert slapd.conf → slapd.d
 - name: Generate slapd.d from slapd.conf
   command: >
     slaptest -f {{ openldap_conf_file }}
              -F {{ openldap_server_conf_path }}
-  when: primary | default(true)
+  when:
+    - primary | default(true)
+    - slapd_conf_rendered.changed
+  notify: restart openldap

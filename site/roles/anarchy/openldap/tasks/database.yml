@@ -20,12 +20,32 @@
 
 # Check if database already exists
 - name: Check if database is already initialized
-  command: ldapsearch -Y EXTERNAL -H ldapi:/// -b dc=local -s base '(objectClass=*)'
+  command: ldapsearch -Y EXTERNAL -H ldapi:/// -b "{{ openldap_suffix }}" -s base '(objectClass=*)'
   register: db_exists
   changed_when: false
   ignore_errors: true
 
+###############################################################################
+# SAFE INITIALIZATION BLOCK
+# -------------------------
+# Only runs when the base DN does NOT exist.
+# This prevents wiping or overwriting a real production database.
+###############################################################################
+
 - block:
+
+    - name: Remove existing LDAP database files (only when uninitialized)
+      file:
+        path: "{{ openldap_server_dir_path }}"
+        state: absent
+
+    - name: Recreate LDAP database directory
+      file:
+        path: "{{ openldap_server_dir_path }}"
+        state: directory
+        owner: "{{ openldap_default_user }}"
+        group: "{{ openldap_default_group }}"
+        mode: '0750'
 
     - name: Set ldap user ownership on config and DB paths
       file:
@@ -58,7 +78,9 @@
         group: "{{ openldap_default_group }}"
         mode: '0750'
 
-  when: primary | default(true) and db_exists.rc != 0
+  when:
+    - primary | default(true)
+    - db_exists.rc != 0
 
 - name: Cleanup temporary LDIF file
   file:
