@@ -15,7 +15,7 @@
 # Debian: Cluster CA handling (shared include)
 ###############################################################################
 
-- include_tasks: ca.yml
+#- include_tasks: ca.yml
 
 ###############################################################################
 # Debian: TLS configuration (correct, modern)

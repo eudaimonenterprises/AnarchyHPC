@@ -5,6 +5,6 @@
 
 - name: Set OpenLDAP TLS certificate paths
   set_fact:
-    openldap_tls_crt: "/etc/ssl/certs/{{ ansible_fqdn }}.crt"
-    openldap_tls_key: "/etc/ssl/certs/{{ ansible_fqdn }}.key"
-    openldap_tls_ca:  "/etc/ssl/certs/cluster-ca.crt"
+    openldap_tls_crt: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.crt"
+    openldap_tls_key: "{{ ssl_cert_path }}/{{ ansible_fqdn }}.key"
+    openldap_tls_ca: "{{ openldap_tls_cacrt }}"

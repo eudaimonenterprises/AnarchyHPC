@@ -29,8 +29,8 @@
 # This uses your existing tasks/ca.yml and runs BEFORE any distro-specific stack.
 ###############################################################################
 
-- name: Manage cluster CA (generation, sync, trust store)
-  include_tasks: ca.yml
+#- name: Manage cluster CA (generation, sync, trust store)
+#  include_tasks: ca.yml
 
 ###############################################################################
 # LDAP server certificate (signed by cluster CA)

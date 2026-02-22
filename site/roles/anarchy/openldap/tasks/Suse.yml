@@ -15,7 +15,7 @@
 # SUSE: Cluster CA handling (shared include)
 ###############################################################################
 
-- include_tasks: ca.yml
+#- include_tasks: ca.yml
 
 ###############################################################################
 # SUSE: TLS + defaults
