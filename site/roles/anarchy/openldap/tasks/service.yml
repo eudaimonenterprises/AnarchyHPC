@@ -25,7 +25,7 @@
       [Service]
       EnvironmentFile=-/etc/sysconfig/openldap
       ExecStart=
-      ExecStart=/usr/sbin/slapd -h "{{ openldap_endpoints }}" -F {{ openldap_server_conf_path }}
+      ExecStart=/usr/sbin/slapd -h ldaps:/// ldapi:/// -F {{ openldap_server_conf_path }}
     dest: /etc/systemd/system/slapd.service.d/override.conf
     owner: root
     group: root
