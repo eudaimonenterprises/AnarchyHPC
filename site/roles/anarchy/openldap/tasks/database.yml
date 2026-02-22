@@ -19,6 +19,20 @@
   when: primary | default(true)
 
 # Check if database already exists
+# We query the base DN using openldap_suffix.
+# Why this variable is needed:
+#   - It defines the root naming context (e.g., "dc=local" or "dc=example,dc=com")
+#   - slapd.conf, init.ldif, and ldapsearch must all use the same suffix
+#
+# What can be changed later:
+#   - You *can* replace openldap_suffix with any valid DN (e.g., "dc=example,dc=com")
+#   - You *can* override it per environment in inventory (prod/dev/test)
+#   - You *can* compute it dynamically from a domain name
+#
+# IMPORTANT:
+#   Changing the suffix AFTER the database is initialized requires a full DN migration:
+#     slapcat → rewrite DNs → slapadd
+#   The role will NOT automatically migrate existing data.
 - name: Check if database is already initialized
   command: ldapsearch -Y EXTERNAL -H ldapi:/// -b "{{ openldap_suffix }}" -s base '(objectClass=*)'
   register: db_exists
@@ -30,6 +44,21 @@
 # -------------------------
 # Only runs when the base DN does NOT exist.
 # This prevents wiping or overwriting a real production database.
+#
+# Why we check "db_exists.rc != 0":
+#   - ldapsearch returns rc=0 when the base DN exists → DB already initialized
+#   - rc!=0 means the DN does not exist → safe to initialize
+#
+# Why we do NOT guard with "db_exists is defined":
+#   - db_exists is ALWAYS defined because ignore_errors: true ensures the task
+#     registers even on failure.
+#   - If someone removes ignore_errors in the future, they MUST add the guard.
+#
+# Alternatives if behavior needs to change:
+#   - You could check for LMDB files (*.mdb) instead of ldapsearch, but this is
+#     less reliable because LMDB files may exist without a valid suffix.
+#   - You could add a "force_reinitialize: true" variable to allow wiping the DB.
+#   - You could implement schema-aware upgrades instead of full reinitialization.
 ###############################################################################
 
 - block:
