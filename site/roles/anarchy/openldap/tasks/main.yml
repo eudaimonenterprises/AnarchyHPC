@@ -47,18 +47,18 @@
   include_tasks: config.yml
 
 ###############################################################################
-# Initial database import (idempotent)
-###############################################################################
-
-- name: Initialize LDAP database
-  include_tasks: database.yml
-
-###############################################################################
 # Service management (HA or non-HA)
 ###############################################################################
 
 - name: Manage slapd service
   include_tasks: service.yml
+
+###############################################################################
+# Initial database import (idempotent)
+###############################################################################
+
+- name: Initialize LDAP database
+  include_tasks: database.yml
 
 ###############################################################################
 # Distro-specific OpenLDAP stacks (unchanged for now)

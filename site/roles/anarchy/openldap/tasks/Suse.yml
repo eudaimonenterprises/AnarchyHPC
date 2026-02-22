@@ -85,16 +85,6 @@
     and default_openldap_path.stat.isdir
 
 ###############################################################################
-# SUSE: Start service (non‑HA)
-###############################################################################
-
-- name: Enable slapd (non‑HA)
-  systemd:
-    name: slapd
-    enabled: true
-  when: not ha | default(false)
-
-###############################################################################
 # SUSE: Initial schema + config load
 ###############################################################################
 
@@ -106,12 +96,6 @@
         owner: "{{ openldap_default_user }}"
         group: "{{ openldap_default_group }}"
 
-    - name: Start slapd
-      systemd:
-        name: slapd
-        state: started
-        enabled: true
-
     - name: Copy schemas
       copy:
         src: "{{ item }}"
@@ -121,33 +105,3 @@
         - autoinc.ldif
         - local_schema.ldif
   when: primary | default(true)
-
-###############################################################################
-# SUSE: Load schemas + overlays (same logic as RHEL)
-###############################################################################
-
-# SUSE ships OpenLDAP 2.4.x in Leap 15, so only the <=2.4 block will run.
-# You can include the same <=2.4 and >=2.5 blocks from RedHat.yml here.
-
-###############################################################################
-# SUSE: HA integration
-###############################################################################
-
-- block:
-    - name: Disable slapd for HA
-      systemd:
-        name: slapd
-        state: "{{ 'started' if primary else 'stopped' }}"
-        enabled: false
-
-    - name: Add Pacemaker resource
-      pcs_resource:
-        name: openldap
-        resource_class: systemd
-        resource_type: systemd:slapd
-        options: "meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Anarchy-stack"
-        state: present
-      when: primary | default(true)
-  when: ha | default(false)
-
-- meta: flush_handlers

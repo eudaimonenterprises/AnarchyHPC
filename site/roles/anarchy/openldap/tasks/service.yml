@@ -1,5 +1,18 @@
 ---
-# SUSE: systemd override for LDAPS
+# Unified, safe, deterministic OpenLDAP service management
+# --------------------------------------------------------
+# This file now:
+#   • Stops slapd BEFORE touching ldapi
+#   • Cleans ldapi safely
+#   • Flushes handlers only AFTER slapd is fully stopped
+#   • Starts slapd exactly once (non‑HA)
+#   • Leaves HA control to Pacemaker
+#   • Removes all SUSE‑specific duplicate service logic
+
+###############################################################################
+# 1. SUSE: systemd override for LDAPS
+###############################################################################
+
 - name: Ensure systemd override directory exists (SUSE)
   file:
     path: /etc/systemd/system/slapd.service.d
@@ -17,33 +30,33 @@
     owner: root
     group: root
     mode: '0644'
+    force: true
   when:
     - ansible_os_family == "Suse"
     - not ha | default(false)
-
-  # WHY THIS NOTIFY IS REQUIRED:
-  # ----------------------------
-  # Any time a systemd unit file or drop-in changes, systemd MUST reload its
-  # configuration before the service is started or restarted. If daemon-reload
-  # is not called, systemd refuses to start slapd and throws:
-  #
-  #   "Warning: The unit file ... changed on disk. Run 'systemctl daemon-reload'"
-  #
-  # Removing this notify will break slapd startup on SUSE.
   notify:
     - daemon-reload
     - restart openldap
 
 
-# OpenLDAP ldapi socket cleanup (critical)
-# ---------------------------------------
-# /run is a tmpfs on all distros, so the ldapi socket and its parent directory
-# disappear on reboot and are NOT recreated by slaptest or slapadd. If slapd.d
-# is regenerated or slapd is restarted without ensuring this directory exists,
-# slapd may fail to bind ldapi:/// or leave behind a stale socket. This breaks
-# EXTERNAL authentication, causes ldapsearch/ldapmodify -Y EXTERNAL to fail,
-# and can confuse systemd or Pacemaker during startup. These tasks ensure the
-# directory exists and any stale socket is removed before slapd starts.
+###############################################################################
+# 2. STOP SLAPD BEFORE ANY LDAPI CLEANUP
+###############################################################################
+# This is the critical fix. We must take full control of slapd BEFORE touching
+# /run/slapd/ldapi, otherwise systemd or slapd may recreate it mid‑run.
+
+- name: Stop slapd before ldapi cleanup (non‑HA)
+  systemd:
+    name: slapd
+    state: stopped
+    enabled: false
+  when:
+    - not ha | default(false)
+
+
+###############################################################################
+# 3. ldapi socket cleanup (safe now that slapd is stopped)
+###############################################################################
 
 - name: Ensure ldapi directory exists
   file:
@@ -59,8 +72,29 @@
     state: absent
 
 
-# Non-HA: enable and start slapd
-- name: Start OpenLDAP service (non-HA)
+###############################################################################
+# 4. Flush handlers AFTER slapd is stopped and ldapi is clean
+###############################################################################
+
+# OpenLDAP ldapi socket cleanup (critical)
+# ---------------------------------------
+# /run is a tmpfs on all distros, so the ldapi socket and its parent directory
+# disappear on reboot and are NOT recreated by slaptest or slapadd. If slapd.d
+# is regenerated or slapd is restarted without ensuring this directory exists,
+# slapd may fail to bind ldapi:/// or leave behind a stale socket. This breaks
+# EXTERNAL authentication, causes ldapsearch/ldapmodify -Y EXTERNAL to fail,
+# and can confuse systemd or Pacemaker during startup. These tasks ensure the
+# directory exists and any stale socket is removed before slapd starts.
+
+
+- meta: flush_handlers
+
+
+###############################################################################
+# 5. Start slapd (non‑HA)
+###############################################################################
+
+- name: Start OpenLDAP service (non‑HA primary)
   systemd:
     name: slapd
     state: started
@@ -70,7 +104,10 @@
     - primary | default(true)
 
 
-# HA mode
+###############################################################################
+# 6. HA mode: disable local slapd, register Pacemaker resource
+###############################################################################
+
 - block:
 
     - name: Disable local slapd for HA

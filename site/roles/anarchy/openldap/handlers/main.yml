@@ -14,4 +14,3 @@
   retries: 10
   delay: 15
   listen: restart openldap
-  notify: daemon-reload
