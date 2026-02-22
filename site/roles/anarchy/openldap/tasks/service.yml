@@ -20,7 +20,20 @@
   when:
     - ansible_os_family == "Suse"
     - not ha | default(false)
-  notify: restart openldap
+
+  # WHY THIS NOTIFY IS REQUIRED:
+  # ----------------------------
+  # Any time a systemd unit file or drop-in changes, systemd MUST reload its
+  # configuration before the service is started or restarted. If daemon-reload
+  # is not called, systemd refuses to start slapd and throws:
+  #
+  #   "Warning: The unit file ... changed on disk. Run 'systemctl daemon-reload'"
+  #
+  # Removing this notify will break slapd startup on SUSE.
+  notify:
+    - daemon-reload
+    - restart openldap
+
 
 # OpenLDAP ldapi socket cleanup (critical)
 # ---------------------------------------
@@ -45,6 +58,7 @@
     path: /run/slapd/ldapi
     state: absent
 
+
 # Non-HA: enable and start slapd
 - name: Start OpenLDAP service (non-HA)
   systemd:
@@ -54,6 +68,7 @@
   when:
     - not ha | default(false)
     - primary | default(true)
+
 
 # HA mode
 - block:

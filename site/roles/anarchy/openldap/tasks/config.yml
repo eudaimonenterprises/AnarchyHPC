@@ -15,7 +15,9 @@
     group: root
     mode: '0644'
   register: slapd_conf_rendered
-  notify: restart openldap
+  notify:
+    - daemon-reload
+    - restart openldap
 
 ###############################################################################
 # SUSE‑SAFE SLAPD.D REGENERATION
@@ -31,7 +33,9 @@
   when:
     - primary | default(true)
     - slapd_conf_rendered.changed
-  notify: restart openldap
+  notify:
+    - daemon-reload
+    - restart openldap
 
 - name: Recreate slapd.d directory
   file:
@@ -52,4 +56,6 @@
   when:
     - primary | default(true)
     - slapd_conf_rendered.changed
-  notify: restart openldap
+  notify:
+    - daemon-reload
+    - restart openldap
