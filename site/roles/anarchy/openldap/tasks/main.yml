@@ -16,6 +16,46 @@
     name: openssl
     state: present
 
+###############################################################################
+# Step 1: Centralize CA lifecycle (generation, HA sync, trust store)
+# This uses your existing tasks/ca.yml and runs BEFORE any distro-specific stack.
+###############################################################################
+
+- name: Manage cluster CA (generation, sync, trust store)
+  include_tasks: ca.yml
+
+###############################################################################
+# LDAP server certificate (signed by cluster CA)
+###############################################################################
+
+- name: Generate LDAP server certificate
+  include_tasks: certs.yml
+
+###############################################################################
+# OpenLDAP configuration (slapd.conf → slapd.d)
+###############################################################################
+
+- name: Configure OpenLDAP
+  include_tasks: config.yml
+
+###############################################################################
+# Initial database import (idempotent)
+###############################################################################
+
+- name: Initialize LDAP database
+  include_tasks: database.yml
+
+###############################################################################
+# Service management (HA or non-HA)
+###############################################################################
+
+- name: Manage slapd service
+  include_tasks: service.yml
+
+###############################################################################
+# Distro-specific OpenLDAP stacks (unchanged for now)
+###############################################################################
+
 - name: Run OpenLDAP stack for RedHat
   include_tasks: RedHat.yml
   when: ansible_os_family == "RedHat"

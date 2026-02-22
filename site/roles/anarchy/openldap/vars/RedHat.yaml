@@ -7,5 +7,9 @@ openldap_default_group: ldap
 openldap_server_conf_path: /etc/openldap/slapd.d
 openldap_server_dir_path: /var/lib/ldap
 openldap_server_defaults_file: /etc/sysconfig/slapd
+
+openldap_conf_file: /etc/openldap/slapd.conf
+openldap_schema_path: /etc/openldap/schema
+
 openldap_tls_cacrt: /etc/pki/ca-trust/source/anchors/cluster-ca.crt
 ssl_cert_group: ssl-cert

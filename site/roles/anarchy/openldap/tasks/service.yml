@@ -1,0 +1,78 @@
+---
+# SUSE: systemd override for LDAPS
+- name: Ensure systemd override directory exists (SUSE)
+  file:
+    path: /etc/systemd/system/slapd.service.d
+    state: directory
+  when: ansible_os_family == "Suse"
+
+- name: Write systemd service override for LDAPS (SUSE)
+  copy:
+    content: |
+      [Service]
+      EnvironmentFile=-/etc/sysconfig/openldap
+      ExecStart=
+      ExecStart=/usr/sbin/slapd -h "{{ openldap_endpoints }}" -F {{ openldap_server_conf_path }}
+    dest: /etc/systemd/system/slapd.service.d/override.conf
+    owner: root
+    group: root
+    mode: '0644'
+  when:
+    - ansible_os_family == "Suse"
+    - not ha | default(false)
+  notify: restart openldap
+
+# OpenLDAP ldapi socket cleanup (critical)
+# ---------------------------------------
+# /run is a tmpfs on all distros, so the ldapi socket and its parent directory
+# disappear on reboot and are NOT recreated by slaptest or slapadd. If slapd.d
+# is regenerated or slapd is restarted without ensuring this directory exists,
+# slapd may fail to bind ldapi:/// or leave behind a stale socket. This breaks
+# EXTERNAL authentication, causes ldapsearch/ldapmodify -Y EXTERNAL to fail,
+# and can confuse systemd or Pacemaker during startup. These tasks ensure the
+# directory exists and any stale socket is removed before slapd starts.
+
+- name: Ensure ldapi directory exists
+  file:
+    path: /run/slapd
+    state: directory
+    owner: "{{ openldap_default_user }}"
+    group: "{{ openldap_default_group }}"
+    mode: '0750'
+
+- name: Remove stale ldapi socket
+  file:
+    path: /run/slapd/ldapi
+    state: absent
+
+# Non-HA: enable and start slapd
+- name: Start OpenLDAP service (non-HA)
+  systemd:
+    name: slapd
+    state: started
+    enabled: true
+  when:
+    - not ha | default(false)
+    - primary | default(true)
+
+# HA mode
+- block:
+
+    - name: Disable local slapd for HA
+      systemd:
+        name: slapd
+        state: stopped
+        enabled: false
+
+    - name: Add Pacemaker resource (SUSE)
+      pcs_resource:
+        name: openldap
+        resource_class: systemd
+        resource_type: systemd:slapd
+        options: "meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Anarchy-stack"
+        state: present
+      when:
+        - ansible_os_family == "Suse"
+        - primary | default(true)
+
+  when: ha | default(false)

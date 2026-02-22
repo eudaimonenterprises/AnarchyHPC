@@ -1,0 +1,66 @@
+---
+# Ensure database directory exists
+- name: Ensure database directory exists
+  file:
+    path: "{{ openldap_server_dir_path }}"
+    state: directory
+    owner: "{{ openldap_default_user }}"
+    group: "{{ openldap_default_group }}"
+    mode: '0750'
+
+# Render initial LDIF (only on primary)
+- name: Render initial LDIF (only on primary)
+  template:
+    src: init.ldif.j2
+    dest: /tmp/init.ldif
+    owner: root
+    group: root
+    mode: '0644'
+  when: primary | default(true)
+
+# Check if database already exists
+- name: Check if database is already initialized
+  command: ldapsearch -Y EXTERNAL -H ldapi:/// -b dc=local -s base '(objectClass=*)'
+  register: db_exists
+  changed_when: false
+  ignore_errors: true
+
+- block:
+
+    - name: Set ldap user ownership on config and DB paths
+      file:
+        path: "{{ item }}"
+        owner: "{{ openldap_default_user }}"
+        group: "{{ openldap_default_group }}"
+        recurse: yes
+      loop:
+        - "{{ openldap_server_conf_path }}"
+        - "{{ openldap_server_dir_path }}"
+
+    - name: Import initial database
+      command: >
+        slapadd -n 1
+                -F {{ openldap_server_conf_path }}
+                -l /tmp/init.ldif
+
+    - name: Restore slapd.d ownership to root
+      file:
+        path: "{{ openldap_server_conf_path }}"
+        owner: root
+        group: root
+        mode: '0750'
+        recurse: yes
+
+    - name: Ensure DB directory ownership
+      file:
+        path: "{{ openldap_server_dir_path }}"
+        owner: "{{ openldap_default_user }}"
+        group: "{{ openldap_default_group }}"
+        mode: '0750'
+
+  when: primary | default(true) and db_exists.rc != 0
+
+- name: Cleanup temporary LDIF file
+  file:
+    path: /tmp/init.ldif
+    state: absent

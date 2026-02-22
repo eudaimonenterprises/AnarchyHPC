@@ -1,3 +1,6 @@
+- name: Load OS-specific vars
+  include_vars: "{{ ansible_os_family }}.yml"
+
 ###############################################################################
 # OBOL: LDAP PASSWORD HANDLING (shared include)
 ###############################################################################
@@ -47,7 +50,6 @@
   package:
     name: "{{ obol_packages }}"
     state: present
-  tags: install-only
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
@@ -89,10 +91,3 @@
   vars:
     obol_ldap_password: "{{ ldap_root_password }}"
     obol_ldap_cacert: "{{ obol_ldap_cacert }}"
-
-- name: Add link to the configuration file in /etc
-  file:
-    src: '{{ obol_conf_path }}'
-    dest: '/etc/'
-    state: link
-  when: obol_conf_path|string not in '/etc'

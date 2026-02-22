@@ -5,7 +5,7 @@
 obol_packages: []
 
 users_home_path: '/home'
-obol_conf_path: '/etc'
+obol_conf_path: '/etc/obol'
 ldap_host: localhost
 
 obol_use_ds389: false

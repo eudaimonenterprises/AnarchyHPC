@@ -32,4 +32,4 @@ replace: olcRootDN
 olcRootDN: cn=config
 -
 replace: olcRootPW
-olcRootPW: {{ openldap_root_pwd_hash.stdout }}
+olcRootPW: {{ ldap_root_password_hash.stdout }}

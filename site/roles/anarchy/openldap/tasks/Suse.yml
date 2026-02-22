@@ -31,14 +31,14 @@
 
 - name: Hash OpenLDAP root password
   command: slappasswd -h {SSHA} -s {{ ldap_root_password }}
-  register: openldap_root_pwd_hash
+  register: ldap_root_password_hash
   changed_when: false
   when: primary | default(true)
 
 - name: Set OpenLDAP root password facts
   set_fact:
     openldap_root_pwd: "{{ ldap_root_password }}"
-    openldap_root_pwd_hash: "{{ openldap_root_pwd_hash.stdout }}"
+    ldap_root_password_hash: "{{ ldap_root_password_hash.stdout }}"
   when: primary | default(true)
 
 - name: Configure slapd URLs

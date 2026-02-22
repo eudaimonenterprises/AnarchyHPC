@@ -12,6 +12,9 @@ openldap_server_conf_path: /etc/openldap/slapd.d
 openldap_server_dir_path: /var/lib/ldap
 openldap_server_defaults_file: /etc/sysconfig/openldap
 
+openldap_conf_file: /etc/openldap/slapd.conf
+openldap_schema_path: /etc/openldap/schema
+
 # SUSE uses the system CA bundle, not /etc/openldap/certs
 openldap_tls_cacrt: /etc/ssl/ca-bundle.pem
 

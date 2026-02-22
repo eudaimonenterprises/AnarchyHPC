@@ -24,7 +24,7 @@ olcAccess: to *
  by dn.base="cn=manager,dc=local" read 
  by * none
 olcRootDN: cn=Manager,dc=local
-olcRootPW: {{ openldap_root_pwd_hash.stdout }}
+olcRootPW: {{ ldap_root_password_hash.stdout }}
 olcMonitoring: TRUE
 olcDbDirectory: {{ openldap_server_dir_path }}
 olcDbCheckpoint: 128 15
