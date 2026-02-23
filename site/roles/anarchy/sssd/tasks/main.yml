@@ -62,11 +62,20 @@
 
 - meta: flush_handlers
 
-- name: Adjust OpenLDAP client TLS configuration
+- name: Configure client TLS CA (SUSE)
+  lineinfile:
+    path: /etc/openldap/ldap.conf
+    regexp: '^TLS_CACERT'
+    line: 'TLS_CACERT /etc/ssl/ca-bundle.pem'
+  when: ansible_os_family == "Suse"
+
+- name: Adjust OpenLDAP client TLS configuration (non-SUSE)
   lineinfile:
     path: "{{ ldap_conf }}"
     line: 'TLS_CACERT   {{ ca_certificate_path }}/{{ ssl_ca_cert | basename }}'
-  when: not sss_use_ds389 | default(False)
+  when:
+    - ansible_os_family != "Suse"
+    - not sss_use_ds389 | default(False)
 
 - name: Enable sssd service
   systemd:

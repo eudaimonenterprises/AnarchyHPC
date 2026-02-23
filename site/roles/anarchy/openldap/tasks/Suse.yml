@@ -33,12 +33,33 @@
     ldap_root_password_hash: "{{ ldap_root_password_hash.stdout }}"
   when: primary | default(true)
 
-- name: Configure slapd URLs
+###############################################################################
+# SUSE: sysconfig (script‑style)
+###############################################################################
+
+- name: Ensure SLAPD_URLS is set (SUSE)
   lineinfile:
     path: /etc/sysconfig/openldap
     regexp: '^SLAPD_URLS='
     line: 'SLAPD_URLS="{{ openldap_endpoints }}"'
     create: true
+
+- name: Ensure SLAPD_CONFIG_BACKEND is config (SUSE)
+  lineinfile:
+    path: /etc/sysconfig/openldap
+    regexp: '^SLAPD_CONFIG_BACKEND='
+    line: 'SLAPD_CONFIG_BACKEND="config"'
+    create: true
+
+- name: Ensure SLAPD_CONF points to slapd.d (SUSE)
+  lineinfile:
+    path: /etc/sysconfig/openldap
+    regexp: '^SLAPD_CONF='
+    line: 'SLAPD_CONF="{{ openldap_server_conf_path }}"'
+
+###############################################################################
+# SUSE: Configure client TLS CA
+###############################################################################
 
 - name: Configure client TLS CA (SUSE)
   lineinfile:

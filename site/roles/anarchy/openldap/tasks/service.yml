@@ -7,37 +7,36 @@
 #   • Flushes handlers only AFTER slapd is fully stopped
 #   • Starts slapd exactly once (non‑HA)
 #   • Leaves HA control to Pacemaker
-#   • Removes all SUSE‑specific duplicate service logic
+#   • Owns the slapd unit on SUSE (vendor unit was broken)
 
 ###############################################################################
-# 1. SUSE: systemd override for LDAPS
+# 1. SUSE: install fixed slapd.service with LDAPS
 ###############################################################################
 
-- name: Ensure systemd override directory exists (SUSE)
-  file:
-    path: /etc/systemd/system/slapd.service.d
-    state: directory
-  when: ansible_os_family == "Suse"
-
-- name: Write systemd service override for LDAPS (SUSE)
+- name: Install fixed slapd.service unit (SUSE, non-HA)
   copy:
-    content: |
-      [Service]
-      EnvironmentFile=-/etc/sysconfig/openldap
-      ExecStart=
-      ExecStart=/usr/sbin/slapd -h ldaps:/// ldapi:/// -F {{ openldap_server_conf_path }}
-    dest: /etc/systemd/system/slapd.service.d/override.conf
+    dest: /usr/lib/systemd/system/slapd.service
     owner: root
     group: root
     mode: '0644'
-    force: true
+    content: |
+      [Unit]
+      Description=OpenLDAP Server Daemon
+      After=syslog.target network.target
+
+      [Service]
+      Type=forking
+      EnvironmentFile=-/etc/sysconfig/openldap
+      ExecStart=/usr/sbin/slapd -h "ldaps:/// ldapi:///" -F {{ openldap_server_conf_path }}
+
+      [Install]
+      WantedBy=multi-user.target
   when:
     - ansible_os_family == "Suse"
     - not ha | default(false)
   notify:
     - daemon-reload
     - restart openldap
-
 
 ###############################################################################
 # 2. STOP SLAPD BEFORE ANY LDAPI CLEANUP
