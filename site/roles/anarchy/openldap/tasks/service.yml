@@ -11,6 +11,54 @@
     - ansible_os_family == "Suse"
     - ansible_distribution_major_version | int >= 16
 
+- name: Ensure ldap user is in the ssl certificate group
+  user:
+    name: ldap
+    groups: "{{ ssl_cert_group }}"
+    append: yes
+  when: ansible_os_family == "Suse"
+
+- name: Ensure sysusers.d directory exists
+  file:
+    path: /etc/sysusers.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: ansible_os_family == "Suse"
+
+- name: Ensure sysusers override for ldap exists
+  copy:
+    dest: /etc/sysusers.d/ldap.conf
+    content: |
+      u ldap - "OpenLDAP Server" /var/lib/ldap
+      g ssl
+      m ldap ssl
+  when: ansible_os_family == "Suse"
+
+- name: Apply sysusers override for ldap
+  command: systemd-sysusers
+  when: ansible_os_family == "Suse"
+
+- name: Invalidate group cache
+  command: nscd -i group
+  when: ansible_os_family == "Suse"
+
+- name: Reload systemd to pick up new group memberships
+  command: systemctl daemon-reexec
+  when: ansible_os_family == "Suse"
+
+- name: Stop slapd
+  service:
+    name: slapd
+    state: stopped
+  when: ansible_os_family == "Suse"
+
+- name: Kill any leftover ldap processes
+  command: pkill -u ldap
+  ignore_errors: yes
+  when: ansible_os_family == "Suse"
+
 ###############################################################################
 # Non‑HA mode — normal systemd management
 ###############################################################################
