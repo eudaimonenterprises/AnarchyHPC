@@ -1,0 +1,22 @@
+---
+- name: Ensure munge config directory exists
+  ansible.builtin.file:
+    path: "{{ munge_conf_path }}"
+    state: directory
+    owner: munge
+    group: munge
+    mode: "0700"
+
+- name: Create munge.key if missing
+  ansible.builtin.command: "dd if=/dev/urandom bs=1 count=1024 of={{ munge_conf_path }}/munge.key"
+  args:
+    creates: "{{ munge_conf_path }}/munge.key"
+
+- name: Set munge.key permissions
+  ansible.builtin.file:
+    path: "{{ munge_conf_path }}/munge.key"
+    state: file
+    owner: munge
+    group: munge
+    mode: "0400"
+  notify: restart munge

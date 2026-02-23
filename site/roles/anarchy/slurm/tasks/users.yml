@@ -1,0 +1,23 @@
+---
+- name: Create groups for munge and slurm
+  ansible.builtin.group:
+    name: "{{ item.name }}"
+    gid: "{{ item.gid }}"
+    state: present
+  loop:
+    - { name: "munge", gid: "{{ munge_group_id }}" }
+    - { name: "slurm", gid: "{{ slurm_group_id }}" }
+  tags: install-only
+
+- name: Create users for munge and slurm
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    uid: "{{ item.uid }}"
+    group: "{{ item.name }}"
+    shell: /sbin/nologin
+    system: true
+    state: present
+  loop:
+    - { name: "munge", uid: "{{ munge_user_id }}" }
+    - { name: "slurm", uid: "{{ slurm_user_id }}" }
+  tags: install-only

@@ -1,0 +1,3 @@
+---
+# OpenHPC 3.x for SUSE does NOT ship Slurm today.
+slurm_packages_ohpc: []

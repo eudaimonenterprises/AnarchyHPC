@@ -1,0 +1,43 @@
+---
+- name: Ensure Slurm log directory exists
+  ansible.builtin.file:
+    path: "{{ slurm_log_path }}"
+    owner: slurm
+    group: slurm
+    mode: "0750"
+    state: directory
+
+- name: Ensure Slurm config directory exists
+  ansible.builtin.file:
+    path: "{{ slurm_conf_path }}"
+    owner: slurm
+    group: slurm
+    mode: "0755"
+    state: directory
+
+- name: Get /etc/slurm status
+  ansible.builtin.stat:
+    path: "/etc/slurm"
+  register: default_slurm_path
+
+- name: Delete default /etc/slurm if different from slurm_conf_path
+  ansible.builtin.file:
+    path: "/etc/slurm"
+    state: absent
+  when:
+    - slurm_conf_path | string != "/etc/slurm"
+    - default_slurm_path.stat.exists
+    - default_slurm_path.stat.isdir
+
+- name: Re-check /etc/slurm status
+  ansible.builtin.stat:
+    path: "/etc/slurm"
+  register: default_slurm_path_after
+
+- name: Replace /etc/slurm with symlink to slurm_conf_path
+  ansible.builtin.file:
+    src: "{{ slurm_conf_path }}"
+    dest: "/etc/slurm"
+    state: link
+    force: false
+  when: not default_slurm_path_after.stat.exists

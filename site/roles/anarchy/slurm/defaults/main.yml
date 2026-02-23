@@ -1,39 +1,4 @@
 ---
-# vars file for slurm
-enable_openhpc: true
-
-slurm_packages:
-  - munge-libs
-  - munge
-  - slurm
-  - slurm-libs
-  - slurm-contribs
-  - slurm-devel
-  - slurm-openlava
-  - slurm-pam_slurm
-  - slurm-perlapi
-  - slurm-slurmd
-  - slurm-slurmdbd
-  - slurm-slurmctld
-  - slurm-torque
-
-slurm_packages_ohpc:
-  - slurm-ohpc
-  - slurm-slurmctld-ohpc
-  - slurm-slurmd-ohpc
-  - slurm-contribs-ohpc
-  - slurm-devel-ohpc
-  - pmix-ohpc
-  - slurm-libpmi-ohpc
-  - munge-libs
-  - munge
-  - slurm-openlava-ohpc
-  - slurm-pam_slurm-ohpc
-  - slurm-perlapi-ohpc
-  - slurm-slurmdbd-ohpc
-  - slurm-sview-ohpc
-  - slurm-torque-ohpc
-
 slurm_conf_path: '/etc/slurm'
 slurm_spool_path: '/var/spool/slurm'
 slurm_log_path: '/var/log/slurm'
@@ -41,8 +6,7 @@ slurm_log_path: '/var/log/slurm'
 slurm_user_id: 891
 slurm_group_id: 891
 
-slurm_ctrl: 'controller'
-slurm_ctrl_ip: '127.0.0.1'
+slurm_ctrl: 'controller1'
 slurm_ctrl_list: 'controller1,controller2'
 
 enable_slurm_pam: false
@@ -52,5 +16,10 @@ slurmdbd_sql_db: 'slurm_accounting'
 
 munge_user_id: 892
 munge_group_id: 892
-
 munge_conf_path: '/etc/munge'
+
+# These flags are expected to be set by inventory/play:
+# on_controller: true/false
+# on_node: true/false
+# in_image: true/false
+# ha: true/false

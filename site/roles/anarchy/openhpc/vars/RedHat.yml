@@ -1,0 +1,6 @@
+---
+slurm_packages_ohpc:
+  - slurm-ohpc
+  - slurm-slurmd-ohpc
+  - slurm-slurmctld-ohpc
+  - slurm-slurmdbd-ohpc

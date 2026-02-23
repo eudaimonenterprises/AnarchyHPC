@@ -1,0 +1,56 @@
+---
+- name: Install PyMySQL (for DB access)
+  ansible.builtin.package:
+    name:
+      - python3-PyMySQL
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Generate password for DB user and save it
+  ansible.builtin.set_fact:
+    tmp_pwd: "{{ lookup('password', '/etc/anarchy/passwords/mysql/{{ slurmdbd_sql_user }}.txt chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Get password for DB user
+  ansible.builtin.set_fact:
+    slurmdbd_sql_pwd: "{{ lookup('password', '/etc/anarchy/passwords/mysql/{{ slurmdbd_sql_user }}.txt chars=ascii_letters,digits,hexdigits') }}"
+
+- name: Create DB for accounting
+  community.mysql.mysql_db:
+    name: "{{ slurmdbd_sql_db }}"
+    state: present
+
+- name: Create DB user for accounting
+  community.mysql.mysql_user:
+    name: "{{ slurmdbd_sql_user }}"
+    password: "{{ slurmdbd_sql_pwd }}"
+    priv: "{{ slurmdbd_sql_db }}.*:ALL"
+    state: present
+
+- name: Start munge and slurmdbd services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: "{{ not ha | default(true) }}"
+    daemon_reload: true
+  loop:
+    - munge
+    - slurmdbd
+
+- name: Wait 10s after starting slurmdbd
+  ansible.builtin.wait_for:
+    timeout: 10
+
+- name: Start slurmctld service
+  ansible.builtin.systemd:
+    name: "slurmctld"
+    state: started
+    enabled: "{{ not ha | default(true) }}"
+    daemon_reload: true
+
+- name: Register Slurm cluster in slurmdbd
+  ansible.builtin.shell: "sacctmgr -i add cluster cluster | grep -i adding"
+  register: sacctmgr_success
+  changed_when: '"Not adding." not in sacctmgr_success.stdout'
+  until: '"Adding Cluster" in sacctmgr_success.stdout or "Not adding." in sacctmgr_success.stdout'
+  retries: 10
+  delay: 15

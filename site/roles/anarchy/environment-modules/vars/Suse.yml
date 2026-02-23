@@ -1,18 +1,4 @@
 ---
-openhpc_repos:
-  - name: hpc
-    repo: "https://repos.openhpc.community/OpenHPC/3/Leap_15"
-    gpgcheck: false
-    os: leap
-
-  - name: hpc
-    repo: "https://repos.openhpc.community/OpenHPC/3/SLE_15"
-    gpgcheck: false
-    os: sles
-
-openhpc_base_packages:
-  - patterns-hpc-ohpc-base
-  - patterns-hpc-ohpc-compute
-
+# SUSE-specific environment-modules defaults
 envmodules_packages:
   - lmod

@@ -1,5 +1,4 @@
 ---
-
 - block:
   - name: Detect openhpc structure
     stat:
@@ -53,8 +52,6 @@
       - lmod
       - environment-modules
     state: removed
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Install ohpc-base
   yum:
@@ -62,24 +59,18 @@
     state: installed
     enablerepo: powertools
   when: on_controller
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Install ohpc-base-compute
   yum:
     name: ohpc-base-compute
     state: installed
   when: on_controller
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
 
 - block:
   - name: Install pdsh-mod-genders-ohpc
     yum:
       name: pdsh-mod-genders-ohpc
       state: installed
-    retries: "{{ rpm_retries | default(3) }}"
-    delay: "{{ rpm_delay | default(15) }}"
 
   - name: Get /etc/genders status
     stat:
@@ -107,35 +98,11 @@
     when: default_genders_path.stat.exists == false
   when: on_controller
 
-- name: Install lmod dependencies on non-controller nodes
-  yum:
-    name:
-      - lua-filesystem
-      - lua-posix
-    enablerepo: powertools
-    state: installed
-  when: in_image
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
-
-- name: Create symlinks for pdsh and pdcp
-  file:
-    dest: "/usr/bin/{{ item }}"
-    src: "{{ openhpc_home }}/admin/pdsh/bin/{{ item }}"
-    state: link
-    force: true
-    follow: false
-  with_items:
-    - pdsh
-    - pdcp
-
 - name: Install lmod-ohpc
   yum:
     name: lmod-ohpc
     state: installed
     enablerepo: powertools
-  retries: "{{ rpm_retries | default(3) }}"
-  delay: "{{ rpm_delay | default(15) }}"
 
 - name: Install profile for modules
   template:
@@ -148,3 +115,7 @@
     state: absent
   notify: Export NFS
   when: on_controller
+
+- name: Mark OpenHPC as managing the module system
+  set_fact:
+    openhpc_manages_modules: true

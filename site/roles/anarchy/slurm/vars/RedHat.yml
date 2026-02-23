@@ -1,0 +1,38 @@
+---
+pkg_mgr: yum
+
+slurm_packages:
+  - munge
+  - munge-libs
+  - slurm
+  - slurm-slurmd
+  - slurm-slurmctld
+  - slurm-slurmdbd
+  - slurm-pam_slurm
+  - slurm-perlapi
+  - slurm-contribs
+  - slurm-devel
+  - pmix
+
+slurm_packages_ohpc:
+  - slurm-ohpc
+  - slurm-slurmctld-ohpc
+  - slurm-slurmd-ohpc
+  - slurm-slurmdbd-ohpc
+  - slurm-contribs-ohpc
+  - slurm-devel-ohpc
+  - slurm-libpmi-ohpc
+  - pmix-ohpc
+  - munge
+  - munge-libs
+
+slurm_unit_path: /usr/lib/systemd/system
+
+slurm_services:
+  controller:
+    - munge
+    - slurmdbd
+    - slurmctld
+  compute:
+    - munge
+    - slurmd

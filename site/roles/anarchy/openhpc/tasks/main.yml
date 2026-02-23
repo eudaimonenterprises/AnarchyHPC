@@ -1,98 +1,58 @@
 ---
+# Load OS-specific vars
+- name: Load OS-specific OpenHPC vars
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_os_family }}.yml"
+    - "{{ ansible_distribution }}.yml"
+    - "default.yml"
+
 ###############################################################################
-# 1. Determine whether OpenHPC is SUPPORTED on this OS
-###############################################################################
-# Supported:
-#   - SUSE: Leap 15.x, SLES 15.x
-#   - RedHat-family
-#   - Debian-family
-# Unsupported:
-#   - SUSE Leap 16+
-#   - SLES 16+ (future)
+# 1. Determine OpenHPC support
 ###############################################################################
 
 - name: Determine OpenHPC support
   set_fact:
     openhpc_supported: >-
       {{
-        # SUSE support only up to major version 15
         (ansible_os_family == "Suse"
-         and ansible_distribution_major_version | int <= 15
-         and ansible_distribution in ["openSUSE Leap", "SUSE Linux Enterprise Server", "SLES"])
+         and ansible_distribution_major_version | int <= 15)
         or
-        # RedHat-family supported
         (ansible_os_family == "RedHat")
         or
-        # Debian-family supported
         (ansible_os_family == "Debian")
       }}
 
-- name: Skipping OpenHPC install — unsupported OS version
+- name: Skipping OpenHPC — unsupported OS or disabled
   debug:
-    msg: "OpenHPC is NOT supported on {{ ansible_distribution }} {{ ansible_distribution_version }} — skipping."
-  when: not openhpc_supported
+    msg: "OpenHPC not supported or disabled on {{ ansible_distribution }} {{ ansible_distribution_version }}"
+  when: not openhpc_supported or not enable_openhpc
 
-- name: Stop OpenHPC processing when unsupported
-  meta: end_play
-  when: not openhpc_supported
-
-
-###############################################################################
-# 2. Detect whether OpenHPC is AVAILABLE (repo present)
-#    This is separate from SUPPORT. A supported OS may not have the repo yet.
-###############################################################################
-
-- name: Check OpenHPC availability
-  block:
-
-    # RedHat-family check
-    - name: Check for OpenHPC repo (RedHat)
-      when: ansible_os_family == "RedHat"
-      stat:
-        path: "/etc/yum.repos.d/openhpc*.repo"
-      register: ohpc_repo_rh
-
-    # SUSE check
-    - name: Check for OpenHPC repo (SUSE)
-      when: ansible_os_family == "Suse"
-      command: zypper lr openhpc
-      register: ohpc_repo_suse
-      failed_when: false
-      changed_when: false
-
-    # Debian check
-    - name: Check for OpenHPC repo (Debian)
-      when: ansible_os_family == "Debian"
-      command: grep -R "openhpc" /etc/apt/sources.list /etc/apt/sources.list.d/ || true
-      register: ohpc_repo_deb
-      changed_when: false
-
-    # Decide availability
-    - name: Set OpenHPC availability flag
-      set_fact:
-        openhpc_available: >-
-          {{
-            (ansible_os_family == "RedHat" and ohpc_repo_rh.stat.exists)
-            or
-            (ansible_os_family == "Suse" and ('openhpc' in ohpc_repo_suse.stdout))
-            or
-            (ansible_os_family == "Debian" and ohpc_repo_deb.stdout != '')
-          }}
-
-- name: Skipping OpenHPC install — repo not available
-  debug:
-    msg: "OpenHPC repo not found on {{ ansible_distribution }} {{ ansible_distribution_version }} — skipping installation."
-  when: not openhpc_available
-
-- name: Stop OpenHPC processing when repo unavailable
-  meta: end_play
-  when: not openhpc_available
-
+- name: Stop OpenHPC role when unsupported or disabled
+  meta: end_host
+  when: not openhpc_supported or not enable_openhpc
 
 ###############################################################################
-# 3. Run OS-specific OpenHPC tasks
+# 2. Run OS-specific OpenHPC tasks
 ###############################################################################
 
 - name: Include OS-specific OpenHPC tasks
   include_tasks: "{{ ansible_os_family }}.yml"
-  when: openhpc_supported and openhpc_available
+
+###############################################################################
+# 3. Verify OpenHPC Slurm packages exist (optional safety)
+###############################################################################
+
+- name: Gather package facts
+  package_facts:
+  when: slurm_packages_ohpc | length > 0
+
+- name: Filter OpenHPC Slurm packages to only those available
+  set_fact:
+    slurm_packages_ohpc: >-
+      {{
+        slurm_packages_ohpc
+        | select('in', ansible_facts.packages.keys())
+        | list
+      }}
+  when: slurm_packages_ohpc | length > 0

@@ -7,20 +7,18 @@
     - "{{ ansible_distribution }}.yml"
     - "default.yml"
 
-# Dispatch to OS-specific tasks
-- name: Run OS-specific OpenHPC setup
+# OS-specific environment-modules setup (no OpenHPC here)
+- name: Run OS-specific environment-modules setup
   include_tasks: "{{ ansible_os_family }}.yml"
-  when:
-    - ansible_os_family == "Suse"
-    - ansible_distribution_major_version | int <= 15
 
 # Shared tasks across all OSes
 - name: Install profile for modules
   template:
     src: z_modules.sh.j2
     dest: /etc/profile.d/z_modules.sh
+    mode: "0644"
 
-# NEW: Check if modulefiles directory exists
+# Check if modulefiles directory exists
 - name: Check if modulefiles directory exists
   stat:
     path: "{{ anarchy_modulefiles }}"
@@ -31,6 +29,7 @@
   template:
     src: dummy-module.lua.j2
     dest: "{{ anarchy_modulefiles }}/dummy-module.lua"
+    mode: "0644"
   when:
     - on_controller
     - primary | default(True)

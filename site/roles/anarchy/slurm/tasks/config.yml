@@ -1,0 +1,44 @@
+---
+- name: Copy static Slurm configuration files
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ slurm_conf_path }}/{{ item }}"
+    force: false
+  loop:
+    - slurm-health.conf
+    - topology.conf
+    - cgroup.conf
+  notify: restart slurm
+
+- name: Copy Slurm scripts
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ slurm_conf_path }}/{{ item }}"
+    force: false
+    mode: "0755"
+  loop:
+    - epilog.sh
+    - prolog.sh
+    - balance.sh
+  notify: restart slurm
+
+- name: Render Slurm templates
+  ansible.builtin.template:
+    src: "{{ item.name }}.j2"
+    dest: "{{ slurm_conf_path }}/{{ item.name }}"
+    mode: "{{ item.mode }}"
+    owner: "{{ item.owner }}"
+    force: false
+  loop:
+    - { name: "slurm.conf",          mode: "0644", owner: "root"  }
+    - { name: "slurmdbd.conf",       mode: "0600", owner: "slurm" }
+    - { name: "slurm-nodes.conf",    mode: "0644", owner: "root"  }
+    - { name: "slurm-partitions.conf", mode: "0644", owner: "root" }
+    - { name: "gres.conf",           mode: "0644", owner: "root"  }
+  notify: restart slurm
+
+- name: Enable UsePAM in slurm.conf when requested
+  ansible.builtin.lineinfile:
+    path: "{{ slurm_conf_path }}/slurm.conf"
+    line: "UsePAM=1"
+  when: enable_slurm_pam

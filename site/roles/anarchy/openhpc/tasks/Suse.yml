@@ -81,3 +81,7 @@
 
   # This block only runs when main.yml has already validated support
   when: openhpc_supported
+
+- name: Mark OpenHPC as managing the module system
+  set_fact:
+    openhpc_manages_modules: true

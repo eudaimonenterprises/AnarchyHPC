@@ -1,0 +1,17 @@
+---
+- name: Enable compute services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+  loop: "{{ slurm_services.compute }}"
+  when: in_image or on_node | default(false)
+
+- name: Start compute services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+    daemon_reload: true
+  loop:
+    - munge
+    - slurmd
+  when: on_node | default(false)

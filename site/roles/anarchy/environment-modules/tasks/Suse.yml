@@ -1,48 +1,13 @@
 ---
+# Enable SUSE HPC module (SLES only)
 - name: Enable SUSE HPC module (SLES only)
   command: >
     SUSEConnect -p sle-module-HPC/{{ ansible_distribution_version }}/x86_64
   when: ansible_distribution in ["SUSE Linux Enterprise Server", "SLES"]
 
-- name: Add OpenHPC repo (openSUSE Leap)
-  zypper_repository:
-    name: "openhpc-{{ item.name }}"
-    description: "OpenHPC repo {{ item.name }}"
-    repo: "{{ item.repo }}"
-    autorefresh: yes
-  loop: "{{ openhpc_repos }}"
-  when:
-    - ansible_distribution == "openSUSE Leap"
-    - item.os == "leap"
-
-- name: Add OpenHPC repo (SLES 15)
-  zypper_repository:
-    name: "openhpc-{{ item.name }}"
-    description: "OpenHPC repo {{ item.name }}"
-    repo: "{{ item.repo }}"
-    autorefresh: yes
-  loop: "{{ openhpc_repos }}"
-  when:
-    - ansible_distribution in ["SUSE Linux Enterprise Server", "SLES"]
-    - ansible_distribution_major_version == "15"
-    - item.os == "sles"
-
-- name: Install OpenHPC base patterns
-  when:
-    - ansible_os_family == "Suse"
-    - ansible_distribution_major_version | int <= 15
-  zypper:
-    name: "{{ openhpc_base_packages }}"
-    state: present
-
-- name: Install environment modules
-  zypper:
+# Install environment modules (SUSE default)
+- name: Install environment modules on SUSE
+  community.general.zypper:
     name: "{{ envmodules_packages }}"
     state: present
-
-- name: Install pdsh and genders
-  zypper:
-    name:
-      - pdsh
-      - genders
-    state: present
+  when: not (openhpc_manages_modules | default(false))

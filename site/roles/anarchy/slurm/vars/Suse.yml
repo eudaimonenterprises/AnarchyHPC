@@ -1,0 +1,29 @@
+---
+pkg_mgr: zypper
+
+slurm_packages:
+  - munge
+  - munge-libs
+  - slurm
+  - slurm-slurmd
+  - slurm-slurmctld
+  - slurm-slurmdbd
+  - slurm-pam_slurm
+  - slurm-contribs
+  - slurm-devel
+  - pmix
+  - libpmi0
+
+# Only use if you truly have Slurm from OpenHPC on SUSE; otherwise leave empty
+slurm_packages_ohpc: []
+
+slurm_unit_path: /usr/lib/systemd/system
+
+slurm_services:
+  controller:
+    - munge
+    - slurmdbd
+    - slurmctld
+  compute:
+    - munge
+    - slurmd

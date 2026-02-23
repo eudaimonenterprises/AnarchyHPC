@@ -1,0 +1,23 @@
+---
+pkg_mgr: apt
+
+slurm_packages:
+  - slurm-wlm
+  - slurm-wlm-basic-plugins
+  - slurm-wlm-doc
+  - munge
+  - libmunge2
+  - libpmix2
+
+slurm_packages_ohpc: []  # no OpenHPC here
+
+slurm_unit_path: /lib/systemd/system
+
+slurm_services:
+  controller:
+    - munge
+    - slurmdbd
+    - slurmctld
+  compute:
+    - munge
+    - slurmd

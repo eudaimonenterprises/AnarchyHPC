@@ -1,0 +1,34 @@
+---
+- name: Create systemd override directories
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ item }}.service.d"
+    state: directory
+  loop:
+    - munge
+    - slurmdbd
+    - slurmctld
+
+- name: Render systemd override units
+  ansible.builtin.template:
+    src: "systemd/{{ item }}.service.d/anarchy.conf.j2"
+    dest: "/etc/systemd/system/{{ item }}.service.d/anarchy.conf"
+    backup: true
+  loop:
+    - munge
+    - slurmdbd
+    - slurmctld
+
+- name: Disable default After dependency for slurmd service (where applicable)
+  ansible.builtin.replace:
+    path: "{{ slurm_unit_path }}/slurmd.service"
+    before: "[Service]"
+    regexp: "^(After=munge.+)$"
+    replace: "# \\1"
+  when: slurm_unit_path is defined
+
+- name: Ensure slurmd starts after multi-user and sssd
+  ansible.builtin.lineinfile:
+    path: "{{ slurm_unit_path }}/slurmd.service"
+    insertafter: "^# After="
+    line: "After=multi-user.target sssd.service"
+  when: slurm_unit_path is defined

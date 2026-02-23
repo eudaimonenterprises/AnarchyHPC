@@ -1,6 +1,7 @@
 ---
-- name: Install environment modules
+- name: Install environment modules on Debian/Ubuntu
   apt:
     name: "{{ envmodules_packages }}"
     state: present
     update_cache: yes
+  when: not (openhpc_manages_modules | default(false))

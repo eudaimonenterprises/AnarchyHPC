@@ -1,28 +1,6 @@
 ---
-- name: Configure OpenHPC repos (RHEL)
-  yum_repository:
-    name: "openhpc-{{ item.name }}"
-    description: "OpenHPC repo {{ item.name }}"
-    baseurl: "{{ item.repo }}"
-    gpgcheck: "{{ item.gpgcheck | default(false) }}"
-  loop: "{{ openhpc_repos }}"
-
-- name: Remove conflicting packages
-  yum:
-    name:
-      - pdsh
-      - Lmod
-      - lmod
-      - environment-modules
-    state: absent
-
-- name: Install OpenHPC base packages
-  yum:
-    name: "{{ openhpc_base_packages }}"
-    state: present
-    enablerepo: powertools
-
-- name: Install environment modules
+- name: Install environment modules on RHEL
   yum:
     name: "{{ envmodules_packages }}"
     state: present
+  when: not (openhpc_manages_modules | default(false))

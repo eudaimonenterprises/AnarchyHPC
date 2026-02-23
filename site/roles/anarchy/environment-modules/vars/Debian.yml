@@ -1,7 +1,4 @@
 ---
-openhpc_repos: []
-
-openhpc_base_packages: []
-
+# Debian/Ubuntu-specific environment-modules defaults
 envmodules_packages:
   - environment-modules

@@ -1,0 +1,54 @@
+---
+# Determine whether OpenHPC Slurm should be used
+- name: Determine Slurm installation mode
+  set_fact:
+    use_openhpc_slurm: >
+      {{ enable_openhpc
+         and slurm_packages_ohpc | length > 0 }}
+
+# ============================================================
+#  Standard Slurm installation (fallback or no OpenHPC)
+# ============================================================
+
+- name: Install standard Slurm packages
+  when: not use_openhpc_slurm
+  block:
+
+    - name: Install Slurm packages on RHEL
+      yum:
+        name: "{{ slurm_packages }}"
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Install Slurm packages on SUSE
+      community.general.zypper:
+        name: "{{ slurm_packages }}"
+        state: present
+      when: ansible_os_family == "Suse"
+
+    - name: Install Slurm packages on Debian/Ubuntu
+      apt:
+        name: "{{ slurm_packages }}"
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+
+
+# ============================================================
+#  OpenHPC Slurm installation (only if available)
+# ============================================================
+
+- name: Install Slurm from OpenHPC
+  when: use_openhpc_slurm
+  block:
+
+    - name: Remove standard Slurm packages
+      ansible.builtin.package:
+        name: "{{ slurm_packages }}"
+        state: absent
+
+    - name: Install OpenHPC Slurm packages
+      ansible.builtin.package:
+        name: "{{ slurm_packages_ohpc }}"
+        state: present
