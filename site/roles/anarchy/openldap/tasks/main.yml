@@ -1,4 +1,11 @@
 ---
+- name: Abort on unsupported SUSE Leap 16
+  fail:
+    msg: "openSUSE Leap 16 is not supported by this OpenLDAP role."
+  when:
+    - ansible_os_family == "Suse"
+    - ansible_distribution_major_version | int >= 16
+
 - name: Load OS‑specific OpenLDAP vars
   include_vars: "{{ item }}"
   with_first_found:

@@ -1,99 +1,21 @@
 ---
-# Unified, safe, deterministic OpenLDAP service management
-# --------------------------------------------------------
-# This file now:
-#   • Stops slapd BEFORE touching ldapi
-#   • Cleans ldapi safely
-#   • Flushes handlers only AFTER slapd is fully stopped
-#   • Starts slapd exactly once (non‑HA)
-#   • Leaves HA control to Pacemaker
-#   • Owns the slapd unit on SUSE (vendor unit was broken)
-
 ###############################################################################
-# 1. SUSE: install fixed slapd.service with LDAPS
+# Unified OpenLDAP service management for all distros EXCEPT openSUSE Leap 16
 ###############################################################################
 
-- name: Install fixed slapd.service unit (SUSE, non-HA)
-  copy:
-    dest: /usr/lib/systemd/system/slapd.service
-    owner: root
-    group: root
-    mode: '0644'
-    content: |
-      [Unit]
-      Description=OpenLDAP Server Daemon
-      After=syslog.target network.target
-
-      [Service]
-      Type=forking
-      EnvironmentFile=-/etc/sysconfig/openldap
-      ExecStart=/usr/sbin/slapd -h "ldaps:/// ldapi:///" -F {{ openldap_server_conf_path }}
-
-      [Install]
-      WantedBy=multi-user.target
+# Abort on Leap 16 (requires separate hack stack)
+- name: Abort on unsupported SUSE Leap 16
+  fail:
+    msg: "openSUSE Leap 16 requires a separate OpenLDAP service stack and is not supported by this service.yml."
   when:
     - ansible_os_family == "Suse"
-    - not ha | default(false)
-  notify:
-    - daemon-reload
-    - restart openldap
+    - ansible_distribution_major_version | int >= 16
 
 ###############################################################################
-# 2. STOP SLAPD BEFORE ANY LDAPI CLEANUP
-###############################################################################
-# This is the critical fix. We must take full control of slapd BEFORE touching
-# /run/slapd/ldapi, otherwise systemd or slapd may recreate it mid‑run.
-
-- name: Stop slapd before ldapi cleanup (non‑HA)
-  systemd:
-    name: slapd
-    state: stopped
-    enabled: false
-  when:
-    - not ha | default(false)
-
-
-###############################################################################
-# 3. ldapi socket cleanup (safe now that slapd is stopped)
+# Non‑HA mode — normal systemd management
 ###############################################################################
 
-- name: Ensure ldapi directory exists
-  file:
-    path: /run/slapd
-    state: directory
-    owner: "{{ openldap_default_user }}"
-    group: "{{ openldap_default_group }}"
-    mode: '0750'
-
-- name: Remove stale ldapi socket
-  file:
-    path: /run/slapd/ldapi
-    state: absent
-
-
-###############################################################################
-# 4. Flush handlers AFTER slapd is stopped and ldapi is clean
-###############################################################################
-
-# OpenLDAP ldapi socket cleanup (critical)
-# ---------------------------------------
-# /run is a tmpfs on all distros, so the ldapi socket and its parent directory
-# disappear on reboot and are NOT recreated by slaptest or slapadd. If slapd.d
-# is regenerated or slapd is restarted without ensuring this directory exists,
-# slapd may fail to bind ldapi:/// or leave behind a stale socket. This breaks
-# EXTERNAL authentication, causes ldapsearch/ldapmodify -Y EXTERNAL to fail,
-# and can confuse systemd or Pacemaker during startup. These tasks ensure the
-# directory exists and any stale socket is removed before slapd starts.
-
-
-- meta: flush_handlers
-
-
-###############################################################################
-# 5. Start slapd (non‑HA)
-###############################################################################
-
-- name: Start OpenLDAP service (non‑HA primary)
+- name: Start and enable slapd (non‑HA primary)
   systemd:
     name: slapd
     state: started
@@ -102,9 +24,16 @@
     - not ha | default(false)
     - primary | default(true)
 
+- name: Enable slapd on non‑HA secondaries
+  systemd:
+    name: slapd
+    enabled: true
+  when:
+    - not ha | default(false)
+    - not primary | default(false)
 
 ###############################################################################
-# 6. HA mode: disable local slapd, register Pacemaker resource
+# HA mode — disable local slapd and register Pacemaker resource
 ###############################################################################
 
 - block:
@@ -115,15 +44,14 @@
         state: stopped
         enabled: false
 
-    - name: Add Pacemaker resource (SUSE)
+    - name: Register OpenLDAP as a Pacemaker resource
       pcs_resource:
         name: openldap
         resource_class: systemd
         resource_type: systemd:slapd
         options: "meta migration-threshold=3 failure-timeout=120s op monitor interval=30 --group Anarchy-stack"
         state: present
-      when:
-        - ansible_os_family == "Suse"
-        - primary | default(true)
+      when: primary | default(true)
 
-  when: ha | default(false)
+  when:
+    - ha | default(false)

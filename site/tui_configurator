@@ -310,10 +310,14 @@ else
   fi
 fi
 
-REMOTE_OS=$(ssh -i "$SSH_KEY_PATH" -o BatchMode=yes \
-    "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
-    "awk -F= '/^ID=/{print \$2}' /etc/os-release | tr -d '\"'")
+# Extract ID and VERSION_ID in one SSH call
+read -r REMOTE_OS REMOTE_OS_VERSION <<< "$(
+    ssh -i "$SSH_KEY_PATH" -o BatchMode=yes \
+        "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
+        "awk -F= '/^(ID|VERSION_ID)=/{gsub(/\"/,\"\",\$2); print \$2}' /etc/os-release"
+)"
 
+# Normalize OS family
 REMOTE_OS_FAMILY=$(echo "$REMOTE_OS" | tr '[:upper:]' '[:lower:]')
 
 case "$REMOTE_OS_FAMILY" in
@@ -321,6 +325,17 @@ case "$REMOTE_OS_FAMILY" in
     opensuse*|suse*)             REMOTE_OS_FAMILY="opensuse" ;;
     ubuntu)                      REMOTE_OS_FAMILY="ubuntu" ;;
 esac
+
+# Abort immediately on openSUSE Leap 16
+if [[ "$REMOTE_OS_FAMILY" == "opensuse" ]]; then
+    MAJOR_VERSION="${REMOTE_OS_VERSION%%.*}"
+
+    if [[ "$MAJOR_VERSION" -ge 16 ]]; then
+        echo "FATAL: openSUSE Leap 16 is not supported."
+        echo "This cluster system requires a functional OpenLDAP server, which Leap 16 does not yet provide."
+        exit 1
+    fi
+fi
 
 echo
 echo "Checking for SFTP/SCP support on controller..."
@@ -352,13 +367,18 @@ if [[ "$SFTP_ENABLED" == "no" ]]; then
 
         opensuse)
             # Fix incorrect SFTP subsystem in SUSE's main sshd_config
-            echo "Fixing SFTP/SCP support on controller..."
-            ssh -t -i "$SSH_KEY_PATH" \
-                -o PreferredAuthentications=keyboard-interactive,password \
-                -o PubkeyAuthentication=yes \
-                "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
-                "sudo sed -i 's|/usr/libexec/openssh/sftp-server|/usr/libexec/ssh/sftp-server|' /etc/ssh/sshd_config &&
-                sudo systemctl restart sshd"
+            echo "SFTP/SCP support hack for openSUSE Leap 16 for controller installation in Ansible..."
+            echo -n "This will modify /etc/ssh/sshd_config on the remote host and restart SSHD. Proceed? [y/N]: "
+            read -r CONFIRM
+
+            if [[ "$CONFIRM" =~ ^[Yy]$ ]]; then
+                ssh -t -i "$SSH_KEY_PATH" \
+                    -o PreferredAuthentications=keyboard-interactive,password \
+                    -o PubkeyAuthentication=yes \
+                    "${CONTROLLER_USER}@${CONTROLLER_HOST}" \
+                    "sudo sed -i 's|/usr/libexec/openssh/sftp-server|/usr/libexec/ssh/sftp-server|' /etc/ssh/sshd_config &&
+                    sudo systemctl restart sshd"
+            fi
 
             ###############################################################################
             # OpenLDAP Automated Bootstrap Script
@@ -384,8 +404,7 @@ if [[ "$SFTP_ENABLED" == "no" ]]; then
             # slapd starts cleanly even after crashes, reboots, or partial configuration.
             ###############################################################################
 
-
-            read -p "Run full OpenLDAP bootstrap on ${CONTROLLER_HOST}? [y/N]: " RUN_BOOTSTRAP
+            read -p "Run OpenLDAP bootstrap hack for openSUSE Leap 16 ${CONTROLLER_HOST}? [y/N]: " RUN_BOOTSTRAP
             RUN_BOOTSTRAP=${RUN_BOOTSTRAP:-N}
             if [[ "$RUN_BOOTSTRAP" =~ ^[Yy]$ ]]; then
 
@@ -534,7 +553,7 @@ EOF
             # overwriting vendor files in /usr/lib/systemd/system.
             # ======================================================================
 
-            read -p "Create systemd override for slapd? [y/N]: " RUN_OVERRIDE
+            read -p "Create systemd override hack for openSUSE Leap 16 slapd? [y/N]: " RUN_OVERRIDE
             RUN_OVERRIDE=${RUN_OVERRIDE:-N}
 
             if [[ "$RUN_OVERRIDE" =~ ^[Yy]$ ]]; then

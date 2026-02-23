@@ -2,15 +2,18 @@
 tunables_packages:
   - tuned
   - tuned-utils
-  - tuned-profiles-cpu-partitioning
-  - tuned-profiles-compat
-  - tuned-profiles-sap
-  - tuned-profiles-virtual-host
-  - tuned-profiles-virtual-guest
+  - tuned-gtk
+  - tuned-profiles-atomic
+  - tuned-profiles-nfv
+  - tuned-profiles-oracle
+  - tuned-profiles-realtime
+  - tuned-utils-systemtap
   - sysstat
-  - numactl
   - lvm2
-  - ethtool
 
-compute_tuned_profile: "hpc-compute"
+# SUSE does NOT ship 'hpc-compute'
+# Best SUSE equivalent for compute nodes is 'latency-performance'
+compute_tuned_profile: "latency-performance"
+
+# This one *is* available on SUSE and appropriate for controllers
 controller_tuned_profile: "throughput-performance"

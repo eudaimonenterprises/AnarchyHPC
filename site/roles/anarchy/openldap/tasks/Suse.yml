@@ -1,123 +1,89 @@
 ---
+- name: Abort on unsupported SUSE Leap 16
+  fail:
+    msg: "openSUSE Leap 16 requires a separate OpenLDAP stack."
+  when:
+    - ansible_distribution_major_version | int >= 16
+
 ###############################################################################
-# SUSE: Install packages
+# SUSE Leap 15 — Clean, stable OpenLDAP stack
 ###############################################################################
 
-- name: Install OpenLDAP packages (SUSE)
+# Install required packages
+- name: Install OpenLDAP packages (SUSE Leap 15)
+  when:
+    - ansible_distribution_major_version | int <= 15
   zypper:
     name:
       - openldap2
       - openldap2-client
+      - openldap2-server
       - cyrus-sasl
     state: present
 
 ###############################################################################
-# SUSE: Cluster CA handling (shared include)
+# TLS CA configuration (Leap 15 uses system CA bundle)
 ###############################################################################
 
-#- include_tasks: ca.yml
-
-###############################################################################
-# SUSE: TLS + defaults
-###############################################################################
-
-- name: Hash OpenLDAP root password
-  command: slappasswd -h {SSHA} -s {{ ldap_root_password }}
-  register: ldap_root_password_hash
-  changed_when: false
-  when: primary | default(true)
-
-- name: Set OpenLDAP root password facts
-  set_fact:
-    openldap_root_pwd: "{{ ldap_root_password }}"
-    ldap_root_password_hash: "{{ ldap_root_password_hash.stdout }}"
-  when: primary | default(true)
-
-###############################################################################
-# SUSE: sysconfig (script‑style)
-###############################################################################
-
-- name: Ensure SLAPD_URLS is set (SUSE)
-  lineinfile:
-    path: /etc/sysconfig/openldap
-    regexp: '^SLAPD_URLS='
-    line: 'SLAPD_URLS="{{ openldap_endpoints }}"'
-    create: true
-
-- name: Ensure SLAPD_CONFIG_BACKEND is config (SUSE)
-  lineinfile:
-    path: /etc/sysconfig/openldap
-    regexp: '^SLAPD_CONFIG_BACKEND='
-    line: 'SLAPD_CONFIG_BACKEND="config"'
-    create: true
-
-- name: Ensure SLAPD_CONF points to slapd.d (SUSE)
-  lineinfile:
-    path: /etc/sysconfig/openldap
-    regexp: '^SLAPD_CONF='
-    line: 'SLAPD_CONF="{{ openldap_server_conf_path }}"'
-
-###############################################################################
-# SUSE: Configure client TLS CA
-###############################################################################
-
-- name: Configure client TLS CA (SUSE)
+- name: Configure client TLS CA (Leap 15)
+  when: ansible_distribution_major_version | int <= 15
   lineinfile:
     path: /etc/openldap/ldap.conf
     regexp: '^TLS_CACERT'
     line: 'TLS_CACERT /etc/ssl/ca-bundle.pem'
 
 ###############################################################################
-# SUSE: slapd.d relocation (same logic as RHEL)
+# slapd.d relocation (Leap 15 supports this normally)
 ###############################################################################
 
-- name: Check default slapd.d path
+- name: Check default slapd.d path (Leap 15)
+  when: ansible_distribution_major_version | int <= 15
   stat:
     path: /etc/openldap/slapd.d
   register: default_openldap_path
 
 - block:
-    - name: Ensure custom config directory exists
+    - name: Ensure custom config directory exists (Leap 15)
       file:
         path: "{{ openldap_server_conf_path }}"
         state: directory
         owner: "{{ openldap_default_user }}"
         group: "{{ openldap_default_group }}"
 
-    - name: Copy default slapd.d to custom path
+    - name: Copy default slapd.d to custom path (Leap 15)
+      when: primary | default(true)
       shell: rsync -raW /etc/openldap/slapd.d/* {{ openldap_server_conf_path | quote }}
       args:
         creates: "{{ openldap_server_conf_path }}/cn=config.ldif"
-      when: primary | default(true)
 
-    - name: Remove default slapd.d
+    - name: Remove default slapd.d (Leap 15)
       file:
         path: /etc/openldap/slapd.d
         state: absent
 
-    - name: Symlink slapd.d to custom path
+    - name: Symlink slapd.d to custom path (Leap 15)
       file:
         src: "{{ openldap_server_conf_path }}"
         dest: /etc/openldap/slapd.d
         state: link
         force: true
+
   when:
-    openldap_server_conf_path != '/etc/openldap/slapd.d'
-    and default_openldap_path.stat.isdir
+    - ansible_distribution_major_version | int <= 15
+    - openldap_server_conf_path != '/etc/openldap/slapd.d'
+    - default_openldap_path.stat.isdir
 
 ###############################################################################
-# SUSE: Initial schema + config load
+# Schema installation (Leap 15 supports normal schema loading)
 ###############################################################################
 
 - block:
-    - name: Ensure data directory exists
+    - name: Ensure schema directory exists (Leap 15)
       file:
-        path: "{{ openldap_server_dir_path }}"
+        path: /etc/openldap/schema
         state: directory
-        owner: "{{ openldap_default_user }}"
-        group: "{{ openldap_default_group }}"
 
-    - name: Copy schemas
+    - name: Copy schemas (Leap 15)
       copy:
         src: "{{ item }}"
         dest: /etc/openldap/schema/
@@ -125,4 +91,7 @@
         - rfc2307bis.ldif
         - autoinc.ldif
         - local_schema.ldif
-  when: primary | default(true)
+
+  when:
+    - ansible_distribution_major_version | int <= 15
+    - primary | default(true)

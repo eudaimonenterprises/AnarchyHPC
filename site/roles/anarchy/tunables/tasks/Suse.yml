@@ -7,6 +7,15 @@
     name: "{{ tunables_packages }}"
     state: present
 
+# SUSE: ensure tuned daemon is running before applying profiles
+- name: Ensure tuned service is enabled and running (SUSE)
+  when:
+    - ansible_distribution_major_version | int <= 15
+  service:
+    name: tuned
+    enabled: yes
+    state: started
+
 # SUSE: limits + sysctl only on ≤ 15
 - name: Copy 91-hpc-limits.conf to /etc/security/limits.d
   when:
@@ -31,16 +40,16 @@
   notify: activate sysctls
 
 # SUSE: tuned-adm only on ≤ 15 (tuned removed in Leap 16)
-- name: Setting compute performance tuned profile (SUSE)
+- name: Apply compute tuned profile (SUSE)
   when:
     - ansible_distribution_major_version | int <= 15
-  shell: "tuned-adm profile {{ compute_tuned_profile | default('hpc-compute') }}"
+  shell: "tuned-adm profile {{ compute_tuned_profile }}"
   ignore_errors: true
 
-- name: Setting controller performance tuned profile (SUSE)
+- name: Apply controller tuned profile (SUSE)
   when:
     - ansible_distribution_major_version | int <= 15
-  shell: "tuned-adm profile {{ controller_tuned_profile | default('throughput-performance') }}"
+  shell: "tuned-adm profile {{ controller_tuned_profile }}"
   ignore_errors: true
 
 # SUSE: NFS tuning (controller only, all versions)
