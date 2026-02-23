@@ -34,6 +34,7 @@
         name: openhpc
         repo: "https://repos.openhpc.community/OpenHPC/3/Leap_15"
         autorefresh: yes
+        priority: 90        # <-- FIX GOES HERE
 
     - name: Add OpenHPC repo for SLES 15
       when:
@@ -43,6 +44,7 @@
         name: openhpc
         repo: "https://repos.openhpc.community/OpenHPC/3/SLE_15"
         autorefresh: yes
+        priority: 90        # <-- FIX GOES HERE
 
 
     ###########################################################################
@@ -54,32 +56,21 @@
 
 
     ###########################################################################
-    # 4. Install OpenHPC patterns
+    # 4. Install supporting tools (prefer OpenHPC versions when available)
     ###########################################################################
-    - name: Install OpenHPC base patterns
-      when:
-        - ansible_os_family == "Suse"
-        - ansible_distribution_major_version | int <= 15
-      zypper:
+    - name: Install Lmod from OpenHPC repo
+      community.general.zypper:
+        name: lmod-ohpc
+        state: present
+
+    - name: Install pdsh from OpenHPC repo
+      community.general.zypper:
         name:
-          - patterns-hpc-ohpc-base
-          - patterns-hpc-ohpc-compute
+          - pdsh-ohpc
+          - pdsh-mod-genders-ohpc
+          - pdsh-mod-slurm-ohpc
         state: present
 
-    ###########################################################################
-    # 5. Install supporting tools
-    ###########################################################################
-    - name: Install lmod
-      community.general.zypper:
-        name: lmod
-        state: present
-
-    - name: Install pdsh
-      community.general.zypper:
-        name: pdsh
-        state: present
-
-  # This block only runs when main.yml has already validated support
   when: openhpc_supported
 
 - name: Mark OpenHPC as managing the module system

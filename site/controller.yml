@@ -24,6 +24,7 @@
     - anarchy/resolv
     - anarchy/ssl-cert
     - anarchy/environment
+    - anarchy/openhpc
     - anarchy/environment-modules
     - anarchy/tunables
     - anarchy/logrotate
@@ -103,7 +104,6 @@
     # ------------------------------------------------------------
     # Optional HPC stacks (enable if needed)
     # ------------------------------------------------------------
-    # - anarchy/openhpc
     # - anarchy/easybuild
     # - anarchy/pbspro
     # - anarchy/kubernetes
