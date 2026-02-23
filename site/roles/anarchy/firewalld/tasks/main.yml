@@ -1,4 +1,14 @@
 ---
+- name: Determine network backend for firewalld
+  set_fact:
+    firewalld_network_backend: >-
+      {% if ansible_facts.os_family == 'Suse' and ansible_facts.distribution_major_version|int == 15 %}
+        wicked
+      {% elif ansible_facts.distribution == 'Ubuntu' and ansible_facts.id == 'ubuntu' and ansible_facts.cmdline.initrd is not defined %}
+        systemd-networkd
+      {% else %}
+        NetworkManager
+      {% endif %}
 
 - name: Loading controller firewall role
   include_tasks: "controller.yml"

@@ -178,8 +178,8 @@ anarchy_login_fqdn: ''
 # DNS forwarders. These should normally point to your organization's DNS servers.
 
 anarchy_dns_forwarders:
-  - "1.1.1.1"
-  - "1.0.0.1"
+  - '9.9.9.9'
+  - '149.112.112.112'
 
 
 # -----------------------------------------------------------------------

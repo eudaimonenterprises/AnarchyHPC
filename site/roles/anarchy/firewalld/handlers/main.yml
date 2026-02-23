@@ -5,11 +5,12 @@
     name: firewalld
     state: reloaded
 
-- name: reload NetworkManager
+- name: reload network backend
   service:
-    name: NetworkManager
+    name: "{{ firewalld_network_backend }}"
     state: restarted
   listen: reload firewalld
+  when: firewalld_network_backend == 'NetworkManager'
 
 - name: fix firewall zones
   shell: /tmp/fix-firewalld-zones.sh

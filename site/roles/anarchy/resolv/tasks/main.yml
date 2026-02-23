@@ -1,5 +1,15 @@
 ---
 # tasks file for resolv
+- name: Determine network backend for resolv
+  set_fact:
+    resolv_network_backend: >-
+      {% if ansible_facts.os_family == 'Suse' and ansible_facts.distribution_major_version|int == 15 %}
+        wicked
+      {% elif ansible_facts.distribution == 'Ubuntu' and ansible_facts.id == 'ubuntu' and ansible_facts.cmdline.initrd is not defined %}
+        systemd-networkd
+      {% else %}
+        NetworkManager
+      {% endif %}
 
 - name: Disable NetworkManager managing /etc/resolv.conf
   ini_file:
@@ -14,6 +24,7 @@
     mode: 0644
     backup: yes
   notify: reload NetworkManager
+  when: resolv_network_backend == 'NetworkManager'
 
 - name: Render /etc/resolv.conf
   template:
@@ -21,3 +32,4 @@
     dest: "/etc/resolv.conf"
     backup: "yes"
   notify: reload NetworkManager
+  when: resolv_network_backend == 'NetworkManager'

@@ -3,8 +3,8 @@
 
 # forwarders go into resolv.conf
 bind_dns_forwarders:
-  - '8.8.8.8'
-  - '8.8.4.4'
+  - '9.9.9.9'
+  - '149.112.112.112'
 
 resolv_server: '127.0.0.1'
 anarchy_resolv_search_domains: '{{ anarchy_domain }} ipmi'

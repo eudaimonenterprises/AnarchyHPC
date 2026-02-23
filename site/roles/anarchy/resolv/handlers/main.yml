@@ -4,3 +4,4 @@
   service:
     name: NetworkManager
     state: reloaded
+  when: resolv_network_backend == 'NetworkManager'
