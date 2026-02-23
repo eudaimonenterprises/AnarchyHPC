@@ -17,7 +17,6 @@
     name:
       - openldap2
       - openldap2-client
-      - openldap2-server
       - cyrus-sasl
     state: present
 

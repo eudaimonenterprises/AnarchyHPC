@@ -1,7 +1,4 @@
 ---
-# Where generated certificates will be stored
-ssl_cert_path: '/etc/ssl/certs'
-
 # Certificate subject information
 ssl_cert_country: ''
 ssl_cert_state: ''

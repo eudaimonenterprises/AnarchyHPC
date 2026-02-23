@@ -29,7 +29,6 @@ ds389_host: "{{ ansible_fqdn }}"
 ds389_default_user: dirsrv
 ds389_default_group: dirsrv
 
-ssl_cert_path: '/etc/ssl/certs'
 ssl_cert_group: '{{ ds389_default_user }}'
 
 ds389_tls_cacrt: '{{ ssl_ca_cert }}'

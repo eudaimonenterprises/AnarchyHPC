@@ -16,7 +16,6 @@ openldap_server_defaults_file: /etc/sysconfig/slapd
 openldap_endpoints: ldaps:/// ldapi:///
 openldap_host: 'controller.cluster'
 
-ssl_cert_path: '/etc/ssl/certs'
 ssl_cert_group: '{{ openldap_default_user }}'
 
 openldap_tls_cacrt: '{{ ssl_ca_cert }}'

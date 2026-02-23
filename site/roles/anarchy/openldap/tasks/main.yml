@@ -15,6 +15,22 @@
     - "default.yaml"
 
 ###############################################################################
+# Distro-specific OpenLDAP stacks (unchanged for now)
+###############################################################################
+
+- name: Run OpenLDAP stack for RedHat
+  include_tasks: RedHat.yml
+  when: ansible_os_family == "RedHat"
+
+- name: Run OpenLDAP stack for SUSE
+  include_tasks: Suse.yml
+  when: ansible_os_family == "Suse"
+
+- name: Run OpenLDAP stack for Debian/Ubuntu
+  include_tasks: Debian.yml
+  when: ansible_os_family == "Debian"
+
+###############################################################################
 # Password handling
 ###############################################################################
 
@@ -67,18 +83,3 @@
 - name: Initialize LDAP database
   include_tasks: database.yml
 
-###############################################################################
-# Distro-specific OpenLDAP stacks (unchanged for now)
-###############################################################################
-
-- name: Run OpenLDAP stack for RedHat
-  include_tasks: RedHat.yml
-  when: ansible_os_family == "RedHat"
-
-- name: Run OpenLDAP stack for SUSE
-  include_tasks: Suse.yml
-  when: ansible_os_family == "Suse"
-
-- name: Run OpenLDAP stack for Debian/Ubuntu
-  include_tasks: Debian.yml
-  when: ansible_os_family == "Debian"

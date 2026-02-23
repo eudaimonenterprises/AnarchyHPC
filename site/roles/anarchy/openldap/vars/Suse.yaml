@@ -3,7 +3,6 @@
 openldap_packages:
   - openldap2
   - openldap2-client
-  - openldap2-server
   - cyrus-sasl
 
 openldap_default_user: ldap
