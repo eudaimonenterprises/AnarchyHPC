@@ -29,7 +29,7 @@
   lineinfile:
     path: /etc/openldap/ldap.conf
     regexp: '^TLS_CACERT'
-    line: 'TLS_CACERT /etc/ssl/ca-bundle.pem'
+    line: 'TLS_CACERT {{ ssl_ca_cert }}'
 
 ###############################################################################
 # slapd.d relocation (Leap 15 supports this normally)

@@ -17,7 +17,7 @@
   set_fact:
     obol_ldap_cacert: >-
       {% if ansible_os_family == 'Suse' %}
-        /etc/ssl/ca-bundle.pem
+        {{ ssl_ca_cert }}
       {% elif ansible_os_family == 'RedHat' %}
         /etc/pki/tls/certs/ca-bundle.crt
       {% elif ansible_os_family == 'Debian' %}

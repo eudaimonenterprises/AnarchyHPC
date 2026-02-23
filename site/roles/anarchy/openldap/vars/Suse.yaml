@@ -16,7 +16,7 @@ openldap_conf_file: /etc/openldap/slapd.conf
 openldap_schema_path: /etc/openldap/schema
 
 # SUSE uses the system CA bundle, not /etc/openldap/certs
-openldap_tls_cacrt: /etc/ssl/ca-bundle.pem
+openldap_tls_cacrt: '{{ ssl_ca_cert }}'
 
 # Group that owns system CA files
 ssl_cert_group: trusted
