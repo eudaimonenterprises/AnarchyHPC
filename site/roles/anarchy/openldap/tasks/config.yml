@@ -68,3 +68,11 @@
   notify:
     - daemon-reload
     - restart openldap
+
+# Ensure slapd.d is root-owned (critical)
+- name: Ensure slapd.d ownership is root:root
+  file:
+    path: "{{ openldap_server_conf_path }}"
+    owner: root
+    group: root
+    recurse: yes
