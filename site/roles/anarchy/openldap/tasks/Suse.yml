@@ -94,3 +94,36 @@
   when:
     - ansible_distribution_major_version | int <= 15
     - primary | default(true)
+
+###############################################################################
+# 3.5 Enable LDAPS listener (SUSE-specific)
+###############################################################################
+
+- name: Ensure /etc/sysconfig/openldap exists
+  file:
+    path: /etc/sysconfig/openldap
+    state: touch
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Enable LDAPS in SUSE OpenLDAP
+  lineinfile:
+    path: /etc/sysconfig/openldap
+    regexp: '^OPENLDAP_START_LDAPS='
+    line: 'OPENLDAP_START_LDAPS="yes"'
+    create: yes
+
+- name: Ensure LDAP listener is enabled
+  lineinfile:
+    path: /etc/sysconfig/openldap
+    regexp: '^OPENLDAP_START_LDAP='
+    line: 'OPENLDAP_START_LDAP="yes"'
+    create: yes
+
+- name: Ensure LDAPI listener is enabled
+  lineinfile:
+    path: /etc/sysconfig/openldap
+    regexp: '^OPENLDAP_START_LDAPI='
+    line: 'OPENLDAP_START_LDAPI="yes"'
+    create: yes

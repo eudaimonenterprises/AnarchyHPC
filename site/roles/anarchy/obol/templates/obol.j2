@@ -1167,7 +1167,7 @@ def run():
         logging.info(f"Executing command '{logged_cmd}'")
 
         args = vars(parser.parse_args())
-        obol = Obol("/etc/obol.conf", overrides=args)
+        obol = Obol("/etc/obol/obol.conf", overrides=args)
 
         method_name = f"{args['command']}_{ args.get('subcommand', '')}"
         function = getattr(obol, method_name, None)

@@ -111,7 +111,7 @@
     - ansible_facts['os_family'] == "RedHat"
     - ansible_facts['distribution_major_version']|int > 9
 
-- name: Adding access controler groups to the system
+- name: Adding access controller groups to the system
   shell: '/usr/local/sbin/obol group list | grep {{ item }} || /usr/local/sbin/obol group add {{ item }}'
   register: obol_result
   with_items: '{{ sss_allowed_groups }}'
