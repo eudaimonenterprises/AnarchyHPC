@@ -12,20 +12,20 @@ changetype: add
 objectClass: olcDatabaseConfig
 objectClass: olcMetaConfig
 olcDatabase: meta
-olcSuffix: dc=cluster
+olcSuffix: {{ openldap_suffix }}
 olcAddContentAcl: FALSE
-olcRootDN: cn=manager,dc=cluster
+olcRootDN: {{ openldap_rootdn }}
 olcRootPW: {{ ldap_root_password_hash.stdout }}
 
 dn: olcMetaSub={0}uri,olcDatabase={2}meta,cn=config
 changetype: add
 objectClass: olcMetaTargetConfig
 olcMetaSub: {0}uri
-olcDbURI: "ldapi:///{{ openldap_suffix }},dc=cluster" ldaps://{{ inventory_hostname }}
+olcDbURI: "ldapi:///{{ openldap_suffix }}" ldaps://{{ inventory_hostname }}
 olcDbIDAssertAuthzFrom: dn:{{ openldap_rootdn }}
 olcDbIDAssertBind: mode=self
   flags=non-prescriptive
   bindmethod=simple
   binddn="{{ openldap_rootdn }}"
   credentials={{ obol_ldap_password }}
-olcDbRewrite: {0}suffixmassage "{{ openldap_suffix }},dc=cluster" "{{ openldap_suffix }}"
+olcDbRewrite: {0}suffixmassage "{{ openldap_suffix }}" "{{ openldap_suffix }}"
