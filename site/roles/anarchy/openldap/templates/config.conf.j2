@@ -1,0 +1,8 @@
+include         /etc/openldap/schema/core.schema
+
+pidfile         /var/run/slapd.pid
+argsfile        /var/run/slapd.args
+
+# This creates ONLY the config database (DB 0)
+database        config
+rootdn          "cn=config"

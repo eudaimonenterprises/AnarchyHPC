@@ -21,6 +21,7 @@ rootdn      "{{ openldap_rootdn }}"
 rootpw      {{ ldap_root_password_hash.stdout }}
 
 directory   {{ openldap_server_dir_path }}
+maxsize     1073741824
 
 index default eq,sub
 index cn,uid,givenName,sn eq,sub

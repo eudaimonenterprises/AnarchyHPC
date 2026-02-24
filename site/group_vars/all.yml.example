@@ -422,6 +422,31 @@ ssl_cert_group: ssl
 
 anarchy_ldap_backend: 'openldap'
 
+
+# The LDAP suffix (base DN) for the directory.
+# This value defines the root naming context of the LDAP tree.
+#
+# Why this is required:
+#   - slapd.conf, init.ldif, and ldapsearch must all use the same suffix
+#   - The database initialization logic depends on this DN
+#
+# What can be changed in the future:
+#   - You *can* replace this with any valid DN, e.g. "dc=example,dc=com"
+#   - You *can* make it environment-specific (prod/dev/test) via inventory
+#   - You *can* derive it dynamically from a domain name if desired
+#
+# IMPORTANT:
+#   Changing this value AFTER the LDAP database has been initialized
+#   will NOT automatically migrate the existing data.
+#   If the suffix changes later, you must:
+#     1. Export the DB with slapcat
+#     2. Rewrite all DNs to the new suffix
+#     3. Re-import with slapadd
+#
+# In short: this value is flexible BEFORE initialization, but changing it
+# later requires a full DN migration.
+
+
 # Global LDAP identity (used by all OpenLDAP roles)
 openldap_suffix: "dc=local"
 openldap_rootdn: "cn=Manager,{{ openldap_suffix }}"

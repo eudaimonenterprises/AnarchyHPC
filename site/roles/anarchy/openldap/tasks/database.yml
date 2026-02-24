@@ -97,8 +97,7 @@
         runuser -u {{ openldap_default_user }} -- \
         /usr/sbin/slapadd -n 1 -F {{ openldap_server_conf_path }} -l /tmp/init.ldif
       become: true
-
-
+      
     ###########################################################################
     # Restore slapd.d ownership to root:root
     ###########################################################################

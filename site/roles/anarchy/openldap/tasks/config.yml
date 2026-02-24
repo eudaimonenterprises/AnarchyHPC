@@ -30,6 +30,18 @@
   changed_when: false
   when: primary | default(true)
 
+  ###############################################################################
+# Render config.conf
+###############################################################################
+
+- name: Render OpenLDAP configuration file (config.conf)
+  template:
+    src: config.conf.j2
+    dest: "{{ openldap_config_conf_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+
 ###############################################################################
 # Render slapd.conf
 ###############################################################################
@@ -80,9 +92,7 @@
 ###############################################################################
 
 - name: Remove existing slapd.d directory when regeneration needed
-  file:
-    path: "{{ openldap_server_conf_path }}"
-    state: absent
+  command: rm -rf {{ openldap_server_conf_path }}
   when:
     - primary | default(true)
     - slapd_conf_rendered.changed or slapd_d_missing
@@ -98,7 +108,41 @@
     - primary | default(true)
     - slapd_conf_rendered.changed or slapd_d_missing
 
-# DO NOT CHOWN TO LDAP BEFORE slaptest — THIS WAS THE BUG
+- name: Verify slapd.d is empty
+  find:
+    paths: "{{ openldap_server_conf_path }}"
+    file_type: any
+  register: slapd_d_contents
+  when: primary | default(true)
+
+- name: Abort if slapd.d is not empty
+  fail:
+    msg: "slapd.d is NOT empty — something recreated files before slaptest!"
+  when:
+    - primary | default(true)
+    - slapd_d_contents.matched > 0
+
+- name: Recreate LDAP database directory (root-owned for slaptest)
+  file:
+    path: "{{ openldap_server_dir_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0770'
+  when:
+    - primary | default(true)
+    - slapd_conf_rendered.changed or slapd_d_missing
+
+
+# Generate slapd.d from config.conf (NO -u)
+- name: Generate slapd.d from config.conf (actual write)
+  command: >
+    slaptest
+      -f {{ openldap_config_conf_file }}
+      -F {{ openldap_server_conf_path }}
+  when:
+    - primary | default(true)
+    - slapd_conf_rendered.changed or slapd_d_missing
 
 # Generate slapd.d from slapd.conf (NO -u)
 - name: Generate slapd.d from slapd.conf (actual write)
