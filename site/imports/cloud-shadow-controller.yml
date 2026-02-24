@@ -37,7 +37,7 @@
         -newkey rsa:2048
         -keyout /etc/pki/tls/private/cluster.key
         -out /etc/pki/tls/certs/cluster.crt
-        -subj "/C=NL/ST=Noord-Holland/L=Amsterdam/O=HPC/CN={{ inventory_hostname }}"
+        -subj "/C=NL/ST=Noord-Holland/L=Amsterdam/O=HPC/CN={{ ansible_fqdn }}"
       args:
         creates: /etc/pki/tls/certs/cluster.crt
       tags: ssl-cert

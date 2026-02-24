@@ -79,7 +79,7 @@
       src: '{{ item.item["mount"] }}/'
       dest: '/mnt/{{ item.item["mount"] | replace("/","_") }}-temp/'
       recursive: yes
-    delegate_to: "{{ inventory_hostname }}"
+    delegate_to: "{{ ansible_fqdn }}"
     loop: "{{ shared_fs_zfs_partitions_mounted.results }}"
     when: item.rc != 0
 

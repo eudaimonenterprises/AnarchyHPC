@@ -56,7 +56,7 @@
     src: /etc/anarchy
     dest: "{{ anarchy_local }}/backup/"
     recursive: yes
-  delegate_to: "{{ inventory_hostname }}"
+  delegate_to: "{{ ansible_fqdn }}"
 
 - name: Backup group_vars to {{ anarchy_local }}/backup/group_vars
   copy:

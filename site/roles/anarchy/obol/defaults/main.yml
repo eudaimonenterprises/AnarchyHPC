@@ -6,6 +6,6 @@ obol_packages: []
 
 users_home_path: '/home'
 obol_conf_path: '/etc/obol'
-ldap_host: "{{ inventory_hostname }}"
+ldap_host: "{{ ansible_fqdn }}"
 
 obol_use_ds389: false
