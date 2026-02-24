@@ -11,7 +11,7 @@ bind_dn = cn=Directory Manager
 bind_pass = {{ ds389_root_pwd }}
 {% else %}
 bind_dn = {{ openldap_rootdn }}
-bind_pass = {{ openldap_root_pwd }}
+bind_pass = {{ obol_ldap_password }}
 {% endif %}
 base_dn = {{ openldap_suffix }}
 

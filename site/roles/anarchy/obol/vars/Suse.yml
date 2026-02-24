@@ -5,21 +5,21 @@
 # interpreter used by Obol (`/usr/bin/python3` → Python 3.13.x).
 #
 # Earlier versions of openSUSE (Leap 15.x, Tumbleweed snapshots before 2024)
-# used different naming conventions such as `python3-python-ldap` or
+# used different naming conventions such as `python3-ldap` or
 # version-specific builds for Python 3.10/3.11. These packages will NOT work
 # on Leap 16 because they install into a different Python version’s
 # site-packages directory.
 #
-# If this role is ever run on an older openSUSE release, the package name
+# If this role is ever run on a newer openSUSE release, the package name
 # may need to be adjusted to match the system Python version. The correct
 # package can always be discovered with:
 #
 #   zypper search -s python | grep -i ldap
 #
-# This role assumes Leap 16 or later, where `python313-ldap` is the correct
+# This role assumes Leap 15, where `python313-ldap` is the correct
 # dependency for Obol.
 
 obol_packages:
   - python3
-  - python313-ldap
+  - python3-ldap
   - openldap2-client

@@ -27,5 +27,5 @@ olcDbIDAssertBind: mode=self
   flags=non-prescriptive
   bindmethod=simple
   binddn="{{ openldap_rootdn }}"
-  credentials={{ openldap_root_pwd }}
+  credentials={{ obol_ldap_password }}
 olcDbRewrite: {0}suffixmassage "{{ openldap_suffix }},dc=cluster" "{{ openldap_suffix }}"

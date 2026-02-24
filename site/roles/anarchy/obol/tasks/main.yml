@@ -40,7 +40,7 @@
 - name: Warn if ldap module is missing before installation
   debug:
     msg: >
-      python3 cannot import ldap yet. Installing python313-ldap.
+      python3 cannot import ldap yet. Installing python3-ldap.
   when:
     - ansible_os_family == "Suse"
     - ldap_import.rc != 0
