@@ -63,18 +63,11 @@
   include_tasks: certs.yml
 
 ###############################################################################
-# OpenLDAP configuration (slapd.conf → slapd.d)
+# OpenLDAP configuration (slapd.conf → slapd.d) & Initial database import
 ###############################################################################
 
-- name: Configure OpenLDAP
-  include_tasks: config.yml
-
-###############################################################################
-# Initial database import (idempotent)
-###############################################################################
-
-- name: Initialize LDAP database
-  include_tasks: database.yml
+- name: LDAP database bootstrap
+  include_tasks: bootstrap.yml
 
 ###############################################################################
 # Service management (HA or non-HA)

@@ -1,0 +1,118 @@
+---
+###############################################################################
+# 0. Reset OpenLDAP state (wipe slapd.d + wipe MDB)
+###############################################################################
+
+- name: Stop slapd service
+  service:
+    name: slapd
+    state: stopped
+  failed_when: false
+
+- name: Remove slapd.d directory
+  file:
+    path: /etc/openldap/slapd.d
+    state: absent
+
+- name: Remove LDAP database directory
+  file:
+    path: /var/lib/ldap
+    state: absent
+
+- name: Recreate slapd.d directory
+  file:
+    path: /etc/openldap/slapd.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Recreate LDAP database directory
+  file:
+    path: /var/lib/ldap
+    state: directory
+    owner: ldap
+    group: ldap
+    mode: '0750'
+
+###############################################################################
+# 1. Hash root password (SSHA)
+###############################################################################
+
+- name: Hash OpenLDAP root password (SSHA)
+  command: slappasswd -h {SSHA} -s {{ ldap_root_password }}
+  register: ldap_root_password_hash
+  changed_when: false
+  when: primary | default(true)
+
+###############################################################################
+# 2. Render slapd.conf
+###############################################################################
+
+- name: Render slapd.conf
+  template:
+    src: slapd.conf.j2
+    dest: "{{ openldap_conf_file }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+###############################################################################
+# 3. Render init.ldif
+###############################################################################
+
+- name: Render initial LDIF
+  template:
+    src: init.ldif.j2
+    dest: /tmp/init.ldif
+    owner: ldap
+    group: ldap
+    mode: '0640'
+  when: primary | default(true)
+
+###############################################################################
+# 4. Start slapd (creates empty MDB)
+###############################################################################
+
+- name: Start slapd using slapd.conf
+  service:
+    name: slapd
+    state: started
+    enabled: yes
+
+###############################################################################
+# 5. Check if DB already initialized
+###############################################################################
+
+- name: Check if database already exists
+  command: >
+    ldapsearch -x -H ldap://127.0.0.1:389
+    -D "{{ openldap_rootdn }}"
+    -w {{ ldap_root_password }}
+    -b "{{ openldap_suffix }}" -s base '(objectClass=*)'
+  register: db_exists
+  changed_when: false
+  ignore_errors: true
+
+###############################################################################
+# 6. Load initial data (only if DB empty)
+###############################################################################
+
+- name: Load initial data via ldapadd
+  command: >
+    ldapadd -x
+    -D "{{ openldap_rootdn }}"
+    -w {{ ldap_root_password }}
+    -f /tmp/init.ldif
+  when:
+    - primary | default(true)
+    - db_exists.rc != 0
+
+###############################################################################
+# 7. Cleanup
+###############################################################################
+
+- name: Cleanup temporary LDIF file
+  file:
+    path: /tmp/init.ldif
+    state: absent

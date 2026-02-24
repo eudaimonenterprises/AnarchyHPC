@@ -6,9 +6,9 @@ include {{ openldap_schema_path }}/inetorgperson.schema
 include {{ openldap_schema_path }}/ppolicy.schema
 
 modulepath {{ openldap_server_module_path }}
-moduleload  back_{{ openldap_db_backend }}.so
-moduleload  ppolicy.so
-moduleload  memberof.so
+moduleload  back_{{ openldap_db_backend }}.la
+moduleload  ppolicy.la
+moduleload  memberof.la
 
 # TLS settings
 TLSCACertificateFile {{ openldap_tls_ca }}

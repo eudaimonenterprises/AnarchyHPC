@@ -20,6 +20,10 @@ dn: ou=Group,{{ openldap_suffix }}
 objectClass: organizationalUnit
 ou: Group
 
+dn: ou=Policies,{{ openldap_suffix }}
+objectClass: organizationalUnit
+ou: Policies
+
 {% if openldap_ppolicy_enabled | default(false) %}
 dn: cn=Default,ou=Policies,{{ openldap_suffix }}
 objectClass: top
