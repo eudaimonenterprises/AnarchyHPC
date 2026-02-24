@@ -1,12 +1,39 @@
 ---
+###############################################################################
+# Detect if slapd.d is missing or empty BEFORE anything else
+###############################################################################
+
+- name: Check if slapd.d directory exists
+  stat:
+    path: "{{ openldap_server_conf_path }}"
+  register: slapd_d_dir
+
+- name: Check if slapd.d contains any LDIF files
+  find:
+    paths: "{{ openldap_server_conf_path }}"
+    patterns: "*.ldif"
+    file_type: file
+  register: slapd_d_ldif_files
+  when: slapd_d_dir.stat.exists
+
+- name: Determine if slapd.d must be regenerated
+  set_fact:
+    slapd_d_missing: "{{ (not slapd_d_dir.stat.exists) or (slapd_d_ldif_files.matched == 0) }}"
+
+###############################################################################
 # Hash OpenLDAP root password (SSHA)
+###############################################################################
+
 - name: Hash OpenLDAP root password (SSHA)
   command: slappasswd -h {SSHA} -s {{ ldap_root_password }}
   register: ldap_root_password_hash
   changed_when: false
   when: primary | default(true)
 
+###############################################################################
 # Render slapd.conf
+###############################################################################
+
 - name: Render OpenLDAP configuration file (slapd.conf)
   template:
     src: slapd.conf.j2
@@ -15,64 +42,83 @@
     group: root
     mode: '0644'
   register: slapd_conf_rendered
-  notify:
-    - daemon-reload
-    - restart openldap
 
 ###############################################################################
-# SUSE‑SAFE SLAPD.D REGENERATION
-# --------------------------------
-# We only regenerate slapd.d when slapd.conf changed AND we are on the primary.
-# This avoids overwriting a live configuration on re-runs.
+# PREPARE SYSTEM FOR slaptest (SUSE‑required steps)
 ###############################################################################
 
-- name: Remove existing slapd.d directory (force clean regeneration)
-  file:
-    path: "{{ openldap_server_conf_path }}"
-    state: absent
-  when:
-    - primary | default(true)
-    - slapd_conf_rendered.changed
-  notify:
-    - daemon-reload
-    - restart openldap
+- name: Stop slapd before slaptest
+  service:
+    name: slapd
+    state: stopped
+  when: primary | default(true)
 
-- name: Recreate slapd.d directory
+- name: Ensure /run/slapd exists
   file:
-    path: "{{ openldap_server_conf_path }}"
-    state: directory
-    owner: root
-    group: root
-    mode: '0750'
-  when:
-    - primary | default(true)
-    - slapd_conf_rendered.changed
-
-- name: Ensure LDAP database directory exists
-  file:
-    path: "{{ openldap_server_dir_path }}"
+    path: /run/slapd
     state: directory
     owner: "{{ openldap_default_user }}"
     group: "{{ openldap_default_group }}"
     mode: '0750'
 
-# Convert slapd.conf → slapd.d
-- name: Generate slapd.d from slapd.conf
-  command: >
-    slaptest -u
-             -f {{ openldap_conf_file }}
-             -F {{ openldap_server_conf_path }}
-  when:
-    - primary | default(true)
-    - slapd_conf_rendered.changed
-  notify:
-    - daemon-reload
-    - restart openldap
-
-# Ensure slapd.d is root-owned (critical)
-- name: Ensure slapd.d ownership is root:root
+- name: Remove stale ldapi socket
   file:
-    path: "{{ openldap_server_conf_path }}"
+    path: /run/slapd/ldapi
+    state: absent
+
+# IMPORTANT: MDB REQUIRES ROOT OWNERSHIP DURING slaptest
+- name: Ensure LDAP database directory exists (root-owned for slaptest)
+  file:
+    path: "{{ openldap_server_dir_path }}"
+    state: directory
     owner: root
     group: root
+    mode: '0770'
+
+###############################################################################
+# Regenerate slapd.d when needed
+###############################################################################
+
+- name: Remove existing slapd.d directory when regeneration needed
+  file:
+    path: "{{ openldap_server_conf_path }}"
+    state: absent
+  when:
+    - primary | default(true)
+    - slapd_conf_rendered.changed or slapd_d_missing
+
+- name: Recreate slapd.d directory (root-owned for slaptest)
+  file:
+    path: "{{ openldap_server_conf_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+  when:
+    - primary | default(true)
+    - slapd_conf_rendered.changed or slapd_d_missing
+
+# DO NOT CHOWN TO LDAP BEFORE slaptest — THIS WAS THE BUG
+
+# Generate slapd.d from slapd.conf (NO -u)
+- name: Generate slapd.d from slapd.conf (actual write)
+  command: >
+    slaptest
+      -f {{ openldap_conf_file }}
+      -F {{ openldap_server_conf_path }}
+  when:
+    - primary | default(true)
+    - slapd_conf_rendered.changed or slapd_d_missing
+
+# NOW allow ldap to write slapd.d for slapadd
+- name: Temporarily allow ldap user to write slapd.d (for slapadd)
+  file:
+    path: "{{ openldap_server_conf_path }}"
+    owner: "{{ openldap_default_user }}"
+    group: "{{ openldap_default_group }}"
     recurse: yes
+  when:
+    - primary | default(true)
+    - slapd_conf_rendered.changed or slapd_d_missing
+
+# slapadd happens in database.yml — after that we restore ownership
