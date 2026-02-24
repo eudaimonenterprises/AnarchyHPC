@@ -60,17 +60,17 @@
   when: not ha|default(False)
 
 # Needs dnspython module. Available in RL,Alma,RH,C9, but not in 8. commented out for now. -Antoine
-#- name: Verify if i can resolve anarchy_anarchy_external_fqdn
+#- name: Verify if i can resolve anarchy_external_fqdn
 #  set_fact:
-#    anarchy_anarchy_external_fqdn_resolvable: "{{ query('community.general.dig', anarchy_anarchy_external_fqdn, '@'+anarchy_dns_forwarders|first) }}"
+#    anarchy_external_fqdn_resolvable: "{{ query('community.general.dig', anarchy_external_fqdn, '@'+anarchy_dns_forwarders|first) }}"
 #
-#- name: anarchy_anarchy_external_fqdn warning
+#- name: anarchy_external_fqdn warning
 #  fail:
-#    msg: "{{ anarchy_anarchy_external_fqdn }} is not resolvable! Please add an entry for {{ anarchy_anarchy_external_fqdn }} to /etc/hosts"
+#    msg: "{{ anarchy_external_fqdn }} is not resolvable! Please add an entry for {{ anarchy_external_fqdn }} to /etc/hosts"
 #  ignore_errors: true
 #  when:
-#    - anarchy_anarchy_external_fqdn_resolvable is iterable
-#    - '"NXDOMAIN" is in anarchy_anarchy_external_fqdn_resolvable'
+#    - anarchy_external_fqdn_resolvable is iterable
+#    - '"NXDOMAIN" is in anarchy_external_fqdn_resolvable'
 
 - name: Re-gather facts
   action: setup
