@@ -44,4 +44,4 @@ openldap_tls_key: '{{ ssl_cert_path }}/{{ anarchy_ctrl_hostname if ha else ansib
 #
 # In short: this value is flexible BEFORE initialization, but changing it
 # later requires a full DN migration.
-openldap_suffix: "dc=local"
+openldap_suffix: "{{ openldap_suffix }}"

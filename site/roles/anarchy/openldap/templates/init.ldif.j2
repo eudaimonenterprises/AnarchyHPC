@@ -1,27 +1,27 @@
-dn: dc=local
+dn: {{ openldap_suffix }}
 objectClass: top
 objectClass: dcObject
 objectClass: organization
 o: Anarchy Cluster
 dc: local
 
-dn: cn=Manager,dc=local
+dn: {{ openldap_rootdn }}
 objectClass: simpleSecurityObject
 objectClass: organizationalRole
 cn: Manager
 description: LDAP Administrator
 userPassword: {{ ldap_root_password_hash }}
 
-dn: ou=People,dc=local
+dn: ou=People,{{ openldap_suffix }}
 objectClass: organizationalUnit
 ou: People
 
-dn: ou=Group,dc=local
+dn: ou=Group,{{ openldap_suffix }}
 objectClass: organizationalUnit
 ou: Group
 
 {% if openldap_ppolicy_enabled | default(false) %}
-dn: cn=Default,ou=Policies,dc=local
+dn: cn=Default,ou=Policies,{{ openldap_suffix }}
 objectClass: top
 objectClass: pwdPolicy
 cn: Default

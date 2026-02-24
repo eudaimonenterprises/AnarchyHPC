@@ -39,14 +39,14 @@ dex:
         bindPW: {{ ds389_root_pwd }}
 {% endif %}
         userSearch:
-          baseDN: ou=People,dc=local
+          baseDN: ou=People,{{ openldap_suffix }}
           filter: "(objectClass=posixAccount)"
           username: uid
           emailAttr: uid
           idAttr: uid
           preferredUsernameAttr: uid
         groupSearch:
-          baseDN: ou=Group,dc=local
+          baseDN: ou=Group,{{ openldap_suffix }}
           filter: "(objectClass=posixGroup)"
           userMatchers:
             - userAttr: DN

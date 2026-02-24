@@ -36,12 +36,12 @@ ldap_default_authtok = {{ ds389_root_pwd }}
 ldap_group_member = uniqueMember
 {% endif %}
 
-ldap_search_base = dc=local
+ldap_search_base = {{ openldap_suffix }}
 ldap_network_timeout = 30
 
 ldap_access_order = {% if sss_filter_enabled %}filter,{% endif %}expire
 {% if sss_allowed_groups is iterable %}
-ldap_access_filter = {% for group in sss_allowed_groups %} (memberOf=cn={{ group }},ou=group,dc=local) {% endfor %}
+ldap_access_filter = {% for group in sss_allowed_groups %} (memberOf=cn={{ group }},ou=group,{{ openldap_suffix }}) {% endfor %}
 {% else %}
 ldap_access_filter = (&(objectclass=inetOrgPerson))
 {% endif %}

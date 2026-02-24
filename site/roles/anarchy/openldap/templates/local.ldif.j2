@@ -10,20 +10,20 @@ changetype: add
 objectClass: olcDatabaseConfig
 objectClass: olcHdbConfig
 olcDatabase: {1}hdb
-olcSuffix: dc=local
+olcSuffix: {{ openldap_suffix }}
 olcAccess: to attrs=userPassword,givenName,sn 
  by self write 
  by anonymous auth 
- by dn.base="cn=manager,dc=local" write 
+ by dn.base="{{ openldap_rootdn }}" write 
  by * none
 olcAccess: to * 
  by self read 
- by dn.base="cn=manager,dc=local" write 
+ by dn.base="{{ openldap_rootdn }}" write 
  by * read
 olcAccess: to * 
- by dn.base="cn=manager,dc=local" read 
+ by dn.base="{{ openldap_rootdn }}" read 
  by * none
-olcRootDN: cn=Manager,dc=local
+olcRootDN: {{ openldap_rootdn }}
 olcRootPW: {{ ldap_root_password_hash.stdout }}
 olcMonitoring: TRUE
 olcDbDirectory: {{ openldap_server_dir_path }}

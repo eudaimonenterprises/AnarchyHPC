@@ -10,7 +10,7 @@ objectClass: olcPPolicyConfig
 objectClass: olcOverlayConfig
 objectClass: top
 olcOverlay: ppolicy
-olcPPolicyDefault: cn=pwdDefaultPolicy,ou=Policies,dc=local
+olcPPolicyDefault: cn=pwdDefaultPolicy,ou=Policies,{{ openldap_suffix }}
 olcPPolicyHashCleartext: FALSE
 olcPPolicyUseLockout: FALSE
 olcPPolicyForwardUpdates: FALSE

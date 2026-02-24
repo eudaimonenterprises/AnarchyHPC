@@ -390,7 +390,7 @@
   - name: Check local schemas
     command: > 
       ldapsearch -x -H ldap://localhost -D "cn=Directory Manager"
-         -w {{ ds389_root_pwd }} -b "ou=Group,dc=local"
+         -w {{ ds389_root_pwd }} -b "ou=Group,{{ openldap_suffix }}"
     register: ds389_ldapsearch
     no_log: false
     ignore_errors: true

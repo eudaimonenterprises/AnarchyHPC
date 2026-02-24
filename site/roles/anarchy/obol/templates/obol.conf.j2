@@ -10,8 +10,8 @@ host = ldaps://{{ ldap_host }}
 bind_dn = cn=Directory Manager
 bind_pass = {{ ds389_root_pwd }}
 {% else %}
-bind_dn = cn=manager,dc=local
+bind_dn = {{ openldap_rootdn }}
 bind_pass = {{ openldap_root_pwd }}
 {% endif %}
-base_dn = dc=local
+base_dn = {{ openldap_suffix }}
 

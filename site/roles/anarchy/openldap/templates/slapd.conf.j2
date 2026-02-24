@@ -16,8 +16,8 @@ TLSCertificateFile   {{ openldap_tls_crt }}
 TLSCertificateKeyFile {{ openldap_tls_key }}
 
 database    {{ openldap_db_backend }}
-suffix      "dc=local"
-rootdn      "cn=Manager,dc=local"
+suffix      "{{ openldap_suffix }}"
+rootdn      "{{ openldap_rootdn }}"
 rootpw      {{ ldap_root_password_hash.stdout }}
 
 directory   {{ openldap_server_dir_path }}
@@ -29,16 +29,16 @@ index mail,objectClass eq
 access to attrs=userPassword
   by self write
   by anonymous auth
-  by dn.base="cn=Manager,dc=local" write
+  by dn.base="{{ openldap_rootdn }}" write
   by * none
 
 access to *
   by self read
-  by dn.base="cn=Manager,dc=local" write
+  by dn.base="{{ openldap_rootdn }}" write
   by * read
 
 overlay ppolicy
-ppolicy_default cn=Default,ou=Policies,dc=local
+ppolicy_default cn=Default,ou=Policies,{{ openldap_suffix }}
 ppolicy_hash_cleartext on
 ppolicy_use_lockout
 

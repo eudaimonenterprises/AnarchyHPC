@@ -19,9 +19,9 @@
   template:
     src: init.ldif.j2
     dest: /tmp/init.ldif
-    owner: root
-    group: root
-    mode: '0600'
+    owner: "{{ openldap_default_user }}"
+    group: "{{ openldap_default_group }}"
+    mode: '0640'
   when: primary | default(true)
 
 ###############################################################################
@@ -94,12 +94,10 @@
     ###########################################################################
     - name: Import initial database using slapd.d
       command: >
-        slapadd
-          -n 1
-          -F {{ openldap_server_conf_path }}
-          -l /tmp/init.ldif
+        runuser -u {{ openldap_default_user }} -- \
+        /usr/sbin/slapadd -n 1 -F {{ openldap_server_conf_path }} -l /tmp/init.ldif
       become: true
-      become_user: "{{ openldap_default_user }}"
+
 
     ###########################################################################
     # Restore slapd.d ownership to root:root

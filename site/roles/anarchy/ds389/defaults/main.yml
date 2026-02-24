@@ -17,7 +17,7 @@ ds389_packages:
 
 
 ds389_root_dn: "cn=Directory Manager"
-ds389_base_dn: "dc=local"
+ds389_base_dn: "{{ openldap_suffix }}"
 ds389_server_dir_path: "/var/lib/dirsrv/slapd-{{ ds389_instance_name }}"
 ds389_server_conf_path: "/etc/dirsrv/slapd-{{ ds389_instance_name }}"
 ds389_server_defaults_file: "/etc/dirsrv/slapd-{{ ds389_instance_name }}/dse.ldif"

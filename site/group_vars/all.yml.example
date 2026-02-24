@@ -422,6 +422,10 @@ ssl_cert_group: ssl
 
 anarchy_ldap_backend: 'openldap'
 
+# Global LDAP identity (used by all OpenLDAP roles)
+openldap_suffix: "dc=local"
+openldap_rootdn: "cn=Manager,{{ openldap_suffix }}"
+
 
 #########################################################################
 #                           Open Ondemand                               #

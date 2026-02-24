@@ -149,14 +149,14 @@
       notify: restart openldap
 
     - name: Check local schema
-      command: 'ldapsearch -H ldapi:// -Y EXTERNAL -b "dc=local" "cn=pwdDefaultPolicy,ou=Policies,dc=local"'
+      command: 'ldapsearch -H ldapi:// -Y EXTERNAL -b "{{ openldap_suffix }}" "cn=pwdDefaultPolicy,ou=Policies,{{ openldap_suffix }}"'
       register: ldapsearch
       failed_when: false
       changed_when: false
 
     - name: Load local schema
       command: >
-        ldapadd -x -H ldapi:// -D "cn=manager,dc=local" -w {{ ldap_root_password }}
+        ldapadd -x -H ldapi:// -D "{{ openldap_rootdn }}" -w {{ ldap_root_password }}
                                  -f /etc/ldap/schema/local_schema.ldif
       ignore_errors: true
       when: ldapsearch.rc == 32

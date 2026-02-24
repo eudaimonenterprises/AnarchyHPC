@@ -1,23 +1,23 @@
-dn: dc=local
+dn: {{ openldap_suffix }}
 dc: local
 objectClass: domain
 
-dn: ou=People,dc=local
+dn: ou=People,{{ openldap_suffix }}
 ou: People
 objectClass: top
 objectClass: organizationalUnit
 
-dn: ou=Group,dc=local
+dn: ou=Group,{{ openldap_suffix }}
 ou: Group
 objectClass: top
 objectClass: organizationalUnit
 
-#dn: cn=uid,dc=local
+#dn: cn=uid,{{ openldap_suffix }}
 #cn: uid
 #objectClass: uidNext
 #uidNumber: 1050
 #
-#dn: cn=gid,dc=local
+#dn: cn=gid,{{ openldap_suffix }}
 #cn: gid
 #objectClass: uidNext
 #uidNumber: 1050
