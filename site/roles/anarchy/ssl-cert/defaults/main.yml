@@ -4,7 +4,8 @@ ssl_cert_country: ''
 ssl_cert_state: ''
 ssl_cert_locality: ''
 ssl_cert_organization: ''
-ssl_cert_altname: 'controller.cluster'
+ssl_cert_altname: '{{ ansible_fqdn }}'
+ssl_cert_altip: '{{ ansible_default_ipv4.address }}'
 
 # Certificate lifetime (in days)
 ssl_cert_days: '3650'
