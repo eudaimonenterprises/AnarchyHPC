@@ -24,12 +24,30 @@
 # TLS CA configuration (Leap 15 uses system CA bundle)
 ###############################################################################
 
-- name: Configure client TLS CA (Leap 15)
-  when: ansible_distribution_major_version | int <= 15
+- name: Configure client TLS CA (SUSE)
   lineinfile:
     path: /etc/openldap/ldap.conf
     regexp: '^TLS_CACERT'
-    line: 'TLS_CACERT {{ ssl_ca_cert }}'
+    line: 'TLS_CACERT /etc/ssl/ca-bundle.pem'
+  when: ansible_os_family == "Suse"
+
+# >>> INSERT THE VERIFICATION BLOCK HERE <<<
+
+- name: Check that cluster CA is installed in trust anchors
+  stat:
+    path: "/etc/pki/trust/anchors/{{ ssl_ca_cert | basename }}"
+  register: trust_anchor_stat
+
+- name: Check that system CA bundle exists
+  stat:
+    path: /etc/ssl/ca-bundle.pem
+  register: ca_bundle_stat
+
+- name: Debug trust store status
+  debug:
+    msg: |
+      Trust anchor installed: {{ trust_anchor_stat.stat.exists }}
+      System CA bundle exists: {{ ca_bundle_stat.stat.exists }}
 
 ###############################################################################
 # slapd.d relocation (Leap 15 supports this normally)
