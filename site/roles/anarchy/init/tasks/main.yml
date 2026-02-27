@@ -124,62 +124,12 @@
       msg: "anarchy_ctrl_hostname: {{ anarchy_ctrl_hostname }}, anarchy_ctrl_ip: {{ anarchy_ctrl_ip }}"
     # we HAVE to make sure we determine who is primary, else a re-run of the playbook
     # at a later stage WILL cause trouble if there was a failover.
-  - name: Check which controller is primary (crmsh or pcs)
-    shell: |
-      if command -v crm >/dev/call 2>&1; then
-        # Suse/Debian logic using crmsh
-        crm resource status anarchy-ip | grep -m1 "Started" | awk '{print $NF}'
-      elif command -v pcs >/dev/null 2>&1; then
-        # RedHat logic using pcs
-        pcs resource status | grep -m1 -E 'anarchy-ip\s+' | awk -F'tarted ' '{ print $2 }'
-      else
-        echo "not_available"
-      fi
-    register: pcs_primary
-    ignore_errors: true
-    become: true
-
-  - name: Verify if primary override exists
-    stat:
-      path: /etc/anarchy/primary
-    register: stat_primary_file
-
-  - name: Using override to set who is primary
+  
+  - name: Enforce primary status from inventory
     set_fact:
-      primary_controller: "{{ lookup('file', '/etc/anarchy/primary') | trim }}"
-    when: stat_primary_file.stat.exists
+      primary: "{{ primary | default(False) | bool }}"
+    when: on_controller
 
-  - name: Check if this node is the primary controller based on override
-    set_fact:
-      primary: '{{ True if primary_controller in [ansible_hostname, ansible_fqdn, inventory_hostname] else False }}'
-    when:
-      - on_controller
-      - primary_controller is defined
-
-  - name: Check if this node is the primary controller based on ip or hostname
-    set_fact:
-      primary: >-
-        {{ True if anarchy_ctrl1_ip in ansible_all_ipv4_addresses
-          or anarchy_ctrl1_hostname in [ansible_hostname, ansible_fqdn, inventory_hostname]
-          else False }}
-    when:
-      - on_controller
-      - pcs_primary.stdout is not defined or pcs_primary.stdout == "not_available"
-      - primary_controller is not defined
-
-
-  - name: Check if this node is the primary controller based on pacemaker data
-    set_fact:
-      primary: '{{ True if pcs_primary.stdout in [ansible_hostname, ansible_fqdn, inventory_hostname] else False }}'
-      on_controller: true
-    when:
-      - pcs_primary is defined 
-      - pcs_primary.stdout != "not_available"
-
-  - name: Set primary false if we cannot confirm with confidence
-    set_fact:
-       primary: False
-    when: primary is not defined
 
   - debug:
       msg: "Primary: {{ primary }}, on_controller: {{ on_controller }}, in_cloud: {{ in_cloud }}, in_image: {{ in_image }}"
