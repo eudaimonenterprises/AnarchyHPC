@@ -52,6 +52,49 @@
   when: in_login_image | default(False) or
         ((primary | default(True) or in_cloud | default(False)) and on_controller | default(False))
 
+###############################################################################
+# 5. Sync CA to secondary controllers
+###############################################################################
+
+- block:
+
+  - name: Ensure SSL sync directory exists
+    file:
+      path: "{{ anarchy_sync }}/ssl"
+      state: directory
+
+  - name: Copy CA to sync directory
+    copy:
+      remote_src: true
+      src: "{{ ssl_cert_path }}/{{ item }}"
+      dest: "{{ anarchy_sync }}/ssl/{{ item }}"
+      mode: "0640"
+    loop:
+      - "{{ ssl_ca_cert | basename }}"
+      - "{{ ssl_ca_key | basename }}"
+
+  when:
+    - primary | default(True)
+    - ha | default(False)
+    - on_controller | default(False)
+    - not in_image
+
+
+- name: Ensure CA is available in sync directory
+  stat:
+    path: "{{ anarchy_sync }}/ssl/{{ ssl_ca_cert | basename }}"
+  register: ca_sync_stat
+  when:
+    - not primary | default(False)
+    - on_controller | default(False)
+
+- name: Fail if CA certificate not found in sync
+  fail:
+    msg: "Primary controller has not pushed the CA certificate to {{ anarchy_sync }}/ssl/cluster-ca.crt. Verify primary identity."
+  when:
+    - not primary | default(False)
+    - not ca_sync_stat.stat.exists | default(False)
+
 
 ###############################################################################
 # 3. Sync CA from primary controller
@@ -61,10 +104,11 @@
   copy:
     remote_src: true
     src: "{{ anarchy_sync }}/ssl/{{ item }}"
-    dest: "{{ ssl_cert_path }}"
+    dest: "{{ ssl_cert_path }}/{{ item }}"
   loop:
     - "{{ ssl_ca_cert | basename }}"
     - "{{ ssl_ca_key | basename }}"
+  become: true
   when:
     - not in_cloud | default(False)
     - not primary | default(False)
@@ -156,34 +200,6 @@
 
   when:
     - in_login_image | default(False) or (on_controller | default(False) and not in_image)
-
-
-###############################################################################
-# 5. Sync CA to secondary controllers
-###############################################################################
-
-- block:
-
-  - name: Ensure SSL sync directory exists
-    file:
-      path: "{{ anarchy_sync }}/ssl"
-      state: directory
-
-  - name: Copy CA to sync directory
-    copy:
-      remote_src: true
-      src: "{{ ssl_cert_path }}/{{ item }}"
-      dest: "{{ anarchy_sync }}/ssl/{{ item }}"
-      mode: "0640"
-    loop:
-      - "{{ ssl_ca_cert | basename }}"
-      - "{{ ssl_ca_key | basename }}"
-
-  when:
-    - primary | default(True)
-    - ha | default(False)
-    - on_controller | default(False)
-    - not in_image
 
 
 ###############################################################################

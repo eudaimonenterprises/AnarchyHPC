@@ -91,16 +91,13 @@
 
   - name: Set TSIG key secret
     set_fact:
-      # We use a default('') here to prevent 'split()' from crashing if regex fails
-      tsig_key_secret: >-
-        {{ (tsig_key | regex_search('secret\s+\".*\";') | default('')) | split() | last | regex_replace('[\";]', '') }}
+        tsig_key_secret: "{{ tsig_key | regex_search('secret .*') | split() | last | regex_replace('[\";]', '') }}"
+      # Move the condition here
+    when: (stat_tsig_key.stat is defined and stat_tsig_key.stat.exists) or raw_tsig_key is defined
 
   - name: Set TSIG key algo
     set_fact:
-      # Fallback to hmac-sha256 if the regex can't find the algorithm in the key file
-      tsig_key_algo: >-
-        {{ (tsig_key | regex_search('algorithm\s+.*;') | default('')) | split() | last | regex_replace('[\";]', '') | default('hmac-sha256', true) }}
-
-  # REMOVE the RedHat/Version check so this runs on Suse/Ubuntu
-  when: stat_tsig_key.stat.exists or raw_tsig_key is defined
+        tsig_key_algo: "{{ tsig_key | regex_search('algorithm .*') | split() | last | regex_replace('[\";]', '') | default('hmac-sha256', true) }}"
+      # And here
+    when: (stat_tsig_key.stat is defined and stat_tsig_key.stat.exists) or raw_tsig_key is defined
 
