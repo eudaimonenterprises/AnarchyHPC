@@ -2,7 +2,7 @@
 # tasks file for bind
 
 - name: Install bind packages
-  yum:
+  package:
     name: "{{ bind_packages }}"
     state: present
   tags: install-only
@@ -50,7 +50,7 @@
 - name: Update named data path
   replace:
     path: /etc/named.conf
-    regexp: "/var/named"
+    regexp: "/var/(named|lib/named|cache/bind)"
     replace: "{{ bind_db_path }}"
     backup: "yes"
   notify: restart named
@@ -124,23 +124,29 @@
 
 - name: Enable named service
   service:
-    name: named
-    enabled: "yes"
+    name: "{{ bind_service }}"
+    enabled: yes
 
 - block:
   - name: Copy default zones to {{ bind_db_path }}
     synchronize:
-      src: /var/named/
+      src: >-
+        {{ '/var/named/' if ansible_os_family == 'RedHat' 
+           else '/var/lib/named/' if ansible_os_family == 'Suse' 
+           else '/etc/bind/' }}
       dest: "{{ bind_db_path }}"
+      rsync_path: "/usr/bin/rsync"
+    become: true
+    delegate_to: "{{ inventory_hostname }}"
   #  creates: "{{ bind_db_path }}/named.empty"
   # - name: Copy default zones to {{ bind_db_path }}
   #  shell: rsync -raW -AX /var/named/* {{ bind_db_path }}
   #  args:
   #    creates: "{{ bind_db_path }}/named.empty"
 
-  - name: Start named service
-    service:
-      name: named
-      state: started
+- name: Start named service
+  service:
+    name: "{{ bind_service }}"
+    state: started
 
 #  when: primary | default(True)

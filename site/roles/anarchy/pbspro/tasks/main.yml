@@ -11,7 +11,7 @@
   with_items: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repositories') }}"
 
 - name: Install Openpbs-server
-  yum:
+  package:
     name: openpbs-server-ohpc
     state: present
   tags: install-only
@@ -20,7 +20,7 @@
   delay: "{{ rpm_delay | default(15) }}"
 
 - name: Install openpbs-execution-ohpc
-  yum:
+  package:
     name: openpbs-execution-ohpc
     state: present
   tags: install-only

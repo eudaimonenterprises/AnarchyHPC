@@ -2,7 +2,7 @@
 # tasks file for ds389
 
 - name: Install dependencies
-  yum:
+  package:
     name: '{{ ds389_dependencies }}'
     state: installed
   tags: install-only
@@ -10,7 +10,7 @@
   delay: "{{ rpm_delay | default(15) }}"
 
 - name: Install DS389 packages
-  yum:
+  package:
     name: '{{ ds389_packages }}'
     state: present
     enablerepo:

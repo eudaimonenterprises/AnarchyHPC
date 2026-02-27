@@ -1,6 +1,6 @@
 ---
 - name: Install environment modules on RHEL
-  yum:
+  package:
     name: "{{ envmodules_packages }}"
     state: present
   when: not (openhpc_manages_modules | default(false))

@@ -13,7 +13,7 @@
   tags: install-only
 
 - name: Install chrony on RHEL
-  yum:
+  package:
     name: "{{ chrony_packages }}"
     state: present
   when: ansible_os_family == "RedHat"

@@ -4,7 +4,7 @@
 ###############################################################################
 
 - name: Install HA packages (RHEL/Rocky/Alma)
-  yum:
+  package:
     name: "{{ ha_packages }}"
     state: present
     enablerepo:
@@ -15,7 +15,7 @@
       - rhel-9-for-x86_64-highavailability-rpms
 
 - name: Install additional packages (RHEL/Rocky/Alma)
-  yum:
+  package:
     name: "{{ additional_packages }}"
     state: present
 

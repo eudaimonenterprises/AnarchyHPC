@@ -15,7 +15,7 @@
   block:
 
     - name: Install Slurm packages on RHEL
-      yum:
+      package:
         name: "{{ slurm_packages }}"
         state: present
       when: ansible_os_family == "RedHat"

@@ -1,7 +1,7 @@
 ---
 
 - name: Install ISCSI packages
-  yum:
+  package:
     name: '{{ iscsi_packages }}'
     enablerepo: 'elrepo'
     state: present

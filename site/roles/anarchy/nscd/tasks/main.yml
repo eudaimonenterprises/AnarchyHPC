@@ -3,7 +3,7 @@
 
 - block:
   - name: Install nscd
-    yum:
+    package:
       name: nscd
       state: present
     tags: install-only

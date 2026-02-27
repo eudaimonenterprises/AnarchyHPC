@@ -6,7 +6,7 @@
 
 - block:
     - name: Install yum-utils
-      ansible.builtin.yum:
+      ansible.builtin.package:
         name: yum-utils
         state: present
 
@@ -17,7 +17,7 @@
         creates: /etc/yum.repos.d/hashicorp.repo
 
     - name: Install Terraform
-      ansible.builtin.yum:
+      ansible.builtin.package:
         name: terraform
         state: present
   when: terraform_check.rc != 0

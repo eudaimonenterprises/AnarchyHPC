@@ -23,13 +23,13 @@
     grafana_protocol: "{{ 'https' if grafana_enable_ssl else 'http' }}"
 
 - name: Install dependencies
-  yum:
+  package:
     name: python3-firewall
     state: present
   when: ansible_virtualization_type != 'docker'
 
 - name: Install Grafana
-  yum:
+  package:
     name: "{{ grafana_rpm }}"
     disable_gpg_check: true
     state: present

@@ -1,7 +1,7 @@
 ---
 # tasks file for Aria2c
 - name: Install Torrent packages
-  yum:
+  package:
     name:
       - aria2
       - transmission-common

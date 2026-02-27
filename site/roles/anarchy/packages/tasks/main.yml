@@ -89,7 +89,7 @@
 # ---------------------------------------------------------------------------
 
 - name: Install additional packages (RHEL / Rocky / Alma)
-  yum:
+  package:
     name: "{{ item }}"
     state: present
     enablerepo:

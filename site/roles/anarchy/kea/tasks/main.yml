@@ -2,7 +2,7 @@
 # tasks file for kea
 
 - name: Install Kea packages
-  yum:
+  package:
     name: '{{ kea_packages }}'
     state: present
   retries: "{{ rpm_retries | default(3) }}"

@@ -45,7 +45,7 @@
   with_items: "{{ lookup('ansible.builtin.vars', 'el' + ansible_distribution_major_version + '_openhpc_repositories') }}"
 
 - name: Ensure conflicting rpms from legacy AnarchyHPC are not installed
-  yum:
+  package:
     name:
       - pdsh
       - Lmod
@@ -54,21 +54,21 @@
     state: removed
 
 - name: Install ohpc-base
-  yum:
+  package:
     name: ohpc-base
     state: installed
     enablerepo: powertools
   when: on_controller
 
 - name: Install ohpc-base-compute
-  yum:
+  package:
     name: ohpc-base-compute
     state: installed
   when: on_controller
 
 - block:
   - name: Install pdsh-mod-genders-ohpc
-    yum:
+    package:
       name: pdsh-mod-genders-ohpc
       state: installed
 
@@ -99,7 +99,7 @@
   when: on_controller
 
 - name: Install lmod-ohpc
-  yum:
+  package:
     name: lmod-ohpc
     state: installed
     enablerepo: powertools

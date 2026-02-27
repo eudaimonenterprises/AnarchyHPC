@@ -1,6 +1,6 @@
 ---
 - name: Install DRBD packages
-  yum:
+  package:
     name: '{{ drbd_packages }}'
     enablerepo: 'elrepo'
     state: present

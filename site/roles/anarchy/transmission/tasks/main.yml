@@ -1,7 +1,7 @@
 ---
 # tasks file for transmission
 - name: Install Transmission
-  yum:
+  package:
     name:
       - transmission-daemon
       - transmission-cli

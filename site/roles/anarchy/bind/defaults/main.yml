@@ -1,15 +1,27 @@
 ---
 # vars file for bind
 
-bind_packages:
-  - bind
+bind_service: "{{ 'bind9' if ansible_os_family == 'Debian' else 'named' }}"
+
+bind_packages: >-
+  {{ 
+    ['bind', 'bind-utils'] if ansible_os_family == 'RedHat' else
+    ['bind'] if ansible_os_family == 'Suse' else
+    ['bind9', 'bind9-utils']
+  }}
+
+
 
 bind_dns_forwarders:
   - '8.8.8.8'
   - '8.8.4.4'
 
 bind_dnssec_enable: 'no'
-bind_db_path: '/var/named'
+bind_db_path: >-
+  {{ '/var/named' if ansible_os_family == 'RedHat'
+     else '/var/lib/named' if ansible_os_family == 'Suse'
+     else '/var/cache/bind' }}
+
 
 resolv_server: '127.0.0.1'
 anarchy_resolv_search_domains: 'cluster ipmi'

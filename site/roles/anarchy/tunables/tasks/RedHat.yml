@@ -1,6 +1,6 @@
 ---
 - name: Install tunables packages (RHEL/Rocky/Alma)
-  yum:
+  package:
     name: "{{ tunables_packages }}"
     state: present
     enablerepo:

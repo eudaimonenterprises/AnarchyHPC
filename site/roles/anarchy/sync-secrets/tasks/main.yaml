@@ -10,7 +10,7 @@
     ignore_errors: true
 
   - name: Install required packages
-    yum:
+    package:
       name: "{{ sync_secrets_packages }}"
       state: present
       disable_gpg_check: true

@@ -3,7 +3,7 @@
 
 # Ensure EPEL is available (RHEL-family only)
 - name: Enable EPEL repository
-  yum:
+  package:
     name: epel-release
     state: present
   when: ansible_os_family == "RedHat"
@@ -40,7 +40,7 @@
 # Fallback for older RHEL-family systems (< 9)
 # ------------------------------------------------------------
 - name: Install xCAT fallback repo (legacy upstream)
-  yum:
+  package:
     name: "http://xcat.org/files/xcat/repos/yum/latest/xcat-core/xcat-core.repo"
     state: present
   when:

@@ -59,7 +59,7 @@
         state: unmounted
 
     - name: Install createrepo
-      yum:
+      package:
         name: "{{ item }}"
         state: present
         disablerepo: "*"
@@ -88,7 +88,7 @@
         dest: /etc/yum.repos.d/tmp_local.repo
 
     - name: Install nginx
-      yum:
+      package:
         name: nginx
         state: present
         disablerepo: "*"

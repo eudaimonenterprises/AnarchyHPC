@@ -24,22 +24,25 @@ sss_use_ds389: false
 sss_authselect_command:
   - name: RedHat
     version: 10
-    command: authselect select sssd with-mkhomedir
+    command: authselect select sssd with-mkhomedir --force
   - name: RedHat
     version: 9
-    command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
+    command: authselect select sssd with-mkhomedir --force
   - name: RedHat
     version: 8
+    command: authselect select sssd with-mkhomedir --force
+  - name: RedHat
+    version: 7
     command: authconfig --enablemkhomedir --enablesssd --enablesssdauth --update
   - name: SLE
     version: 15
-    command: authselect select sssd with-mkhomedir --force
+    command: pam-config --add --sss --mkhomedir
   - name: Suse
-    command: authselect select sssd with-mkhomedir --force
     version: 15
+    command: pam-config --add --sss --mkhomedir
   - name: SLE
     version: 16
-    command: authselect select sssd with-mkhomedir --force
+    command: pam-config --add --sss --mkhomedir
   - name: Suse
-    command: authselect select sssd with-mkhomedir --force
     version: 16
+    command: pam-config --add --sss --mkhomedir

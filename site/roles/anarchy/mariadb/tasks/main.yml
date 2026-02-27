@@ -14,7 +14,7 @@
                            chars=ascii_letters,digits,hexdigits') }}"
 
 - name: Install MariaDB packages
-  yum:
+  package:
    name: '{{ mariadb_packages }}'
    state: present
   tags: install-only

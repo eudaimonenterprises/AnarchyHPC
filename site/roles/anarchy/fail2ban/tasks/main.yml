@@ -2,7 +2,7 @@
 # tasks file for fail2ban
 
 - name: Install fail2ban packages
-  yum:
+  package:
     name: '{{ fail2ban_packages }}'
     state: present
   tags: install-only

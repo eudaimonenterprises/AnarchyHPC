@@ -5,7 +5,7 @@
 # as well as compute nodes and images
 
 - name: Install init packages
-  yum:
+  package:
     name: '{{ item }}'
     state: present
   tags: install-only

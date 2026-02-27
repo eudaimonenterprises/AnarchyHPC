@@ -45,7 +45,7 @@
 
 # RHEL / Rocky / Alma
 - name: Install firewalld packages on RHEL-family
-  yum:
+  package:
     name: "{{ firewalld_packages }}"
     state: present
   when: ansible_os_family == "RedHat"

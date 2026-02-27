@@ -7,7 +7,7 @@
 ###############################################################################
 
 - name: Install dependencies (RedHat)
-  yum:
+  package:
     name: python3-policycoreutils
     state: installed
   tags: install-only
@@ -19,7 +19,7 @@
 ###############################################################################
 
 - name: Install OpenLDAP packages (RedHat)
-  yum:
+  package:
     name: "{{ openldap_packages }}"
     state: present
     enablerepo:
