@@ -593,7 +593,7 @@ class Obol:
 {% if obol_use_ds389 %}
             ("objectclass", [b"top", b"posixGroup", b"groupOfUniqueNames"]),
 {% else %}
-            ("objectclass", [b"top", b"groupOfNames", b"posixGroup"]),
+            ("objectclass", [b"top", b"posixGroup"]),
 {% endif %}
             ("cn", [groupname.encode("utf-8")]),
             ("gidNumber", [str(gid).encode("utf-8")]),
