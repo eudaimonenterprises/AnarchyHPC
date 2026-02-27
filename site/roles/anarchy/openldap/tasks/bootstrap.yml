@@ -74,6 +74,13 @@
 # 4. Start slapd (creates empty MDB)
 ###############################################################################
 
+
+- name: Ensure ldap is in ssl group
+  ansible.builtin.user:
+    name: ldap
+    groups: ssl
+    append: yes
+
 - name: Start slapd using slapd.conf
   service:
     name: slapd

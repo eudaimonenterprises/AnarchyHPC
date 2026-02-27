@@ -422,6 +422,8 @@ ssl_cert_group: ssl
 
 anarchy_ldap_backend: 'openldap'
 
+#anarchy_ldap_backend: 'ds389'
+
 
 # The LDAP suffix (base DN) for the directory.
 # This value defines the root naming context of the LDAP tree.

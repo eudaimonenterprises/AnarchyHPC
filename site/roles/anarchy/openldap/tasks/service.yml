@@ -11,13 +11,6 @@
     - ansible_os_family == "Suse"
     - ansible_distribution_major_version | int >= 16
 
-- name: Ensure ldap user is in the ssl certificate group
-  user:
-    name: ldap
-    groups: "{{ ssl_cert_group }}"
-    append: yes
-  when: ansible_os_family == "Suse"
-
 - name: Ensure sysusers.d directory exists
   file:
     path: /etc/sysusers.d

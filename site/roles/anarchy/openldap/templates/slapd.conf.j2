@@ -4,6 +4,11 @@ include {{ openldap_schema_path }}/core.schema
 include {{ openldap_schema_path }}/cosine.schema
 include {{ openldap_schema_path }}/inetorgperson.schema
 include {{ openldap_schema_path }}/ppolicy.schema
+include {{ openldap_schema_path }}/nis.schema
+
+{% if ansible_os_family == 'Suse' %}
+include {{ openldap_schema_path }}/misc.schema
+{% endif %}
 
 modulepath {{ openldap_server_module_path }}
 moduleload  back_{{ openldap_db_backend }}.la

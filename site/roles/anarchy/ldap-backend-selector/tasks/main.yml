@@ -1,30 +1,25 @@
 ---
+# site/roles/anarchy/ldap-backend-selector/tasks/main.yml
+
+# Always honor the user's explicit choice.
+# No OS gating. No automatic overrides.
 
 - block:
-  - name: Set OpenLDAP as the preferred backend
-    set_fact:
-      anarchy_use_openldap: true
-
-  - name: Unset DS389 as the preferred backend
-    set_fact:
-      anarchy_use_ds389: false
-  when:
-    - anarchy_ldap_backend == 'openldap'
-    - ansible_facts['os_family'] == "RedHat"
-    - ansible_facts['distribution_major_version']|int < 10
+    - name: Select OpenLDAP backend
+      set_fact:
+        anarchy_use_openldap: true
+        anarchy_use_ds389: false
+  when: anarchy_ldap_backend == 'openldap'
 
 - block:
-  - name: Unset OpenLDAP as the preferred backend
-    set_fact:
-      anarchy_use_openldap: false
-
-  - name: Set DS389 as the preferred backend
-    set_fact:
-      anarchy_use_ds389: true
-  when: anarchy_ldap_backend == 'ds389' or (ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version']|int > 9)
+    - name: Select DS389 backend
+      set_fact:
+        anarchy_use_openldap: false
+        anarchy_use_ds389: true
+  when: anarchy_ldap_backend == 'ds389'
 
 - debug:
-    msg: "anarchy_use_openldap: {{ anarchy_use_openldap }}, anarchy_use_ds389: {{ anarchy_use_ds389 }}"
+    msg: "LDAP backend selection → OpenLDAP: {{ anarchy_use_openldap }}, DS389: {{ anarchy_use_ds389 }}"
   when:
     - anarchy_use_openldap is defined
     - anarchy_use_ds389 is defined
