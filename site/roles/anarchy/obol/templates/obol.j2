@@ -22,8 +22,8 @@ __author__ = "Diego Sonaglia"
 __copyright__ = ""
 __license__ = "GPL"
 __version__ = "1.7.1"
-__maintainer__ = "Antoine Schonewille"
-__email__ = "development@clustervision.com"
+__maintainer__ = "Neil Ball"
+__email__ = "eudaimonent@protonmail.com"
 __status__ = "Development"
 
 {%- if obol_use_ds389 %}
@@ -593,7 +593,7 @@ class Obol:
 {% if obol_use_ds389 %}
             ("objectclass", [b"top", b"posixGroup", b"groupOfUniqueNames"]),
 {% else %}
-            ("objectclass", [b"top", b"groupOfMembers", b"posixGroup"]),
+            ("objectclass", [b"top", b"groupOfNames", b"posixGroup"]),
 {% endif %}
             ("cn", [groupname.encode("utf-8")]),
             ("gidNumber", [str(gid).encode("utf-8")]),
