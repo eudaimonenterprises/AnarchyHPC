@@ -1,9 +1,8 @@
 ---
 
 - set_fact:
-    anarchy_this_ctrl_hostname: '{{ inner_loop_var }}'
+    this_anarchy_ctrl_hostname: "{{ inner_loop_var }}"
   when: 
-    - anarchy_this_ctrl_hostname is not defined
+    - this_anarchy_ctrl_hostname is not defined
     - inner_loop_var != ""
-    - ansible_hostname == inner_loop_var
-
+    - (inner_loop_var == ansible_hostname) or (inner_loop_var == ansible_fqdn) or (inner_loop_var.split('.')[0] == ansible_hostname)

@@ -91,11 +91,16 @@
 
   - name: Set TSIG key secret
     set_fact:
-      tsig_key_secret: "{{ tsig_key | regex_search('secret .*') | split() | last | regex_replace('\"', '') | regex_replace(';', '') }}"
+      # We use a default('') here to prevent 'split()' from crashing if regex fails
+      tsig_key_secret: >-
+        {{ (tsig_key | regex_search('secret\s+\".*\";') | default('')) | split() | last | regex_replace('[\";]', '') }}
 
   - name: Set TSIG key algo
     set_fact:
-      tsig_key_algo: "{{ tsig_key | regex_search('algorithm .*') | split() | last | regex_replace('\"', '') | regex_replace(';', '') }}"
-  when:
-    - ansible_facts['os_family'] == "RedHat"
-    - ansible_facts['distribution_major_version']|int > 8
+      # Fallback to hmac-sha256 if the regex can't find the algorithm in the key file
+      tsig_key_algo: >-
+        {{ (tsig_key | regex_search('algorithm\s+.*;') | default('')) | split() | last | regex_replace('[\";]', '') | default('hmac-sha256', true) }}
+
+  # REMOVE the RedHat/Version check so this runs on Suse/Ubuntu
+  when: stat_tsig_key.stat.exists or raw_tsig_key is defined
+

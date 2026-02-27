@@ -5,14 +5,12 @@
 # as well as compute nodes and images
 
 - name: Install init packages
-  package:
+  package: # Changed from yum/dnf to package
     name: '{{ item }}'
     state: present
   tags: install-only
   with_items: '{{ init_packages }}'
-  when:
-    - ansible_facts['os_family'] == "RedHat"
-    - init_packages is defined
+  when: init_packages is defined # Removed the RedHat-only check
   retries: "{{ rpm_retries | default(3) }}"
   delay: "{{ rpm_delay | default(15) }}"
 
@@ -126,10 +124,20 @@
       msg: "anarchy_ctrl_hostname: {{ anarchy_ctrl_hostname }}, anarchy_ctrl_ip: {{ anarchy_ctrl_ip }}"
     # we HAVE to make sure we determine who is primary, else a re-run of the playbook
     # at a later stage WILL cause trouble if there was a failover.
-  - name: Check with pacemaker who is the primary controller
-    shell: "/usr/local/sbin/pcs resource status|(grep -m1 -E 'anarchy-ip\\s+' || echo 'Started not_available') | awk -F'tarted ' '{ print $2 }'"
+  - name: Check which controller is primary (crmsh or pcs)
+    shell: |
+      if command -v crm >/dev/call 2>&1; then
+        # Suse/Debian logic using crmsh
+        crm resource status anarchy-ip | grep -m1 "Started" | awk '{print $NF}'
+      elif command -v pcs >/dev/null 2>&1; then
+        # RedHat logic using pcs
+        pcs resource status | grep -m1 -E 'anarchy-ip\s+' | awk -F'tarted ' '{ print $2 }'
+      else
+        echo "not_available"
+      fi
     register: pcs_primary
     ignore_errors: true
+    become: true
 
   - name: Verify if primary override exists
     stat:
@@ -235,6 +243,7 @@
   when:
     - not ha | default(False)
     - anarchy_ctrl_hostname != ansible_hostname
+    - anarchy_ctrl_hostname != ansible_fqdn
 - block:
   - name: Adding cloud controllers hostnames
     set_fact:
