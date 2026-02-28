@@ -1,6 +1,1 @@
 ---
-dependencies:
-  - nginx
-  - role: anarchy/anarchy-tree
-  - role: kea
-    when: use_kea | default(false)

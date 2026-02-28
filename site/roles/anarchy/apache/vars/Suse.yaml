@@ -1,13 +1,9 @@
 ---
 # Apache implementation details for SUSE
 apache_packages:
-  - apache2
-  - apache2-mod_perl
-  - apache2-mod_ssl
-  - apache2-mod_passenger
-  - apache2-mod_cgi
-  - apache2-mod_proxy
-  - apache2-mod_proxy_http
+  - apache2                   # Contains base server, ssl, cgi, proxy, proxy_http
+  - apache2-mod_perl          # Found: apache2-mod_perl
+  - rubygem-passenger-apache2 # Found: rubygem-passenger-apache2
 
 apache_service: apache2
 apache_user: wwwrun

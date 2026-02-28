@@ -1,0 +1,21 @@
+# Modern SSL Configuration (Mozilla Modern)
+# Managed by AnarchyHPC Apache Role
+
+<IfModule mod_ssl.c>
+    # Protocol and Cipher Suite
+    SSLProtocol             all -SSLv3 -TLSv1 -TLSv1.1
+    SSLCipherSuite          {{ apache_ssl_ciphers | default('ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256') }}
+    SSLHonorCipherOrder     on
+    SSLSessionTickets       off
+
+    # OCSP Stapling
+    # RedHat uses 'shmcb:logs/ssl_stapling(32768)'
+    # Suse/Debian usually need a path like 'shmcb:/run/apache2/ssl_stapling(32768)'
+    SSLUseStapling          on
+    SSLStaplingCache        "{{ apache_ssl_stapling_cache | default('shmcb:logs/ssl_stapling(32768)') }}"
+</IfModule>
+
+# HSTS (Strict-Transport-Security)
+<IfModule mod_headers.c>
+    Header always set Strict-Transport-Security "max-age=15768000"
+</IfModule>

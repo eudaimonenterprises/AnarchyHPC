@@ -2,9 +2,11 @@
 - name: Load OS-specific variables
   include_vars: "{{ item }}"
   with_first_found:
-    - "{{ ansible_os_family }}.yaml"
-    - "default.yaml"
-  paths: "../vars"
+    - files:
+        - "{{ ansible_os_family }}.yaml"
+        - "default.yaml"
+      paths:
+        - "../vars"
 
 - name: Install apache packages
   package:
