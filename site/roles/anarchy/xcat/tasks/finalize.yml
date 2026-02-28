@@ -8,7 +8,6 @@
   changed_when: false
   failed_when: false
   register: xcat_check
-  tags: [provisioning, finalize]
 
 ###############################################################################
 # 1. Regenerate DHCP/DNS configuration (idempotent)
@@ -20,7 +19,6 @@
     - xcat_check.rc == 0
     - xcat_manage_dhcp
   notify: restart dhcpd
-  tags: [provisioning, finalize, dhcp]
 
 - name: Regenerate DNS configuration
   ansible.builtin.command: makedns -n
@@ -28,7 +26,6 @@
     - xcat_check.rc == 0
     - xcat_manage_dns
   notify: restart named
-  tags: [provisioning, finalize, dns]
 
 ###############################################################################
 # 2. Restart xCAT daemon (idempotent)
@@ -38,7 +35,6 @@
   ansible.builtin.command: restartxcatd
   when: xcat_check.rc == 0
   notify: restart xcatd
-  tags: [provisioning, finalize, xcatd]
 
 ###############################################################################
 # 3. Service health verification (post-convergence)
@@ -50,7 +46,6 @@
   changed_when: false
   failed_when: "'inactive' in xcatd_status.stdout or 'failed' in xcatd_status.stdout"
   when: xcat_check.rc == 0
-  tags: [provisioning, finalize, validation]
 
 - name: Verify DHCP service is active
   ansible.builtin.command: systemctl is-active {{ dhcp_service_name | default('dhcpd') }}
@@ -60,7 +55,6 @@
   when:
     - xcat_check.rc == 0
     - xcat_manage_dhcp
-  tags: [provisioning, finalize, validation]
 
 - name: Verify DNS service is active
   ansible.builtin.command: systemctl is-active named
@@ -70,7 +64,6 @@
   when:
     - xcat_check.rc == 0
     - xcat_manage_dns
-  tags: [provisioning, finalize, validation]
 
 ###############################################################################
 # 4. PXE Boot / Network Convergence Validation (NEW)
@@ -85,7 +78,6 @@
     - xcat_check.rc == 0
     - xcat_manage_dhcp | default(true)
     - provisioning_enabled | default(true)
-  tags: [provisioning, finalize, validation, dhcp]
 
 ###############################################################################
 # 5. Image Packability Validation (NEW)
@@ -101,7 +93,6 @@
     - xcat_check.rc == 0
     - provisioning_enabled | default(true)
     - xcat_os_images is defined
-  tags: [provisioning, finalize, validation, images]
 
 ###############################################################################
 # 6. Final status report
@@ -117,4 +108,3 @@
       Images validated: {{ xcat_os_images | length }} checked.
       All critical services validated.
   when: xcat_check.rc == 0
-  tags: [provisioning, finalize]

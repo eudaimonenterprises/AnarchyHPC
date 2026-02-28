@@ -10,13 +10,11 @@
   changed_when: false
   failed_when: false
   register: xcat_check
-  tags: [provisioning, networks]
 
 - name: Set DHCP management flag
   ansible.builtin.set_fact:
     manage_dhcp: "{{ xcat_manage_dhcp | default(provisioning_method == 'xcat') }}"
   when: manage_dhcp is not defined
-  tags: [provisioning, networks]
 
 ###############################################################################
 # Detect DHCP service name (dhcpd vs isc-dhcp-server)
@@ -29,7 +27,6 @@
     - dhcpd
     - isc-dhcp-server
   when: dhcp_service_name is not defined
-  tags: [provisioning, networks]
 
 ###############################################################################
 # 1. Optional safety: lightweight backup of xCAT config
@@ -43,14 +40,12 @@
     group: root
     mode: '0750'
   when: xcat_check.rc == 0
-  tags: [provisioning, networks, safety]
 
 - name: Backup xCAT configuration (lightweight)
   ansible.builtin.command: >
     cp -rf /etc/xcat /var/backups/xcat/etc-xcat.{{ ansible_date_time.epoch }}
   when: xcat_check.rc == 0
   changed_when: false
-  tags: [provisioning, networks, safety]
 
 ###############################################################################
 # 2. Site table configuration (idempotent)
@@ -62,7 +57,6 @@
   failed_when: false
   register: current_site
   when: xcat_check.rc == 0
-  tags: [provisioning, networks]
 
 - name: Configure xCAT site table (only if needed)
   ansible.builtin.command: >
@@ -90,7 +84,6 @@
     site_verify.rc != 0 or
     site_verify.stdout is not regex("domain={{ xcat_site.domain | default(anarchy_domain | default('cluster')) }}\\b")
   when: xcat_check.rc == 0
-  tags: [provisioning, networks, validation]
 
 ###############################################################################
 # 3. Network definitions (idempotent)
@@ -105,7 +98,6 @@
   loop_control:
     label: "{{ item.name }}"
   when: xcat_check.rc == 0
-  tags: [provisioning, networks]
 
 - name: Create network if it does not exist
   ansible.builtin.command: >
@@ -125,7 +117,6 @@
   loop: "{{ xcat_networks }}"
   loop_control:
     label: "{{ item.name }}"
-  tags: [provisioning, networks]
 
 - name: Update network if parameters differ
   ansible.builtin.command: >
@@ -150,7 +141,6 @@
   loop: "{{ xcat_networks }}"
   loop_control:
     label: "{{ item.name }}"
-  tags: [provisioning, networks]
 
 - name: Validate all networks are defined
   ansible.builtin.command: lsdef -t network -o {{ item.name }}
@@ -161,7 +151,6 @@
   loop_control:
     label: "{{ item.name }}"
   when: xcat_check.rc == 0
-  tags: [provisioning, networks, validation]
 
 ###############################################################################
 # 4. DHCP/DNS generation (conditional, safe)
@@ -175,7 +164,6 @@
   when:
     - xcat_check.rc == 0
     - manage_dhcp
-  tags: [provisioning, networks, dhcp]
 
 ###############################################################################
 # Idempotent makenetworks execution
@@ -186,7 +174,6 @@
   register: networks_timestamp
   changed_when: false
   failed_when: false
-  tags: [provisioning, networks]
 
 - name: Run makenetworks only if network definitions changed
   ansible.builtin.command: makenetworks -a
@@ -197,7 +184,6 @@
     - network_create is changed or network_update is changed
   changed_when: makenetworks_result.rc == 0
   failed_when: makenetworks_result.rc != 0
-  tags: [provisioning, networks, dhcp]
 
 - name: Validate DHCP configuration after makenetworks
   ansible.builtin.command: makedhcp -n
@@ -207,7 +193,6 @@
   when:
     - xcat_check.rc == 0
     - manage_dhcp
-  tags: [provisioning, networks, validation]
 
 ###############################################################################
 # 5. Final status
@@ -220,4 +205,3 @@
       Networks defined: {{ xcat_networks | length }}.
       DHCP management: {{ manage_dhcp }}.
   when: xcat_check.rc == 0
-  tags: [provisioning, networks]

@@ -49,6 +49,7 @@
     # ------------------------------------------------------------
     - anarchy/bind            # DNS
     - anarchy/kea             # DHCP
+    - anarchy/apache          # Replaces anarchy/nginx
     - anarchy/xcat            # Provisioning
     - anarchy/image-create
     - anarchy/image-download
@@ -90,7 +91,6 @@
     # ------------------------------------------------------------
     # Open OnDemand
     # ------------------------------------------------------------
-    - anarchy/nginx
     - anarchy/ood
     - anarchy/ood-apps
 

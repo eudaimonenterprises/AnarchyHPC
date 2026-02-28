@@ -1,0 +1,46 @@
+---
+---
+# RedHat-specific repository URLs
+xcat_core_repo_url: "https://xcat.org/files/xcat/repos/yum/latest/xcat-core/"
+xcat_dep_repo_url: "https://xcat.org/files/xcat/repos/yum/devel/xcat-dep/rh9/x86_64/"
+
+provisioning_required_packages:
+  - xCAT-server
+  - xCAT-client
+  - xCAT-genesis-base-x86_64
+  - xCAT-genesis-scripts-x86_64
+  - conserver-xcat
+  - ipmitool
+
+# Services managed by the xCAT role
+provisioning_enable_services:
+  - xcatd
+
+provisioning_start_services:
+  - xcatd
+
+# xCAT directory layout
+xcat_install_dir: "/opt/xcat"
+xcat_config_dir: "/etc/xcat"
+xcat_bin: "/opt/xcat/bin"
+xcat_sbin: "/opt/xcat/sbin"
+
+# Sub-services used by xCAT (pointers to Infrastructure)
+http_service_name: "httpd"
+dhcp_service_name: "dhcpd"
+tftp_service_name: "tftp"
+
+# Provisioning network definition
+provisioning_network:
+  name: "provnet"
+  device: "eth0"
+  ipaddr: "10.141.255.254"
+  netmask: "255.255.0.0"
+  network: "10.141.0.0"
+  broadcast: "10.141.255.255"
+  gateway: ""
+
+# xCAT object placeholders
+xcat_nodes: []
+xcat_osimages: []
+xcat_groups: []

@@ -1,0 +1,27 @@
+---
+# Apache Infrastructure for Debian / Ubuntu
+apache_service_name: "apache2"
+apache_user: "www-data"
+apache_group: "www-data"
+
+# All Apache-specific modules and base packages
+apache_packages:
+  - apache2
+  - libapache2-mod-perl2
+  - libapache2-mod-passenger
+  - ssl-cert
+
+# Modules to enable via a2enmod in the apache role tasks
+apache_enabled_modules:
+  - perl
+  - ssl
+  - passenger
+  - cgi
+  - proxy
+  - proxy_http
+
+# Global paths for templates to reference
+apache_conf_dir: "/etc/apache2/conf-available"
+apache_enabled_dir: "/etc/apache2/conf-enabled"
+
+apache_main_conf: /etc/apache2/apache2.conf

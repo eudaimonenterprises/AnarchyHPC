@@ -1,0 +1,18 @@
+---
+# Apache Infrastructure for RedHat / RHEL 10
+apache_service_name: "httpd"
+apache_user: "apache"
+apache_group: "apache"
+
+# All Apache-specific modules and base packages
+# Note: RHEL 10 often bundles many modules, but we explicitly list these for clarity
+apache_packages:
+  - httpd
+  - mod_ssl
+  - mod_perl
+
+apache_service: httpd
+apache_user: apache
+apache_group: apache
+apache_main_conf: /etc/httpd/conf/httpd.conf
+apache_conf_dir: /etc/httpd/conf.d

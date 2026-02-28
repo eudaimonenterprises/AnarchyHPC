@@ -1,36 +1,36 @@
 ---
-# Red Hat Enterprise Linux 10 defaults for xCAT-based provisioning
+---
+# Debian-specific repository URLs (Apt format)
+xcat_core_repo_url: "deb [arch=amd64] https://xcat.org/files/xcat/repos/apt/latest/xcat-core bionic main"
+xcat_dep_repo_url: "deb [arch=amd64] https://xcat.org bionic main"
 
-# -----------------------------
-# Packages required for xCAT
-# -----------------------------
 provisioning_required_packages:
   - xcat-server
   - xcat-client
-  - xcat-genesis-base-x86_64
-  - xcat-genesis-scripts-x86_64
+  - xcat-genesis-base-amd64
+  - xcat-genesis-scripts-amd64
+  - conserver-xcat
+  - ipmitool
 
-# -----------------------------
-# Services xCAT manages
-# -----------------------------
+# Services managed by the xCAT role
 provisioning_enable_services:
   - xcatd
 
 provisioning_start_services:
   - xcatd
 
-# -----------------------------
 # xCAT directory layout
-# -----------------------------
 xcat_install_dir: "/opt/xcat"
 xcat_config_dir: "/etc/xcat"
 xcat_bin: "/opt/xcat/bin"
 xcat_sbin: "/opt/xcat/sbin"
 
-# -----------------------------
+# Sub-services used by xCAT (pointers to Infrastructure)
+http_service_name: "apache2"
+dhcp_service_name: "isc-dhcp-server"
+tftp_service_name: "tftpd-hpa"
+
 # Provisioning network definition
-# (replace with your actual values)
-# -----------------------------
 provisioning_network:
   name: "provnet"
   device: "eth0"
@@ -40,9 +40,7 @@ provisioning_network:
   broadcast: "10.141.255.255"
   gateway: ""
 
-# -----------------------------
 # xCAT object placeholders
-# -----------------------------
 xcat_nodes: []
 xcat_osimages: []
 xcat_groups: []

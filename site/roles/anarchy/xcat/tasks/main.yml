@@ -1,9 +1,12 @@
 ---
 - name: Load OS-specific variables
-  include_vars: "{{ ansible_distribution }}{{ ansible_distribution_major_version }}.yaml"
-
-- import_tasks: validation.yml
-  tags: [validation]
+  include_vars: "{{ item }}"
+  with_first_found:
+    - files:
+        - "{{ ansible_os_family }}{{ ansible_distribution_major_version }}.yaml"
+        - "{{ ansible_os_family }}.yaml"
+      paths:
+        - "../vars"
 
 # Main xCAT role entry point - modernized, safe, and maintainable
 
@@ -19,7 +22,6 @@
   when:
     - provisioning_enabled | default(false) | bool
     - provisioning_method | default('xcat') == 'xcat'
-  tags: [xcat, provisioning]
 
 
 ###############################################################################
@@ -29,34 +31,78 @@
 
     - name: Install xCAT packages
       include_tasks: install.yml
-      tags: [install]
 
     - name: Configure xCAT management node
       include_tasks: controller.yml
-      tags: [configuration]
 
     - name: Configure xCAT networks (DHCP, DNS, TFTP)
       include_tasks: networks.yml
-      tags: [networks]
 
     - name: Configure xCAT services
       include_tasks: services.yml
-      tags: [services]
+
+    # --- Pre-flight validation ----------------------------------------------------
+
+    - name: Check DNS resolution
+      command: "getent hosts {{ mgmt_hostname }}"
+      register: dns_check
+      failed_when: dns_check.rc != 0
+
+    - name: Check DHCP config syntax
+      command: makedhcp -n
+      register: dhcp_check
+      failed_when: dhcp_check.rc != 0
+
+    - name: Check xCAT API responds
+      command: lsdef -t site
+      register: xcat_api
+      failed_when: xcat_api.rc != 0
+
+    # ------------------------------------------------------------------------------
+
+    # --- Mid-flight validation ----------------------------------------------------
+
+    - name: Validate TFTP directory exists
+      stat:
+        path: /tftpboot
+      register: tftp_dir
+      failed_when: not tftp_dir.stat.exists
+
+    - name: Validate node definitions exist
+      command: lsdef -t node
+      register: node_defs
+      failed_when: node_defs.rc != 0
+
+    # ------------------------------------------------------------------------------
 
     - name: Build xCAT images
       include_tasks: images.yml
       when: build_images | default(false) | bool
-      tags: [images]
+      when: xcat_build_images_if_missing | default(true)
+
+    # --- Post-flight validation ---------------------------------------------------
+
+    - name: Ping all compute nodes
+      command: "nodels {{ groups['compute'] | join(',') }} -s ping"
+      register: ping_check
+      failed_when: ping_check.rc != 0
+
+    - name: Validate xCAT metadata consistency
+      command: "lsdef -t node -o {{ item }}"
+      loop: "{{ groups['compute'] }}"
+      register: metadata_check
+      failed_when: metadata_check.failed
+
+    # ------------------------------------------------------------------------------
 
     - name: Finalize provisioning
       include_tasks: finalize.yml
-      tags: [finalize]
+      when: xcat_validate_final_state | default(true)
 
   when:
     - provisioning_enabled | default(false) | bool
     - provisioning_method | default('xcat') == 'xcat'
     - host_role | default('compute') == 'controller'
-  tags: [xcat, provisioning]
 
 
 ###############################################################################
@@ -66,10 +112,8 @@
 
     - name: Configure compute nodes
       include_tasks: nodes.yml
-      tags: [nodes]
 
   when:
     - provisioning_enabled | default(false) | bool
     - provisioning_method | default('xcat') == 'xcat'
     - host_role | default('compute') == 'compute'
-  tags: [xcat, provisioning]

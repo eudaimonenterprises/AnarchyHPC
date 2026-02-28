@@ -1,0 +1,22 @@
+---
+# Apache implementation details for SUSE
+apache_packages:
+  - apache2
+  - apache2-mod_perl
+  - apache2-mod_ssl
+  - apache2-mod_passenger
+  - apache2-mod_cgi
+  - apache2-mod_proxy
+  - apache2-mod_proxy_http
+
+apache_service: apache2
+apache_user: wwwrun
+apache_group: www
+
+# SUSE specific paths
+apache_conf_dir: /etc/apache2/conf.d
+apache_main_conf: /etc/apache2/httpd.conf
+apache_modules_sysconfig: /etc/sysconfig/apache2
+
+# Modules to enable in /etc/sysconfig/apache2
+apache_enabled_modules: "perl ssl passenger cgi proxy proxy_http"

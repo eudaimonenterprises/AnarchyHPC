@@ -1,0 +1,12 @@
+---
+# RedHat defaults (Overridden by Suse.yaml in vars)
+apache_packages:
+  - httpd
+  - mod_ssl
+  - mod_perl
+
+apache_service: httpd
+apache_user: apache
+apache_group: apache
+apache_main_conf: /etc/httpd/conf/httpd.conf
+apache_conf_dir: /etc/httpd/conf.d

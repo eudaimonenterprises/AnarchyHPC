@@ -1,0 +1,11 @@
+---
+- name: reload apache in apache role
+  service:
+    name: "{{ apache_service }}"
+    state: reloaded
+  when: primary | default(True)
+
+- name: restart apache in apache role
+  service:
+    name: "{{ apache_service }}"
+    state: restarted

@@ -6,7 +6,6 @@
 - name: Configure DNS via xCAT
   ansible.builtin.command: makedns -n
   when: xcat_manage_dns
-  tags: [provisioning, services, dns]
 
 - name: Configure DHCP via xCAT
   ansible.builtin.command: makedhcp -n
@@ -22,7 +21,6 @@
   changed_when: false
   failed_when: false
   register: xcat_check
-  tags: [provisioning, services]
 
 ###############################################################################
 # 2. TFTP service discovery (multi-OS, deterministic)
@@ -68,8 +66,6 @@
         - xcat_check.rc == 0
         - tftp_service_name is not defined
 
-  tags: [provisioning, services, tftp]
-
 - name: Ensure TFTP server package is installed
   package:
     name: "{{ tftp_service_name }}"
@@ -77,7 +73,6 @@
   register: tftp_package_result
   changed_when: tftp_package_result.changed | default(false)
   when: xcat_check.rc == 0
-  tags: [provisioning, services, tftp]
 
 ###############################################################################
 # 3. HTTP service configuration (image serving)
@@ -87,7 +82,6 @@
   set_fact:
     httpd_service_name: "{{ 'httpd' if ansible_os_family == 'RedHat' else 'apache2' }}"
   when: httpd_service_name is not defined
-  tags: [provisioning, services, http]
 
 ###############################################################################
 # 4. Start and enable services (idempotent)
@@ -101,7 +95,6 @@
   register: xcatd_result
   changed_when: xcatd_result.changed | default(false)
   when: xcat_check.rc == 0
-  tags: [provisioning, services]
 
 - name: Enable and start TFTP service
   systemd:
@@ -111,7 +104,6 @@
   register: tftp_result
   changed_when: tftp_result.changed | default(false)
   when: xcat_check.rc == 0
-  tags: [provisioning, services, tftp]
 
 - name: Enable and start HTTP service for image serving
   systemd:
@@ -121,7 +113,6 @@
   register: httpd_result
   changed_when: httpd_result.changed | default(false)
   when: xcat_check.rc == 0
-  tags: [provisioning, services, http]
 
 ###############################################################################
 # 5. Service verification (idempotent)
@@ -132,18 +123,15 @@
   register: xcatd_status
   changed_when: false
   failed_when: "'inactive' in xcatd_status.stdout or 'failed' in xcatd_status.stdout"
-  tags: [provisioning, services, validation]
 
 - name: Verify TFTP service is running
   command: systemctl is-active {{ tftp_service_name }}
   register: tftp_status
   changed_when: false
   failed_when: "'inactive' in tftp_status.stdout or 'failed' in tftp_status.stdout"
-  tags: [provisioning, services, validation]
 
 - name: Verify HTTP service is running
   command: systemctl is-active {{ httpd_service_name }}
   register: httpd_status
   changed_when: false
   failed_when: "'inactive' in httpd_status.stdout or 'failed' in httpd_status.stdout"
-  tags: [provisioning, services, validation]

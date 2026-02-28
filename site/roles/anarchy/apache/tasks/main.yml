@@ -1,0 +1,57 @@
+---
+- name: Load OS-specific variables
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_os_family }}.yaml"
+    - "default.yaml"
+  paths: "../vars"
+
+- name: Install apache packages
+  package:
+    name: "{{ apache_packages }}"
+    state: present
+  retries: "{{ rpm_retries | default(3) }}"
+  delay: "{{ rpm_delay | default(15) }}"
+
+- name: Ensure configuration directory exists
+  file:
+    path: "{{ apache_conf_dir }}"
+    owner: root
+    group: root
+    state: directory
+
+- name: Enable Apache modules on SUSE (Safe Append)
+  lineinfile:
+    path: /etc/sysconfig/apache2
+    regexp: '^(APACHE_MODULES=".*)"$'
+    line: '\1 perl ssl passenger cgi proxy proxy_http"'
+    backrefs: yes
+  when: ansible_os_family == "Suse"
+  notify: restart apache in apache role
+
+- name: Enable Apache modules on Debian/Ubuntu
+  command: "a2enmod {{ item }}"
+  loop: [ perl, ssl, passenger, cgi, proxy, proxy_http ]
+  register: a2enmod_result
+  changed_when: "'Enabling module' in a2enmod_result.stdout"
+  when: ansible_os_family == "Debian"
+  notify: restart apache in apache role
+
+- name: Copy main httpd.conf
+  template:
+    src: "httpd.conf.j2"
+    dest: "{{ apache_main_conf }}"
+    backup: true
+  notify: reload apache in apache role
+
+- name: Add default ssl configuration
+  copy:
+    src: "ssl.conf"
+    dest: "{{ apache_conf_dir }}/ssl.conf"
+  notify: reload apache in apache role
+
+- name: Enable apache service
+  service:
+    name: "{{ apache_service }}"
+    enabled: true
+    state: started
