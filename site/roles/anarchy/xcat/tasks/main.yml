@@ -75,10 +75,11 @@
 
     # ------------------------------------------------------------------------------
 
-    - name: Build xCAT images
-      include_tasks: images.yml
-      when: build_images | default(false) | bool
-      when: xcat_build_images_if_missing | default(true)
+- name: Build xCAT images
+  include_tasks: images.yml
+  when:
+    - build_images | default(false) | bool
+    - xcat_build_images_if_missing | default(true)
 
     # --- Post-flight validation ---------------------------------------------------
 

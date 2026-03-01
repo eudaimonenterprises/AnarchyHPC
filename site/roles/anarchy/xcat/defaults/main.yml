@@ -5,6 +5,7 @@
 
 provisioning_enabled: true
 
+provisioning_method: xcat
 
 ###############################################################################
 # xCAT package installation

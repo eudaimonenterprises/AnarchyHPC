@@ -25,3 +25,8 @@ apache_conf_dir: "/etc/apache2/conf-available"
 apache_enabled_dir: "/etc/apache2/conf-enabled"
 
 apache_main_conf: /etc/apache2/apache2.conf
+
+apache_server_root: /etc/apache2
+apache_log_dir: /var/log/apache2
+apache_ssl_stapling_cache: "shmcb:${APACHE_RUN_DIR}/ssl_stapling(32768)"
+apache_doc_root: "/var/www/html"   # Standard Ubuntu path

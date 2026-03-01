@@ -1,0 +1,84 @@
+ block:
+
+    ###########################################################################
+    # 1.1 Check if node exists
+    ###########################################################################
+
+    - name: Check if node exists
+      command: lsdef -t node -o {{ item.name }}
+      changed_when: false
+      failed_when: false
+      register: existing_node
+
+    ###########################################################################
+    # 1.2 Create node if missing
+    ###########################################################################
+
+    - name: Create node if missing
+      command: >
+        mkdef -t node -o {{ item.name }}
+        groups={{ item.groups | default(['compute']) | join(',') }}
+        ip={{ item.ip }}
+        mac={{ item.mac }}
+        netboot={{ item.netboot | default('pxe') }}
+      register: node_create_result
+      changed_when: node_create_result.rc == 0
+      failed_when: node_create_result.rc != 0
+      when:
+        - existing_node.rc != 0
+        - item.name is defined
+        - item.ip is defined
+        - item.mac is defined
+
+    ###########################################################################
+    # 1.3 Drift detection for existing nodes
+    ###########################################################################
+
+    - name: Get current node attributes
+      command: lsdef -t node -o {{ item.name }}
+      changed_when: false
+      register: current_node_values
+      when: existing_node.rc == 0
+
+    - name: Determine if IP update is needed
+      set_fact:
+        needs_ip_update: true
+      when:
+        - existing_node.rc == 0
+        - current_node_values.stdout is not regex("ip={{ item.ip }}\\b")
+
+    - name: Determine if group update is needed
+      set_fact:
+        needs_group_update: true
+      when:
+        - existing_node.rc == 0
+        - item.groups is defined
+        - current_node_values.stdout is not regex("groups={{ item.groups | join(',') }}\\b")
+
+    ###########################################################################
+    # 1.4 Apply updates
+    ###########################################################################
+
+    - name: Update node IP if needed
+      command: chdef -t node {{ item.name }} ip={{ item.ip }}
+      register: node_ip_update
+      changed_when: node_ip_update.rc == 0
+      failed_when: node_ip_update.rc != 0
+      when: needs_ip_update | default(false)
+
+    - name: Update node groups if needed
+      command: chdef -t node {{ item.name }} groups={{ item.groups | join(',') }}
+      register: node_group_update
+      changed_when: node_group_update.rc == 0
+      failed_when: node_group_update.rc != 0
+      when: needs_group_update | default(false)
+
+    ###########################################################################
+    # 1.5 Verify node definition
+    ###########################################################################
+
+    - name: Verify node definition
+      command: lsdef -t node -o {{ item.name }}
+      register: node_verify
+      changed_when: false
+      failed_when: node_verify.rc != 0

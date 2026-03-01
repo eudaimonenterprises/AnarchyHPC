@@ -16,3 +16,9 @@ apache_user: apache
 apache_group: apache
 apache_main_conf: /etc/httpd/conf/httpd.conf
 apache_conf_dir: /etc/httpd/conf.d
+
+
+apache_server_root: /etc/httpd
+apache_log_dir: "logs"  # Default RHEL symlink to /var/log/httpd
+apache_ssl_stapling_cache: "shmcb:logs/ssl_stapling(32768)"
+apache_doc_root: "/var/www/html"   # Standard RedHat path

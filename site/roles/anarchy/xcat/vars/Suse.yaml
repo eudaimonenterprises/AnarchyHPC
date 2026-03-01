@@ -1,5 +1,4 @@
 ---
----
 # SUSE-specific repository URLs
 xcat_core_repo_url: "https://xcat.org"
 xcat_dep_repo_url: "https://xcat.org/files/xcat/repos/yum/devel/xcat-dep/sles15/x86_64/"

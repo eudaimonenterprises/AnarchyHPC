@@ -22,18 +22,21 @@
     group: root
     state: directory
 
-- name: Enable Apache modules on SUSE (Safe Append)
+- name: Reset and Enable Apache modules on SUSE (Force Correct Syntax)
   lineinfile:
     path: /etc/sysconfig/apache2
-    regexp: '^(APACHE_MODULES=".*)"$'
-    line: '\1 perl ssl passenger cgi proxy proxy_http"'
-    backrefs: yes
+    # Match any line starting with APACHE_MODULES, even if broken
+    regexp: '^APACHE_MODULES=.*'
+    # Hard-set the line to exactly what it needs to be
+    line: 'APACHE_MODULES="perl {{ apache_enabled_modules }}"'
+    state: present
   when: ansible_os_family == "Suse"
   notify: restart apache in apache role
 
+
 - name: Enable Apache modules on Debian/Ubuntu
   command: "a2enmod {{ item }}"
-  loop: [ perl, ssl, passenger, cgi, proxy, proxy_http ]
+  loop: [ perl, ssl, passenger, cgi, proxy, proxy_http, headers]
   register: a2enmod_result
   changed_when: "'Enabling module' in a2enmod_result.stdout"
   when: ansible_os_family == "Debian"

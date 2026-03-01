@@ -10,9 +10,13 @@ apache_user: wwwrun
 apache_group: www
 
 # SUSE specific paths
+apache_server_root: /etc/apache2
 apache_conf_dir: /etc/apache2/conf.d
 apache_main_conf: /etc/apache2/httpd.conf
 apache_modules_sysconfig: /etc/sysconfig/apache2
+apache_log_dir: /var/log/apache2
 
 # Modules to enable in /etc/sysconfig/apache2
-apache_enabled_modules: "perl ssl passenger cgi proxy proxy_http"
+apache_enabled_modules: "access_compat actions alias auth_basic authn_core authz_core authz_host autoindex dir env log_config mime negotiation setenvif socache_shmcb ssl mpm_prefork perl passenger cgi proxy proxy_http headers"
+apache_ssl_stapling_cache: "shmcb:/run/apache2/ssl_stapling(32768)"
+apache_doc_root: "/srv/www/htdocs"  # Standard SUSE path

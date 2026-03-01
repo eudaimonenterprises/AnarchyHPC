@@ -1,0 +1,21 @@
+ block:
+
+    - name: Get current PXE options
+      command: lsdef -t node {{ item.name }} | grep pxeoptions=
+      changed_when: false
+      failed_when: false
+      register: existing_pxe_options
+
+    - name: Update PXE options if needed
+      command: chdef -t node {{ item.name }} pxeoptions='default'
+      register: pxe_update
+      changed_when: pxe_update.rc == 0
+      failed_when: pxe_update.rc != 0
+      when:
+        - existing_pxe_options.stdout is not regex("pxeoptions=default\\b")
+
+    - name: Verify PXE options
+      command: lsdef -t node {{ item.name }} | grep pxeoptions=default
+      register: pxe_verify
+      changed_when: false
+      failed_when: pxe_verify.rc != 0
