@@ -30,6 +30,10 @@ http_service_name: "apache2"
 dhcp_service_name: "isc-dhcp-server"
 tftp_service_name: "tftpd-hpa"
 
+xcat_manage_dns: true
+xcat_manage_dhcp: true
+xcat_manage_tftp: true
+
 # Provisioning network definition
 provisioning_network:
   name: "provnet"

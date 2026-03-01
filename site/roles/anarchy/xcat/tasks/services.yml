@@ -1,23 +1,10 @@
 ---
 ###############################################################################
-# 0. DNS/DHCP generation (idempotent, conditional)
-###############################################################################
-
-- name: Configure DNS via xCAT
-  ansible.builtin.command: makedns -n
-  when: xcat_manage_dns
-
-- name: Configure DHCP via xCAT
-  ansible.builtin.command: makedhcp -n
-  when: xcat_manage_dhcp
-  tags: [provisioning, services, dhcp]
-
-###############################################################################
 # 1. Pre-flight: verify xCAT installation
 ###############################################################################
 
 - name: Verify xCAT installation before service configuration
-  command: which lsdef
+  command: "ls {{ xcat_bin }}/lsdef"
   changed_when: false
   failed_when: false
   register: xcat_check
@@ -43,6 +30,9 @@
             {
               'RedHat': [
                 ('tftp-server' if 'tftp-server' in ansible_facts.packages | default([]) else none),
+                ('tftp' if 'tftp' in ansible_facts.packages | default([]) else none)
+              ],
+              'Suse': [
                 ('tftp' if 'tftp' in ansible_facts.packages | default([]) else none)
               ],
               'Debian': [
@@ -87,17 +77,29 @@
 # 4. Start and enable services (idempotent)
 ###############################################################################
 
-- name: Enable and start xcatd service
+- name: Install systemd SysV compatibility for xCAT (SUSE)
+  community.general.zypper:
+    name: systemd-sysvcompat
+    state: present
+  when: ansible_os_family == 'Suse'
+
+- name: Ensure all legacy SysV runlevel directories exist (SUSE)
+  ansible.builtin.file:
+    path: "/etc/init.d/rc{{ item }}.d"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  loop: [ '0', '1', '2', '3', '4', '5', '6' ]
+  when: ansible_os_family == 'Suse'
+
+- name: Reload systemd and manage xcatd
   ansible.builtin.systemd:
     name: xcatd
     state: started
     enabled: yes
     daemon_reload: yes
-    force: yes  # Overwrites the SysV sync failure
-  register: xcatd_result
-  changed_when: xcatd_result.changed | default(false)
   when: xcat_check.rc == 0
-
 
 - name: Enable and start TFTP service
   systemd:
@@ -138,3 +140,21 @@
   register: httpd_status
   changed_when: false
   failed_when: "'inactive' in httpd_status.stdout or 'failed' in httpd_status.stdout"
+
+###############################################################################
+# 6. DNS/DHCP generation (idempotent, conditional)
+###############################################################################
+
+- name: Configure DNS via xCAT
+  ansible.builtin.command: "{{ xcat_sbin }}/makedns -n"
+  when: xcat_manage_dns | bool
+
+- name: Configure DHCP via xCAT
+  ansible.builtin.command: "{{ xcat_sbin }}/makedhcp -n"
+  when: xcat_manage_dhcp | bool
+
+- name: Configure TFTP via xCAT (mknb)
+  ansible.builtin.command: "{{ xcat_sbin }}/mknb x86_64"
+  when: xcat_manage_tftp | bool
+
+

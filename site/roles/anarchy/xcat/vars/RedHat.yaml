@@ -30,6 +30,10 @@ http_service_name: "httpd"
 dhcp_service_name: "dhcpd"
 tftp_service_name: "tftp"
 
+xcat_manage_dns: true
+xcat_manage_dhcp: true
+xcat_manage_tftp: true
+
 # Provisioning network definition
 provisioning_network:
   name: "provnet"

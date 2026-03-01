@@ -7,18 +7,28 @@ provisioning_enabled: true
 
 provisioning_method: xcat
 
+xcat_manage_dns: true
+xcat_manage_dhcp: true
+xcat_manage_tftp: true
+
+
 ###############################################################################
 # xCAT package installation
 ###############################################################################
 
-# Packages required for xCAT (auto‑selected per OS family)
-provisioning_required_packages:
-  - xcat-server
-  - xcat-client
-  - xcat-genesis-scripts-x86_64
-  - xcat-genesis-base-x86_64
+# RedHat-specific repository URLs
+xcat_core_repo_url: "https://xcat.org/files/xcat/repos/yum/latest/xcat-core/"
+xcat_dep_repo_url: "https://xcat.org/files/xcat/repos/yum/devel/xcat-dep/rh9/x86_64/"
 
-# Services xCAT manages
+provisioning_required_packages:
+  - xCAT-server
+  - xCAT-client
+  - xCAT-genesis-base-x86_64
+  - xCAT-genesis-scripts-x86_64
+  - goconserver
+  - ipmitool-xcat
+
+# Services managed by the xCAT role
 provisioning_enable_services:
   - xcatd
 

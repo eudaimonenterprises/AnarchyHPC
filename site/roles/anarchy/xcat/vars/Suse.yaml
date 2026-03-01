@@ -31,6 +31,10 @@ tftp_service_name: "tftp"
 # We reference this from the Apache role or define it locally as a pointer
 http_service_name: "apache2"
 
+xcat_manage_dns: true
+xcat_manage_dhcp: true
+xcat_manage_tftp: true
+
 # Provisioning network
 provisioning_network:
   name: "provnet"
