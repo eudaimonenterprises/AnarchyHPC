@@ -5,12 +5,12 @@ xcat_core_repo_url: "deb [arch=amd64] https://xcat.org/files/xcat/repos/apt/late
 xcat_dep_repo_url: "deb [arch=amd64] https://xcat.org bionic main"
 
 provisioning_required_packages:
-  - xcat-server
-  - xcat-client
-  - xcat-genesis-base-amd64
-  - xcat-genesis-scripts-amd64
-  - conserver-xcat
-  - ipmitool
+  - xCAT-server
+  - xCAT-client
+  - xCAT-genesis-base-x86_64
+  - xCAT-genesis-scripts-x86_64
+  - goconserver
+  - ipmitool-xcat
 
 # Services managed by the xCAT role
 provisioning_enable_services:

@@ -88,13 +88,16 @@
 ###############################################################################
 
 - name: Enable and start xcatd service
-  systemd:
+  ansible.builtin.systemd:
     name: xcatd
     state: started
     enabled: yes
+    daemon_reload: yes
+    force: yes  # Overwrites the SysV sync failure
   register: xcatd_result
   changed_when: xcatd_result.changed | default(false)
   when: xcat_check.rc == 0
+
 
 - name: Enable and start TFTP service
   systemd:

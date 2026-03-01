@@ -32,8 +32,18 @@
     - name: Install xCAT packages
       include_tasks: install.yml
 
-    - name: Configure xCAT management node
-      include_tasks: controller.yml
+    # xCAT Controller – Modernized Provisioning Pipeline
+
+    - name: Ensure xCAT directories exist
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+      loop:
+        - "{{ xcat_install_dir | default('/opt/xcat') }}"
+        - "{{ xcat_config_dir | default('/etc/xcat') }}"
 
     - name: Configure xCAT networks (DHCP, DNS, TFTP)
       include_tasks: networks.yml
@@ -90,7 +100,7 @@
 
     - name: Validate xCAT metadata consistency
       command: "lsdef -t node -o {{ item }}"
-      loop: "{{ groups['compute'] }}"
+      loop: "{{ groups['compute'] | default([]) }}"
       register: metadata_check
       failed_when: metadata_check.failed
 

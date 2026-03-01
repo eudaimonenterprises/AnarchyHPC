@@ -9,8 +9,8 @@ provisioning_required_packages:
   - xCAT-client
   - xCAT-genesis-base-x86_64
   - xCAT-genesis-scripts-x86_64
-  - conserver-xcat
-  - ipmitool
+  - goconserver
+  - ipmitool-xcat
 
 # Services managed by the xCAT role
 provisioning_enable_services:
