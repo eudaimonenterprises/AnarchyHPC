@@ -1,0 +1,19 @@
+# Modernized xCAT systemd unit for SUSE
+[Unit]
+Description=xCAT management service (hardened)
+After=network.target syslog.service
+Documentation=man:xcatd(8)
+
+[Service]
+Type=simple
+Environment="PERL5LIB={{ xcat_install_dir | default('/opt/xcat') }}/lib/perl"
+Environment="XCATROOT={{ xcat_install_dir | default('/opt/xcat') }}"
+Environment="XCATCONFIG=/etc/xcat/site.sqlite"
+ExecStartPre=/usr/bin/mkdir -p /var/run/xcat /var/log/xcat
+ExecStart={{ xcat_sbin | default('/opt/xcat/sbin') }}/xcatd -f
+KillMode=process
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

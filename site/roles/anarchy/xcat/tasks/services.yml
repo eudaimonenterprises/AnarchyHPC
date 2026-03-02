@@ -74,6 +74,39 @@
   when: httpd_service_name is not defined
 
 ###############################################################################
+# 2. Install missing DB dependencies (needed BEFORE xcatsetup)
+###############################################################################
+
+- name: Ensure Perl SQLite modules are installed (required for xCAT DB initialization)
+  package:
+    name:
+      - perl-DBI
+      - perl-DBD-SQLite
+      - sqlite3
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Ensure Perl SQLite modules are installed (SUSE-specific)
+  zypper:
+    name:
+      - perl-DBI
+      - perl-DBD-SQLite
+      - sqlite3
+    state: present
+  when: ansible_os_family == "Suse"
+
+- name: Ensure Perl SQLite modules are installed (Debian/Ubuntu)
+  apt:
+    name:
+      - libdbi-perl
+      - libdbd-sqlite3-perl
+      - sqlite3
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+
+###############################################################################
 # 4. Start and enable services (idempotent)
 ###############################################################################
 
@@ -93,13 +126,313 @@
   loop: [ '0', '1', '2', '3', '4', '5', '6' ]
   when: ansible_os_family == 'Suse'
 
-- name: Reload systemd and manage xcatd
+###############################################################################
+# 4. Pre-seed mandatory xCAT site table attributes
+###############################################################################
+
+- name: Manually seed mandatory site table attributes to prevent xcatd crash
+  ansible.builtin.shell: |
+    # 1. Ensure the table exists (idempotent)
+    sqlite3 /etc/xcat/site.sqlite "CREATE TABLE IF NOT EXISTS site (key TEXT PRIMARY KEY, value TEXT, comments TEXT, disable TEXT);"
+    
+    # 2. Inject the 'master' identity
+    sqlite3 /etc/xcat/site.sqlite "INSERT OR IGNORE INTO site (key, value) VALUES ('master', '{{ ansible_fqdn | default(inventory_hostname) }}');"
+    
+    # 3. Inject the mandatory ports (Fixes the "Need xcatdport" error)
+    sqlite3 /etc/xcat/site.sqlite "INSERT OR IGNORE INTO site (key, value) VALUES ('xcatdport', '3001');"
+    sqlite3 /etc/xcat/site.sqlite "INSERT OR IGNORE INTO site (key, value) VALUES ('xcatiport', '3002');"
+    
+    # 4. Inject standard defaults
+    sqlite3 /etc/xcat/site.sqlite "INSERT OR IGNORE INTO site (key, value) VALUES ('domain', '{{ cluster_domain | default('cluster.local') }}');"
+    sqlite3 /etc/xcat/site.sqlite "INSERT OR IGNORE INTO site (key, value) VALUES ('installdir', '/install');"
+  args:
+    executable: /bin/bash
+  # We run this always to ensure the keys exist, but it only changes if the file is new
+  register: sqlite_seed_result
+  changed_when: sqlite_seed_result.rc == 0
+
+- name: Safeguard - Backup existing CA before deletion
+  ansible.builtin.shell: >
+    tar -czf "/root/xcat_ca_backup_{{ ansible_date_time.iso8601_basic_short }}.tgz" 
+    /etc/xcat/ca
+  become: true
+
+- name: Force-remove existing CA directory (Hard Wipe)
+  ansible.builtin.shell: "rm -rf /etc/xcat/ca"
+  become: true
+
+- name: Ensure xCAT CA directory structure exists
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  loop:
+    - /etc/xcat/ca
+    - /etc/xcat/ca/private
+    - /etc/xcat/ca/certs
+    - /etc/xcat/ca/newcerts
+  become: true
+
+- name: Initialize xCAT OpenSSL database files
+  ansible.builtin.copy:
+    dest: "{{ item.path }}"
+    content: "{{ item.content }}"
+    force: true
+    mode: '0644'
+  loop:
+    - { path: '/etc/xcat/ca/index', content: '' }
+    - { path: '/etc/xcat/ca/index.attr', content: "unique_subject = no\n" }
+    - { path: '/etc/xcat/ca/serial', content: "01\n" }
+  become: true
+
+- name: Deploy xCAT OpenSSL configuration from template
+  ansible.builtin.shell: >
+    sed -e "s@##XCATCADIR##@/etc/xcat/ca@" 
+    /opt/xcat/share/xcat/ca/openssl.cnf.tmpl > /etc/xcat/ca/openssl.cnf
+  args:
+    creates: /etc/xcat/ca/openssl.cnf
+  become: true
+
+- name: Generate xCAT CA Private Key (Shell)
+  ansible.builtin.shell: >
+    openssl genrsa -out /etc/xcat/ca/private/ca-key.pem 2048 &&
+    chmod 600 /etc/xcat/ca/private/ca-key.pem
+  become: true
+  args:
+    creates: /etc/xcat/ca/private/ca-key.pem
+
+- name: Generate CA Request (CSR)
+  ansible.builtin.shell: >
+    openssl req -new 
+    -key /etc/xcat/ca/private/ca-key.pem 
+    -config /etc/xcat/ca/openssl.cnf 
+    -out /etc/xcat/ca/ca-req.csr 
+    -subj "/CN=xCAT CA ({{ ansible_hostname }})"
+    -outform PEM
+  become: true
+  args:
+    creates: /etc/xcat/ca/ca-req.csr
+
+- name: Self-sign the CA Certificate
+  ansible.builtin.shell: >
+    openssl ca -selfsign -batch
+    -keyfile /etc/xcat/ca/private/ca-key.pem 
+    -in /etc/xcat/ca/ca-req.csr 
+    -config /etc/xcat/ca/openssl.cnf 
+    -out /etc/xcat/ca/ca-cert.pem 
+    -startdate 700101010101Z 
+    -days 7305 
+    -extensions v3_ca
+  become: true
+  args:
+    creates: /etc/xcat/ca/ca-cert.pem
+
+- name: Ensure xCAT server certificate directory exists
+  ansible.builtin.file:
+    path: /etc/xcat/cert
+    state: directory
+    mode: '0700'
+  become: true
+
+- name: Update openssl.cnf with Subject Alternative Names (SAN)
+  ansible.builtin.shell: >
+    sed -i "s/#XCATCASAN#/DNS.1 = {{ ansible_fqdn }}\nDNS.2 = {{ ansible_hostname }}/g" 
+    /etc/xcat/ca/openssl.cnf
+  become: true
+
+- name: Generate Server Private Key
+  ansible.builtin.shell: >
+    openssl genrsa -out /etc/xcat/ca/{{ ansible_hostname }}.key 2048
+  become: true
+  args:
+    creates: "/etc/xcat/ca/{{ ansible_hostname }}.key"
+
+- name: Generate Server CSR
+  ansible.builtin.shell: >
+    openssl req -new 
+    -config /etc/xcat/ca/openssl.cnf 
+    -key /etc/xcat/ca/{{ ansible_hostname }}.key 
+    -out /etc/xcat/ca/{{ ansible_hostname }}.csr 
+    -extensions server 
+    -subj "/CN={{ ansible_fqdn }}"
+  become: true
+  args:
+    creates: "/etc/xcat/ca/{{ ansible_hostname }}.csr"
+
+- name: Sign Server Certificate with CA
+  ansible.builtin.shell: >
+    openssl ca -batch 
+    -config /etc/xcat/ca/openssl.cnf 
+    -in /etc/xcat/ca/{{ ansible_hostname }}.csr 
+    -out /etc/xcat/ca/{{ ansible_hostname }}.cert 
+    -startdate 600101010101Z 
+    -days 7305 
+    -extensions server 
+    -extensions san_env
+  become: true
+  args:
+    creates: "/etc/xcat/ca/{{ ansible_hostname }}.cert"
+
+- name: Finalize xCAT Server Credentials and Bundle
+  ansible.builtin.shell: |
+    cp /etc/xcat/ca/{{ ansible_hostname }}.cert /etc/xcat/cert/server-cert.pem
+    cp /etc/xcat/ca/{{ ansible_hostname }}.key /etc/xcat/cert/server-key.pem
+    cp /etc/xcat/ca/ca-cert.pem /etc/xcat/cert/ca.pem
+    cat /etc/xcat/cert/server-cert.pem /etc/xcat/cert/server-key.pem > /etc/xcat/cert/server-cred.pem
+    chmod 600 /etc/xcat/cert/*.pem
+  become: true
+
+- name: Remove stale xCAT client credentials for root
+  ansible.builtin.file:
+    path: /root/.xcat
+    state: absent
+  become: true
+
+- name: Create root xCAT credential directory
+  ansible.builtin.file:
+    path: /root/.xcat
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+
+- name: Generate Root Client Private Key
+  ansible.builtin.shell: >
+    openssl genrsa -out /root/.xcat/client-key.pem 2048
+  become: true
+
+- name: Generate Root Client CSR
+  ansible.builtin.shell: >
+    openssl req -new -batch
+    -config /etc/xcat/ca/openssl.cnf 
+    -key /root/.xcat/client-key.pem 
+    -out /root/.xcat/client-req.pem 
+    -extensions usr_cert 
+    -subj "/CN=root"
+  become: true
+
+- name: Sign Root Client Certificate
+  ansible.builtin.shell: >
+    openssl ca -batch 
+    -config /etc/xcat/ca/openssl.cnf 
+    -in /root/.xcat/client-req.pem 
+    -out /root/.xcat/client-cert.pem 
+    -startdate 600101010101Z 
+    -days 7305
+  become: true
+
+- name: Bundle Root Client Credentials
+  ansible.builtin.shell: |
+    cat /root/.xcat/client-cert.pem /root/.xcat/client-key.pem > /root/.xcat/client-cred.pem
+    cp /etc/xcat/ca/ca-cert.pem /root/.xcat/ca.pem
+    chmod 600 /root/.xcat/*.pem
+    rm -f /root/.xcat/client-req.pem
+  become: true
+
+- name: Final Hard Restart of xcatd
+  ansible.builtin.systemd:
+    name: xcatd
+    state: restarted
+  become: true
+
+- name: Authorize root user in xCAT policy table
+  ansible.builtin.shell: >
+    XCATBYPASS=1 /opt/xcat/bin/chdef -t policy -o 1 name=root rule=allow
+  become: true
+
+- name: Verify xCAT site table is accessible (The FINAL Moment of Truth)
+  ansible.builtin.command: "/opt/xcat/bin/lsdef -t site"
+  become: true
+
+- name: Initialize xCAT Management Node (Schema, SSL, and SSH keys)
+  ansible.builtin.command: "{{ xcat_sbin }}/xcatconfig -i"
+  environment:
+    XCATROOT: "/opt/xcat"
+    XCATBYPASS: "yes"
+    # We point to the path where we WANT the DB to live
+    XCATCONFIG: "/etc/xcat/site.sqlite"
+  args:
+    # Only run if the database hasn't been initialized yet
+    creates: /etc/xcat/site.sqlite
+
+- name: Register Management Node in the new database
+  ansible.builtin.command: "{{ xcat_sbin }}/xcatconfig -m"
+  environment:
+    XCATROOT: "/opt/xcat"
+    XCATBYPASS: "yes"
+    XCATCONFIG: "/etc/xcat/site.sqlite"
+  when: xcat_check.rc == 0
+
+###############################################################################
+# 7. Modernize xcatd systemd unit (fix "Unknown Platform" on SUSE)
+###############################################################################
+
+- name: Create hardened xcatd.service template
+  ansible.builtin.template:
+    src: templates/xcatd.service.j2
+    dest: /tmp/xcatd.service.hardened
+    owner: root
+    group: root
+    mode: '0644'
+  vars:
+    xcat_sbin_path: "{{ xcat_sbin | default('/opt/xcat/sbin') }}"
+  # This only runs on SUSE (where the issue manifests)
+  when: ansible_os_family == "Suse"
+
+- name: Deploy hardened xcatd.service unit
+  ansible.builtin.copy:
+    src: /tmp/xcatd.service.hardened
+    dest: /usr/lib/systemd/system/xcatd.service
+    owner: root
+    group: root
+    mode: '0644'
+    remote_src: yes
+  when: ansible_os_family == "Suse"
+
+- name: Ensure /var/run/xcat and /var/log/xcat directories exist (for ExecStartPre)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - /var/run/xcat
+    - /var/log/xcat
+
+- name: Reload systemd to apply hardened xcatd.service unit
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+###############################################################################
+# Then update the systemd start task to use the hardened service:
+###############################################################################
+
+- name: Start xcatd with retry logic (prevents port binding race conditions)
   ansible.builtin.systemd:
     name: xcatd
     state: started
     enabled: yes
-    daemon_reload: yes
-  when: xcat_check.rc == 0
+    daemon_reload: no   # Already reloaded above; avoid redundant reloads
+  register: xcatd_start_result
+  retries: 3
+  delay: 5
+  until: >
+    xcatd_start_result is succeeded or 
+    ('xcatd.service not found' not in xcatd_start_result.stderr)
+
+- name: Wait for xCAT API to be ready (port 3001)
+  wait_for:
+    port: 3001
+    host: localhost
+    timeout: 90
+
+###############################################################################
+# 9. Enable and start supporting services
+###############################################################################
 
 - name: Enable and start TFTP service
   systemd:
@@ -141,6 +474,17 @@
   changed_when: false
   failed_when: "'inactive' in httpd_status.stdout or 'failed' in httpd_status.stdout"
 
+###############################################################################
+# 11. Final verification (no MITM warnings)
+###############################################################################
+
+- name: Verify xCAT site table is accessible without MITM warnings
+  ansible.builtin.command: "{{ xcat_bin }}/lsdef -t site"
+  environment:
+    XCATROOT: "/opt/xcat"
+  register: lsdef_site_check
+  failed_when: "'MITM' in lsdef_site_check.stderr or lsdef_site_check.rc != 0"
+  become: true
 ###############################################################################
 # 6. DNS/DHCP generation (idempotent, conditional)
 ###############################################################################

@@ -54,7 +54,7 @@
     # --- Pre-flight validation ----------------------------------------------------
 
     - name: Check DNS resolution
-      command: "getent hosts {{ mgmt_hostname }}"
+      command: "getent hosts {{ mgmt_hostname | default(ansible_fqdn) }}"
       register: dns_check
       failed_when: dns_check.rc != 0
 
