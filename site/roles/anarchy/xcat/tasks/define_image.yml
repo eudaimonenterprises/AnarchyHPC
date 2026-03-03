@@ -1,0 +1,46 @@
+---
+# 3.1 Check if image exists
+- name: Check if OS image {{ item.name }} exists
+  command: lsdef -t osimage -o {{ item.name }}
+  changed_when: false
+  failed_when: false
+  register: existing_image
+
+# 3.2 Build mkdef command
+- name: Build mkdef command for OS image {{ item.name }}
+  set_fact:
+    final_cmd: >
+      mkdef -t osimage -o {{ item.name }}
+      osvers={{ item.osvers }}
+      arch={{ item.arch | default('x86_64') }}
+      profile={{ item.profile | default('compute') }}
+      provmethod={{ item.provmethod | default('install') }}
+      rootimgdir={{ item.rootimgdir | default(anarchy_images ~ '/' ~ item.name) }}
+      pkgdir={{ item.pkgdir | default(osimage_defaults.pkgdir) }}
+      template={{ item.template | default(osimage_defaults.template) }}
+
+# 3.3 Create image if missing
+- name: Create OS image {{ item.name }} if missing
+  command: "{{ final_cmd }}"
+  register: image_creation_result
+  when: existing_image.rc != 0
+
+# 3.4/3.5 Update existing image if it exists
+- name: Update existing OS image {{ item.name }}
+  command: >
+    chdef -t osimage -o {{ item.name }}
+    rootimgdir={{ item.rootimgdir | default(anarchy_images ~ '/' ~ item.name) }}
+  register: image_update_result
+  when: existing_image.rc == 0
+
+# 3.6 Determine if rebuild is needed (Scoped to this loop iteration)
+- name: Determine if image definition changed for {{ item.name }}
+  set_fact:
+    image_needs_pack: "{{ image_creation_result.changed or image_update_result.changed }}"
+
+# 3.7 Run packimage immediately if needed (more reliable than a second loop)
+- name: Pack image {{ item.name }}
+  command: packimage {{ item.name }}
+  when: 
+    - item.provmethod in ['netboot', 'statelite']
+    - image_needs_pack | bool

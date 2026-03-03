@@ -52,6 +52,7 @@
     ###########################################################################
     - name: Refresh zypper
       command: zypper --non-interactive refresh
+      become: true
       changed_when: false
 
 

@@ -12,183 +12,56 @@
   register: xcat_check
 
 ###############################################################################
-# 1. Discover pkgdir (multi-path, idempotent)
+# 1. Discover pkgdir (Updated for /opt/xcat/share/xcat layout)
 ###############################################################################
 
 - name: Determine appropriate pkgdir based on architecture and OS family
   set_fact:
     xcat_pkgdir: "{{ item }}"
   loop:
-    - "/opt/xcat/share/nodetypes"
-    - "/usr/share/xcat/nodetypes"
+    - "/opt/xcat/share/xcat/install"
+    - "/opt/xcat/share/xcat/netboot"
     - "/install/nodetypes"
-  when: xcat_pkgdir is not defined
+  when: 
+    - xcat_pkgdir is not defined
+    - item is directory
 
 ###############################################################################
-# 2. OS-family defaults (RedHat / Debian / fallback)
+# 2. OS-family defaults (RedHat / Suse / Debian)
 ###############################################################################
 
 - name: Select OS-family-specific image defaults
   set_fact:
     osimage_defaults: "{{ item.defaults }}"
-  loop: "{{ [
-    {
-      'os_family': 'RedHat',
-      'defaults': {
-        'pkgdir': xcat_pkgdir,
-        'template': (
-          '/opt/xcat/share/templates/install-redhat'
-          if lookup('ansible.builtin.file', '/opt/xcat/share/templates/install-redhat', errors='ignore')
-          else '/usr/share/xcat/templates/install-redhat'
-        ),
-        'imagetype': 'install'
-      }
-    },
-    {
-      'os_family': 'Debian',
-      'defaults': {
-        'pkgdir': xcat_pkgdir,
-        'template': (
-          '/opt/xcat/share/templates/install-deb'
-          if lookup('ansible.builtin.file', '/opt/xcat/share/templates/install-deb', errors='ignore')
-          else '/usr/share/xcat/templates/install-deb'
-        ),
-        'imagetype': 'install'
-      }
-    },
-    {
-      'os_family': 'Other',
-      'defaults': {
-        'pkgdir': xcat_pkgdir,
-        'template': '/usr/share/xcat/templates/install-generic',
-        'imagetype': 'install'
-      }
-    }
-  ] }}"
-  when:
+  loop:
+    - os_family: 'RedHat'
+      defaults:
+        pkgdir: "{{ xcat_pkgdir }}"
+        template: "/opt/xcat/share/xcat/install/rh/compute.pkglist"
+        imagetype: 'install'
+    - os_family: 'Suse'
+      defaults:
+        pkgdir: "{{ xcat_pkgdir }}"
+        template: "/opt/xcat/share/xcat/install/sles/compute.pkglist"
+        imagetype: 'install'
+    - os_family: 'Debian'
+      defaults:
+        pkgdir: "{{ xcat_pkgdir }}"
+        template: "/opt/xcat/share/xcat/install/debian/compute.pkglist"
+        imagetype: 'install'
+  when: 
     - osimage_defaults is not defined
-    - item.os_family == (ansible_os_family if ansible_os_family in ['RedHat', 'Debian'] else 'Other')
+    - item.os_family == ansible_os_family
 
 ###############################################################################
-# 3. Define OS images (fully idempotent)
+# 3. Define OS images (Using include_tasks to solve the 'Block Loop' error)
 ###############################################################################
 
-- name: Define OS images in xCAT
-  block:
-
-    ###########################################################################
-    # 3.1 Check if image exists
-    ###########################################################################
-
-    - name: Check if OS image exists
-      command: lsdef -t osimage -o {{ item.name }}
-      changed_when: false
-      failed_when: false
-      register: existing_image
-
-    ###########################################################################
-    # 3.2 Build mkdef command
-    ###########################################################################
-
-    - name: Build mkdef command for OS image
-      set_fact:
-        final_cmd: >
-          mkdef -t osimage -o {{ item.name }}
-          osvers={{ item.osvers }}
-          arch={{ item.arch | default('x86_64') }}
-          profile={{ item.profile | default('compute') }}
-          provmethod={{ item.provmethod | default('install') }}
-          rootimgdir={{ item.rootimgdir | default(anarchy_images ~ '/' ~ item.name) }}
-          pkgdir={{ item.pkgdir | default(osimage_defaults.pkgdir) }}
-          template={{ item.template | default(osimage_defaults.template) }}
-
-    ###########################################################################
-    # 3.3 Create image if missing
-    ###########################################################################
-
-    - name: Create OS image if missing
-      command: "{{ final_cmd }}"
-      register: image_creation_result
-      changed_when: image_creation_result.rc == 0
-      failed_when: image_creation_result.rc != 0
-      when: existing_image.rc != 0
-
-    ###########################################################################
-    # 3.4 Build update command for existing image
-    ###########################################################################
-
-    - name: Build chdef command for existing OS image
-      set_fact:
-        update_cmd: >
-          chdef -t osimage -o {{ item.name }}
-          rootimgdir={{ item.rootimgdir | default(anarchy_images ~ '/' ~ item.name) }}
-      when: existing_image.rc == 0
-
-    ###########################################################################
-    # 3.5 Apply updates if needed
-    ###########################################################################
-
-    - name: Update existing OS image
-      command: "{{ update_cmd }}"
-      register: image_update_result
-      changed_when: image_update_result.rc == 0
-      failed_when: image_update_result.rc != 0
-      when:
-        - existing_image.rc == 0
-
-    ###########################################################################
-    # 3.6 Determine if rebuild is needed
-    ###########################################################################
-
-    - name: Determine if image definition changed
-      set_fact:
-        image_definition_changed: true
-      when: >
-        existing_image.rc == 0 and (
-          existing_image.stdout is not regex("pkgdir={{ item.pkgdir | default(osimage_defaults.pkgdir) }}\\b") or
-          existing_image.stdout is not regex("template={{ item.template | default(osimage_defaults.template) }}\\b") or
-          existing_image.stdout is not regex("rootimgdir={{ item.rootimgdir | default(anarchy_images ~ '/' ~ item.name) }}\\b")
-        )
-
-    ###########################################################################
-    # 3.7 Verify image definition
-    ###########################################################################
-
-    - name: Verify OS image definition
-      command: lsdef -t osimage -o {{ item.name }}
-      register: image_verification
-      failed_when: image_verification.rc != 0
-      changed_when: false
-
-  loop: "{{ xcat_os_images }}"
+- name: Process xCAT OS image definitions
+  include_tasks: define_image.yml
+  loop: "{{ xcat_os_images | default([]) }}"
+  loop_control:
+    loop_var: image_item
   when:
     - xcat_check.rc == 0
-    - provisioning_method == 'xcat'
-
-###############################################################################
-# 4. Pack images (idempotent)
-###############################################################################
-
-- name: Pack netboot/statelite images when needed
-  command: packimage {{ item.name }}
-  when:
-    - item.provmethod in ['netboot', 'statelite']
-    - provisioning_method == 'xcat'
-    - xcat_check.rc == 0
-    - image_definition_changed | default(false)
-  loop: "{{ xcat_os_images }}"
-
-###############################################################################
-# 5. Validate packimage output
-###############################################################################
-
-- name: Validate packimage result (dry run)
-  command: packimage {{ item.name }} --dryrun
-  register: packimage_check
-  changed_when: false
-  failed_when: packimage_check.rc != 0
-  when:
-    - item.provmethod in ['netboot', 'statelite']
-    - provisioning_method == 'xcat'
-    - xcat_check.rc == 0
-  loop: "{{ xcat_os_images }}"
+    - provisioning_method | default('xcat') == 'xcat'

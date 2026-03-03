@@ -2,16 +2,6 @@
 # xCAT node definitions - production-grade with full idempotency
 
 ###############################################################################
-# 0. Pre-flight: ensure xCAT is installed
-###############################################################################
-
-- name: Verify xCAT installation before node configuration
-  command: which lsdef
-  changed_when: false
-  failed_when: false
-  register: xcat_check
-
-###############################################################################
 # 1. Node creation and update (idempotent)
 ###############################################################################
 
@@ -21,8 +11,11 @@
   loop_control:
     loop_var: item
   when:
-    - xcat_check.rc == 0
+    # Use the global variables you already verified
+    - provisioning_enabled | default(false) | bool
     - provisioning_method == 'xcat'
+    # Only run if we are actually on the controller
+    - on_controller | default(false) | bool
 
 ###############################################################################
 # 2. BMC Configuration (idempotent + credential validation)

@@ -59,14 +59,10 @@
       failed_when: dns_check.rc != 0
 
     - name: Check DHCP config syntax
-      command: makedhcp -n
-      register: dhcp_check
-      failed_when: dhcp_check.rc != 0
-
-    - name: Check xCAT API responds
-      command: lsdef -t site
-      register: xcat_api
-      failed_when: xcat_api.rc != 0
+      ansible.builtin.command: "{{ xcat_sbin }}/makedhcp -n"
+      environment:
+        XCATROOT: "/opt/xcat"
+      become: true
 
     # ------------------------------------------------------------------------------
 
@@ -79,30 +75,37 @@
       failed_when: not tftp_dir.stat.exists
 
     - name: Validate node definitions exist
-      command: lsdef -t node
+      ansible.builtin.command: "{{ xcat_bin }}/lsdef -t node"
+      environment:
+        XCATROOT: "/opt/xcat"
+        XCATBYPASS: "1"
       register: node_defs
       failed_when: node_defs.rc != 0
+      become: true
 
     # ------------------------------------------------------------------------------
 
-- name: Build xCAT images
-  include_tasks: images.yml
-  when:
-    - build_images | default(false) | bool
-    - xcat_build_images_if_missing | default(true)
+    - name: Build xCAT images
+      include_tasks: images.yml
 
     # --- Post-flight validation ---------------------------------------------------
 
     - name: Ping all compute nodes
-      command: "nodels {{ groups['compute'] | join(',') }} -s ping"
+      ansible.builtin.command: "{{ xcat_bin }}/nodels {{ groups['compute'] | join(',') }} -s ping"
+      environment:
+        XCATROOT: "/opt/xcat"
       register: ping_check
       failed_when: ping_check.rc != 0
+      become: true
 
     - name: Validate xCAT metadata consistency
-      command: "lsdef -t node -o {{ item }}"
+      ansible.builtin.command: "{{ xcat_bin }}/lsdef -t node -o {{ item }}"
+      environment:
+        XCATROOT: "/opt/xcat"
       loop: "{{ groups['compute'] | default([]) }}"
       register: metadata_check
       failed_when: metadata_check.failed
+      become: true
 
     # ------------------------------------------------------------------------------
 
@@ -113,7 +116,7 @@
   when:
     - provisioning_enabled | default(false) | bool
     - provisioning_method | default('xcat') == 'xcat'
-    - host_role | default('compute') == 'controller'
+    - (on_controller | default(false) | bool)
 
 
 ###############################################################################
@@ -127,4 +130,4 @@
   when:
     - provisioning_enabled | default(false) | bool
     - provisioning_method | default('xcat') == 'xcat'
-    - host_role | default('compute') == 'compute'
+    - not (on_controller | default(true) | bool)

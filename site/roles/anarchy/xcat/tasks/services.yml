@@ -344,7 +344,7 @@
   become: true
 
 - name: Verify xCAT site table is accessible (The FINAL Moment of Truth)
-  ansible.builtin.command: "/opt/xcat/bin/lsdef -t site"
+  ansible.builtin.command: "{{ xcat_bin }}/lsdef -t site"
   become: true
 
 - name: Initialize xCAT Management Node (Schema, SSL, and SSH keys)
