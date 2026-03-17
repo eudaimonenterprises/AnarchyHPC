@@ -24,6 +24,20 @@ anarchy_stream: 'stable'
 
 project_id: '000000'
 
+#########################################################################
+#                           System Settings                             #
+#########################################################################
+
+# Default timezone for all controllers and compute nodes.
+# This value is used by the xCAT timezone postscript.
+# Example values:
+#   - "UTC"
+#   - "Europe/Amsterdam"
+#   - "America/New_York"
+#   - "Asia/Tokyo"
+
+timezone: "UTC"
+
 
 #########################################################################
 #                           Cloud Details                               #
@@ -225,6 +239,62 @@ anarchy_licenses: '{{ anarchy_shared }}/licenses'
 anarchy_docs: '{{ anarchy_shared }}/docs'
 anarchy_examples: '{{ anarchy_shared }}/examples'
 anarchy_modulefiles: '{{ anarchy_shared }}/modulefiles'
+
+#########################################################################
+#                         xCAT OS Image Definitions                     #
+#########################################################################
+
+# These OS images will be defined and managed by xCAT during the
+# provisioning pipeline. Each entry corresponds to an OS image that
+# will be created (or updated) using mkdef/chdef and included in the
+# genimage/build process.
+#
+# Supported fields:
+#   - name:        Unique identifier for the OS image
+#   - osvers:      OS version directory under /install (must match media)
+#   - os_family:   rocky | alma | ubuntu | debian | suse
+#   - arch:        CPU architecture (defaults to x86_64 if omitted)
+#   - profile:     xCAT profile (defaults to "compute")
+#   - provmethod:  netboot | install (defaults to netboot)
+#
+# Add or remove entries depending on which OS images you want available.
+
+xcat_os_images:
+#  - name: rocky8
+#    osvers: rocky8
+#    os_family: rocky
+
+#  - name: rocky9
+#    osvers: rocky9
+#    os_family: rocky
+
+#  - name: almalinux9
+#    osvers: almalinux9
+#    os_family: alma
+#    arch: x86_64
+#    profile: compute
+#    provmethod: netboot
+
+  - name: ubuntu24.04
+    osvers: ubuntu24.04
+    os_family: ubuntu
+    arch: amd64
+    profile: compute
+    provmethod: netboot
+
+#  - name: debian13
+#    osvers: debian13
+#    os_family: debian
+#    arch: amd64
+#    profile: compute
+#    provmethod: netboot
+
+#  - name: leap15.6
+#    osvers: leap15.6
+#    os_family: suse
+#    arch: x86_64
+#    profile: compute
+#    provmethod: netboot
 
 
 #########################################################################

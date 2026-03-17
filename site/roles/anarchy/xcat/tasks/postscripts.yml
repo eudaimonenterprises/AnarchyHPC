@@ -11,38 +11,44 @@
 
 
 ###############################################################################
-# Root password injection script
+# Generate SSH keypair on controller (idempotent)
 ###############################################################################
 
-- name: Create root password postscript
-  copy:
-    dest: "/install/postscripts/config/root-password.sh"
-    mode: "0755"
+- name: Ensure xCAT SSH key directory exists
+  file:
+    path: /etc/xcat/sshkeys
+    state: directory
     owner: root
     group: root
-    content: |
-      #!/bin/bash
-      echo "root:{{ root_password_plaintext }}" | chpasswd
-      exit 0
+    mode: 0700
+
+- name: Generate root SSH keypair for cluster if missing
+  command: ssh-keygen -t ed25519 -N "" -f /etc/xcat/sshkeys/root
+  args:
+    creates: /etc/xcat/sshkeys/root
+
+# IMPORTANT: slurp reads the file at runtime, not parse time
+- name: Read public key for injection
+  slurp:
+    src: /etc/xcat/sshkeys/root.pub
+  register: ssh_pubkey_raw
+
+- name: Decode public key
+  set_fact:
+    ssh_public_key: "{{ ssh_pubkey_raw.content | b64decode }}"
 
 
 ###############################################################################
-# SSH authorized_keys injection script
+# SSH authorized_keys injection script (template-based)
 ###############################################################################
 
 - name: Create authorized_keys postscript
-  copy:
+  template:
+    src: authorized-keys.sh.j2
     dest: "/install/postscripts/config/authorized-keys.sh"
-    mode: "0755"
     owner: root
     group: root
-    content: |
-      #!/bin/bash
-      mkdir -p /root/.ssh
-      chmod 700 /root/.ssh
-      echo "{{ ssh_public_key }}" > /root/.ssh/authorized_keys
-      chmod 600 /root/.ssh/authorized_keys
-      exit 0
+    mode: "0755"
 
 
 ###############################################################################
@@ -57,8 +63,11 @@
     group: root
     content: |
       #!/bin/bash
-      echo "nameserver {{ dns_server }}" > /etc/resolv.conf
-      echo "search {{ dns_search_domain }}" >> /etc/resolv.conf
+      > /etc/resolv.conf
+      {% for ns in anarchy_dns_forwarders %}
+      echo "nameserver {{ ns }}" >> /etc/resolv.conf
+      {% endfor %}
+      echo "search {{ anarchy_domain }}" >> /etc/resolv.conf
       exit 0
 
 
@@ -79,13 +88,26 @@
 
 
 ###############################################################################
+# Root password script (dummy no-op for SSH-key-only clusters)
+###############################################################################
+
+- name: Create root password postscript (no-op)
+  template:
+    src: root-password.sh.j2
+    dest: "/install/postscripts/config/root-password.sh"
+    owner: root
+    group: root
+    mode: "0755"
+
+
+###############################################################################
 # Register the list of postscripts for use in define_image.yml
 ###############################################################################
 
 - name: Register postinstall scripts list
   set_fact:
     xcat_postinstall_scripts: >
-      /install/postscripts/config/root-password.sh,
       /install/postscripts/config/authorized-keys.sh,
       /install/postscripts/config/dns-setup.sh,
-      /install/postscripts/config/timezone-setup.sh
+      /install/postscripts/config/timezone-setup.sh,
+      /install/postscripts/config/root-password.sh

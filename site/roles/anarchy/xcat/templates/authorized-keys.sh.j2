@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+SSH_DIR="/root/.ssh"
+mkdir -p "${SSH_DIR}"
+chmod 700 "${SSH_DIR}"
+
+cat << 'EOF' >> "${SSH_DIR}/authorized_keys"
+{{ ssh_public_key }}
+EOF
+
+chmod 600 "${SSH_DIR}/authorized_keys"

@@ -637,12 +637,31 @@ set_yaml "anarchy_cluster_dhcp_end" "\"$anarchy_cluster_dhcp_end\""
 set_yaml "anarchy_bmc_net" "\"$anarchy_bmc_net\""
 set_yaml "anarchy_bmc_netprefix" "\"$anarchy_bmc_netprefix\""
 
-# Replace DNS block safely
-sed -i "/^anarchy_dns_forwarders:/,/^[^[:space:]]/c\
-anarchy_dns_forwarders:" "$ALL_YML"
-for dns in "${dns_array[@]}"; do
-  echo "  - \"$dns\"" >> "$ALL_YML"
-done
+key="anarchy_dns_forwarders"
+
+tmp=$(mktemp)
+
+# 1. Copy everything before the block
+awk -v key="^${key}:" '
+  $0 ~ key {exit}
+  {print}
+' "$ALL_YML" > "$tmp"
+
+# 2. Write the new block
+{
+  echo "${key}:"
+  for dns in "${dns_array[@]}"; do
+    echo "  - \"$dns\""
+  done
+} >> "$tmp"
+
+# 3. Copy everything after the block
+awk -v key="^${key}:" '
+  found && !/^[[:space:]]*-/ {print}
+  $0 ~ key {found=1}
+' "$ALL_YML" >> "$tmp"
+
+mv "$tmp" "$ALL_YML"
 
 # Replace workload manager block
 sed -i "/^workload_manager:/,/^[^[:space:]]/c\
@@ -656,8 +675,9 @@ echo "Writing inventory to ${HOSTS_FILE}" > /dev/tty
 
 {
   echo "[controllers]"
-  echo "${anarchy_ctrl1_hostname} ansible_host=${anarchy_ctrl1_ip} ansible_user=${CONTROLLER_USER} ansible_ssh_private_key_file=${SSH_KEY_PATH} ansible_become=true"
+  echo "${anarchy_ctrl1_hostname} ansible_host=${anarchy_ctrl1_ip} ansible_user=${CONTROLLER_USER} on_controller=true primary=true ansible_ssh_private_key_file=${SSH_KEY_PATH} ansible_become=true"
 } > "$HOSTS_FILE"
+
 
 # -----------------------------------------------------------------------------
 # FINAL MESSAGES
