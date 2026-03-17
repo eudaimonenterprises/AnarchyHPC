@@ -1,0 +1,91 @@
+---
+# Phase C: Inject post-install configuration scripts for xCAT OS images
+
+- name: Ensure postscripts directory exists
+  file:
+    path: "/install/postscripts/config"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+
+###############################################################################
+# Root password injection script
+###############################################################################
+
+- name: Create root password postscript
+  copy:
+    dest: "/install/postscripts/config/root-password.sh"
+    mode: "0755"
+    owner: root
+    group: root
+    content: |
+      #!/bin/bash
+      echo "root:{{ root_password_plaintext }}" | chpasswd
+      exit 0
+
+
+###############################################################################
+# SSH authorized_keys injection script
+###############################################################################
+
+- name: Create authorized_keys postscript
+  copy:
+    dest: "/install/postscripts/config/authorized-keys.sh"
+    mode: "0755"
+    owner: root
+    group: root
+    content: |
+      #!/bin/bash
+      mkdir -p /root/.ssh
+      chmod 700 /root/.ssh
+      echo "{{ ssh_public_key }}" > /root/.ssh/authorized_keys
+      chmod 600 /root/.ssh/authorized_keys
+      exit 0
+
+
+###############################################################################
+# DNS configuration script
+###############################################################################
+
+- name: Create DNS setup postscript
+  copy:
+    dest: "/install/postscripts/config/dns-setup.sh"
+    mode: "0755"
+    owner: root
+    group: root
+    content: |
+      #!/bin/bash
+      echo "nameserver {{ dns_server }}" > /etc/resolv.conf
+      echo "search {{ dns_search_domain }}" >> /etc/resolv.conf
+      exit 0
+
+
+###############################################################################
+# Timezone configuration script
+###############################################################################
+
+- name: Create timezone setup postscript
+  copy:
+    dest: "/install/postscripts/config/timezone-setup.sh"
+    mode: "0755"
+    owner: root
+    group: root
+    content: |
+      #!/bin/bash
+      timedatectl set-timezone "{{ timezone }}"
+      exit 0
+
+
+###############################################################################
+# Register the list of postscripts for use in define_image.yml
+###############################################################################
+
+- name: Register postinstall scripts list
+  set_fact:
+    xcat_postinstall_scripts: >
+      /install/postscripts/config/root-password.sh,
+      /install/postscripts/config/authorized-keys.sh,
+      /install/postscripts/config/dns-setup.sh,
+      /install/postscripts/config/timezone-setup.sh

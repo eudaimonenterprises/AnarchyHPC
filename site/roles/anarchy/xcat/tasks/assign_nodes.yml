@@ -1,0 +1,24 @@
+# Phase E1: Assign osimage using nodeset (NOT nimdef)
+- name: Assign osimage to compute node using nodeset (Linux command)
+  command: >
+    {{ xcat_bin }}/nodeset {{ groups['compute'] | join(',') }} osimage={{ computed_osimage }}
+  when:
+    - groups['compute'] is defined
+    - groups['compute'] | length > 0
+
+# Phase E2: Set boot state using nodeset (NOT nimdef)
+- name: Set node boot state to prov using nodeset (Linux command)
+  command: >
+    {{ xcat_bin }}/nodeset {{ groups['compute'] | join(',') }} nextstate=prov
+  when:
+    - groups['compute'] is defined
+    - groups['compute'] | length > 0
+
+# Phase E3: Trigger network configuration using handlers
+- name: Update DHCP configuration (makedhcp) with restart handler
+  command: "{{ xcat_sbin }}/makedhcp -n"
+  notify: regenerate DHCP config
+
+- name: Update TFTP configuration (mknb) for x86_64 architecture
+  command: "{{ xcat_sbin }}/mknb x86_64"
+  notify: regenerate TFTP resources

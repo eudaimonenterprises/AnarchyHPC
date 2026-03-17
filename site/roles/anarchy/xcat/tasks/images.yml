@@ -11,23 +11,57 @@
   failed_when: false
   register: xcat_check
 
+
 ###############################################################################
 # 1. Discover pkgdir (Updated for /opt/xcat/share/xcat layout)
 ###############################################################################
 
-- name: Determine appropriate pkgdir based on architecture and OS family
-  set_fact:
-    xcat_pkgdir: "{{ item }}"
+- name: Check for existence of xCAT pkgdir paths
+  stat:
+    path: "{{ item }}"
   loop:
     - "/opt/xcat/share/xcat/install"
     - "/opt/xcat/share/xcat/netboot"
     - "/install/nodetypes"
-  when: 
-    - xcat_pkgdir is not defined
-    - item is directory
+  register: pkgdir_stats
+
+- name: Set xcat_pkgdir from first existing path
+  set_fact:
+    xcat_pkgdir: "{{ (pkgdir_stats.results | selectattr('stat.exists', 'true') | map(attribute='item') | list)[0] }}"
+  failed_when: xcat_pkgdir is not defined
+
 
 ###############################################################################
-# 2. OS-family defaults (RedHat / Suse / Debian)
+# 2. Pre-Build Validation (NEW)
+###############################################################################
+
+- name: Validate .pkglist file exists before genimage
+  stat:
+    path: "{{ xcat_pkgdir }}/{{ os_family_to_template[item.os_family | default('RedHat')] }}/compute.pkglist"
+  register: pkglist_check
+  failed_when: not pkglist_check.stat.exists
+  loop: "{{ xcat_os_images | default([]) }}"
+  loop_control:
+    label: "Validate {{ item.name }} .pkglist"
+
+- name: Validate postscript shell scripts exist before genimage
+  stat:
+    path: "/install/postscripts/config/{{ item }}"
+  register: postscript_check
+  failed_when: not postscript_check.stat.exists
+  loop:
+    - root-password.sh
+    - authorized-keys.sh
+    - dns-setup.sh
+    - timezone-setup.sh
+
+- name: Confirm pre-build validation passed
+  debug:
+    msg: "Pre-build validation successful. All .pkglist and postscripts ready."
+
+
+###############################################################################
+# 3. OS-family defaults (RedHat / Suse / Debian)
 ###############################################################################
 
 - name: Select OS-family-specific image defaults
@@ -53,8 +87,9 @@
     - osimage_defaults is not defined
     - item.os_family == ansible_os_family
 
+
 ###############################################################################
-# 3. Define OS images (Using include_tasks to solve the 'Block Loop' error)
+# 4. Define OS images (Using include_tasks to solve the 'Block Loop' error)
 ###############################################################################
 
 - name: Process xCAT OS image definitions

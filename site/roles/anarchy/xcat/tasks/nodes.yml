@@ -11,14 +11,13 @@
   loop_control:
     loop_var: item
   when:
-    # Use the global variables you already verified
     - provisioning_enabled | default(false) | bool
     - provisioning_method == 'xcat'
-    # Only run if we are actually on the controller
     - on_controller | default(false) | bool
 
+
 ###############################################################################
-# 2. BMC Configuration (idempotent + credential validation)
+# 2. BMC Configuration (optional, idempotent, validated)
 ###############################################################################
 
 - name: Configure node BMC settings (idempotent)
@@ -27,22 +26,27 @@
   loop_control:
     loop_var: item
   when:
-    - xcat_check.rc == 0
+    - provisioning_enabled | default(false) | bool
     - provisioning_method == 'xcat'
+    - on_controller | default(false) | bool
+    - xcat_manage_bmc | default(true)
 
 
 ###############################################################################
-# 3. PXE Options Configuration (idempotent)
+# 3. PXE Options Configuration (legacy, optional, safe to test)
 ###############################################################################
 
-- name: Configure PXE boot options (idempotent)
+- name: Configure PXE boot options (legacy xCAT behavior)
   include_tasks: nodes-pxe.yml
   loop: "{{ xcat_nodes }}"
   loop_control:
     loop_var: item
   when:
-    - xcat_check.rc == 0
+    - provisioning_enabled | default(false) | bool
     - provisioning_method == 'xcat'
+    - on_controller | default(false) | bool
+    - xcat_test_legacy_pxe | default(false)
+
 
 ###############################################################################
 # 4. HPC node configuration (image-side)
@@ -67,6 +71,7 @@
   when:
     - image_path is defined
     - on_controller | default(false)
+
 
 ###############################################################################
 # 5. HPC node configuration (live node)

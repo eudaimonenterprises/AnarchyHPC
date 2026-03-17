@@ -1,0 +1,251 @@
+# xCAT .pkglist template for AnarchyHPC bootable images
+# Generated from legacy image-core package lists
+# This file is processed by genimage during OS image creation
+
+###############################################################################
+# OS Family Specific Configuration
+###############################################################################
+
+{% if os_family == 'RedHat' %}
+# Red Hat Enterprise Linux / CentOS / Rocky / AlmaLinux
+@core
+kernel
+dracut
+grub2
+grub2-tools
+grub2-efi-x64
+grub2-efi-x64-modules
+tzdata
+bind-utils
+shim-x64
+efibootmgr
+dosfstools
+lvm2
+mdadm
+lbzip2
+aria2
+tpm2-tools
+dmidecode
+
+# Dracut extras for network-bootable initramfs
+/usr/sbin/mkswap
+/usr/sbin/swapon
+/usr/sbin/swaplabel
+/usr/sbin/mkfs.vfat
+/usr/sbin/mkfs.fat
+/usr/sbin/mkdosfs
+/usr/sbin/dosfslabel
+/usr/sbin/fatlabel
+/etc/mke2fs.conf
+/usr/sbin/mdadm
+/usr/bin/top
+/usr/sbin/fdisk
+/usr/sbin/lspci
+/usr/share/hwdata/pci.ids
+/usr/bin/lsblk
+/usr/bin/lsscsi
+/usr/bin/tee
+/usr/bin/lbzip2
+/usr/bin/tpm2_pcrread
+/usr/bin/aria2c
+/usr/sbin/parted
+/usr/bin/mount
+
+{% elif os_family == 'Debian' %}
+# Ubuntu / Debian
+base-files
+bash
+apt
+util-linux
+ca-certificates
+ca-certificates-java
+p11-kit
+p11-kit-modules
+network-manager
+auditd
+coreutils
+initramfs-tools
+gettext-base
+firewalld
+libnss-systemd
+libnss-myhostname
+libc6
+hostname
+iproute2
+iputils-ping
+irqbalance
+kbd
+kexec-tools
+ncurses-bin
+tar
+bzip2
+lbzip2
+parted
+gpg
+net-tools
+less
+mc
+openssh-client
+openssh-server
+sudo
+systemd
+curl
+wget
+e2fsprogs
+xfsprogs
+ipmitool
+rsyslog
+vim
+cron
+sssd
+lsscsi
+sg3-utils
+rdma-core
+grub-efi-amd64
+shim-signed
+bind9-dnsutils
+efibootmgr
+dosfstools
+lvm2
+mdadm
+dmidecode
+tpm2-tools
+tpm2-tss
+aria2
+linux-image-generic
+linux-firmware
+
+# Dracut extras (for network-bootable initramfs)
+/usr/sbin/mkswap
+/usr/sbin/swapon
+/usr/sbin/swaplabel
+/usr/sbin/mkfs.vfat
+/usr/sbin/mkfs.fat
+/usr/sbin/mkdosfs
+/usr/sbin/dosfslabel
+/usr/sbin/fatlabel
+/etc/mke2fs.conf
+/usr/sbin/mdadm
+/usr/bin/top
+/usr/sbin/fdisk
+/usr/sbin/lspci
+/usr/share/hwdata/pci.ids
+/usr/bin/lsblk
+/usr/bin/lsscsi
+/usr/bin/tee
+/usr/bin/lbzip2
+/usr/bin/tpm2_pcrread
+/usr/bin/aria2c
+
+{% elif os_family == 'Suse' %}
+# SUSE Linux Enterprise / openSUSE Leap
+aaa_base
+bash
+zypper
+util-linux
+openSUSE-build-key
+ca-certificates
+ca-certificates-mozilla
+p11-kit-tools
+NetworkManager
+audit
+coreutils
+dracut
+gettext-runtime
+filesystem
+firewalld
+nss-systemd
+nss-myhostname
+nss_wrapper
+glibc
+hostname
+iproute2
+iputils
+irqbalance
+kbd
+kexec-tools
+ncurses
+tar
+bzip2
+lbzip2
+parted
+gpg2
+net-tools
+less
+mc
+openssh
+openssh-server
+sudo
+systemd
+curl
+wget
+e2fsprogs
+xfsprogs
+ipmitool
+util-linux
+syslog-ng
+vim-small
+vim
+cronie
+sssd
+sssd-kcm
+lsscsi
+sg3_utils
+rdma-core
+grub2
+shim
+bind-utils
+efibootmgr
+dosfstools
+lvm2
+mdadm
+dmidecode
+tpm2-tools
+tpm2-tss
+aria2
+kernel-default
+kernel-firmware
+systemd-sysvinit
+
+# Dracut extras (for network-bootable initramfs)
+/usr/sbin/mkswap
+/usr/sbin/swapon
+/usr/sbin/swaplabel
+/usr/sbin/mkfs.vfat
+/usr/sbin/mkfs.fat
+/usr/sbin/mkdosfs
+/usr/sbin/dosfslabel
+/usr/sbin/fatlabel
+/etc/mke2fs.conf
+/usr/sbin/mdadm
+/usr/bin/top
+/usr/sbin/fdisk
+/usr/sbin/lspci
+/usr/share/hwdata/pci.ids
+/usr/bin/lsblk
+/usr/bin/lsscsi
+/usr/bin/tee
+/usr/bin/lbzip2
+/usr/bin/tpm2_pcrread
+/usr/bin/aria2c
+
+{% endif %}
+
+###############################################################################
+# Repository Configuration (Injected by genimage from /install/repo)
+###############################################################################
+
+# AnarchyHPC repositories (if defined in defaults/main.yml)
+{% for repo in anarchyhpc_repositories | default([]) %}
+{% if repo.name is defined and repo.repo is defined %}
+{{ repo.repo }}
+{% endif %}
+{% endfor %}
+
+###############################################################################
+# Final Notes
+###############################################################################
+
+# This pkglist file is processed by xCAT genimage command to build bootable OS images.
+# The kernel, dracut, and network-manager (or equivalent) packages are explicitly included
+# to ensure the resulting image can be network-booted via PXE/iPXE.
