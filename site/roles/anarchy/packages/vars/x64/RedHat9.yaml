@@ -101,4 +101,5 @@ install_packages:
   - s-nail
   - moreutils
   - moreutils-parallel
-
+  - python3-pip
+  - python3-virtualenv

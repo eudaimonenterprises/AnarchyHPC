@@ -37,12 +37,15 @@
 
 - name: Validate .pkglist file exists before genimage
   stat:
-    path: "{{ xcat_pkgdir }}/{{ os_family_to_template[item.os_family | default('RedHat')] }}/compute.pkglist"
+    # Use the os_family you already defined in your xcat_os_images list
+    path: "{{ xcat_pkgdir }}/{{ image_item.os_family }}/compute.pkglist"
   register: pkglist_check
   failed_when: not pkglist_check.stat.exists
-  loop: "{{ xcat_os_images | default([]) }}"
+  # The [ ] | flatten ensures the loop gets a list even if only one item is active
+  loop: "{{ [xcat_os_images] | flatten }}"
   loop_control:
-    label: "Validate {{ item.name }} .pkglist"
+    loop_var: image_item
+    label: "Validate {{ image_item.name }} .pkglist"
 
 - name: Validate postscript shell scripts exist before genimage
   stat:
@@ -89,14 +92,69 @@
 
 
 ###############################################################################
-# 4. Define OS images (Using include_tasks to solve the 'Block Loop' error)
+# 4. Define OS images (Flattened to avoid Block/Include errors)
 ###############################################################################
 
-- name: Process xCAT OS image definitions
-  include_tasks: define_image.yml
-  loop: "{{ xcat_os_images | default([]) }}"
+- name: "Check if OS image {{ image_item.name }} exists"
+  command: "{{ xcat_bin | default('/opt/xcat/bin') }}/lsdef -t osimage -o {{ image_item.name }}"
+  changed_when: false
+  failed_when: false
+  register: existing_images
+  loop: "{{ [xcat_os_images] | flatten }}"
   loop_control:
     loop_var: image_item
-  when:
-    - xcat_check.rc == 0
-    - provisioning_method | default('xcat') == 'xcat'
+  when: xcat_check.rc == 0 and provisioning_method | default('xcat') == 'xcat'
+
+- name: "Create OS image if missing"
+  command: >
+    {{ xcat_bin | default('/opt/xcat/bin') }}/mkdef -t osimage -o {{ item.image_item.name }}
+    osvers={{ item.image_item.osvers }}
+    arch={{ item.image_item.arch | default('x86_64') }}
+    profile={{ item.image_item.profile | default('compute') }}
+    provmethod={{ item.image_item.provmethod | default('netboot') }}
+    imagetype=linux
+    pkglist={{ xcat_pkgdir }}/{{ item.image_item.os_family }}/compute.pkglist
+    template={{ item.image_item.template | default(xcat_pkgdir ~ '/rh/compute.pkglist') }}
+  loop: "{{ existing_images.results }}"
+  loop_control:
+    label: "Creating {{ item.image_item.name | default('unknown') }}"
+  when: 
+    - not item.skipped | default(false)
+    - item.rc != 0
+
+- name: "Update OS image if it exists"
+  command: >
+    {{ xcat_bin | default('/opt/xcat/bin') }}/chdef -t osimage -o {{ item.image_item.name }}
+    pkglist={{ xcat_pkgdir }}/{{ item.image_item.os_family }}/compute.pkglist
+  loop: "{{ existing_images.results }}"
+  loop_control:
+    label: "Updating {{ item.image_item.name | default('unknown') }}"
+  when: 
+    - not item.skipped | default(false)
+    - item.rc == 0
+
+###############################################################################
+# 5. Build & Seal OS Images (Restored from Phase E)
+###############################################################################
+
+- name: "Run genimage for {{ item.image_item.name }}"
+  command: "{{ xcat_bin | default('/opt/xcat/bin') }}/genimage {{ item.image_item.name }}"
+  environment:
+    XCATROOT: "/opt/xcat"
+  loop: "{{ existing_images.results }}"
+  loop_control:
+    label: "genimage: {{ item.image_item.name | default('unknown') }}"
+  when: 
+    - not item.skipped | default(false)
+    - osimage_changed | default(true) | bool
+
+- name: "Run packimage for {{ item.image_item.name }}"
+  command: "{{ xcat_bin | default('/opt/xcat/bin') }}/packimage {{ item.image_item.name }}"
+  environment:
+    XCATROOT: "/opt/xcat"
+  loop: "{{ existing_images.results }}"
+  loop_control:
+    label: "packimage: {{ item.image_item.name | default('unknown') }}"
+  when: 
+    - not item.skipped | default(false)
+    - osimage_changed | default(true) | bool

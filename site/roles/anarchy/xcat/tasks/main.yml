@@ -100,20 +100,6 @@
       include_tasks: images.yml
 
     ###########################################################################
-    # Phase D: Object Definition (mkdef)
-    ###########################################################################
-
-    - name: Define OS images in xCAT
-      include_tasks: define_image.yml
-
-    ###########################################################################
-    # Phase E: Build & Seal (genimage + packimage)
-    ###########################################################################
-
-    - name: Build and seal bootable OS images
-      include_tasks: build_seal.yml
-
-    ###########################################################################
     # Phase F: Zero-touch Trigger (nodeset + nextstate=prov)
     ###########################################################################
 

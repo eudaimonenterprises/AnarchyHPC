@@ -90,3 +90,6 @@ install_packages:
   - jq
   - postfix
   - s-nail
+  - python3-pip
+  - python3-venv
+  - python3-virtualenv

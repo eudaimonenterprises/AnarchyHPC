@@ -51,13 +51,13 @@
     - anarchy/kea             # DHCP
     - anarchy/apache          # Replaces anarchy/nginx
     - anarchy/xcat            # Provisioning
-    - anarchy/image-create
-    - anarchy/image-download
-    - anarchy/target
+#    - anarchy/image-create
+#    - anarchy/image-download
+#    - anarchy/target
     - anarchy/config-genders
     - anarchy/config-manager
-    - anarchy/lock-check
-    - anarchy/check-latest-kernel
+#    - anarchy/lock-check
+#    - anarchy/check-latest-kernel
 
 
     # ------------------------------------------------------------
@@ -73,7 +73,7 @@
     - anarchy/slurm
     - anarchy/config-slurm
     - anarchy/slurm-sbank
-    - anarchy/rdma-centos     # Optional but common for HPC fabrics
+#    - anarchy/rdma-centos     # Optional but common for HPC fabrics
 
     # ------------------------------------------------------------
     # Monitoring Stack (Prometheus + Grafana)
@@ -99,7 +99,7 @@
     # ------------------------------------------------------------
     - anarchy/rsyslog         # or anarchy/syslog-ng if preferred
     - anarchy/wrapup
-    - anarchy/wrapup-images
+#    - anarchy/wrapup-images
 
     # ------------------------------------------------------------
     # Optional HPC stacks (enable if needed)

@@ -80,15 +80,17 @@
     - provisioning_enabled | default(true)
 
 ###############################################################################
-# 5. Image Packability Validation (NEW)
+# 5. Image Packability Validation
 ###############################################################################
 
 - name: Validate packimage dry-run for all OS images
   ansible.builtin.command: packimage --dryrun {{ item.name }}
   register: finalize_image_check
   changed_when: false
-  failed_when: "'Error' in finalize_image_check.stderr"
-  loop: "{{ xcat_os_images }}"
+  # Use 'failed_when' carefully; dry-run might return non-zero if packimage isn't ready
+  failed_when: finalize_image_check.rc != 0
+  # The fix: wrap in brackets and flatten
+  loop: "{{ [xcat_os_images] | flatten }}"
   when:
     - xcat_check.rc == 0
     - provisioning_enabled | default(true)

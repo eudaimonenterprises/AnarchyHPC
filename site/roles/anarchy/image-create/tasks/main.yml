@@ -1,17 +1,17 @@
 ---
 - block:
     - name: Load OS‑specific controller variables
-      include_vars: "{{ package_arch }}/controller-{{ image_create_distribution }}.yaml"
+      include_vars: "{{ package_arch | default('x86_64') }}/controller-{{ image_create_distribution | default('ubuntu') }}.yaml"
       no_log: false
       ignore_errors: true
 
     - name: Get image path
       set_fact:
-        image_path: "{{ anarchy_images }}/{{ image_name }}"
+        image_path: "{{ anarchy_images | default('/install/images') }}/{{ image_name | default('placeholder') }}"
 
     - name: Create dir for compute image
       file:
-        name: "{{ image_path }}"
+        path: "{{ image_path }}"
         state: directory
 
     - debug:
@@ -19,7 +19,7 @@
 
     - name: Creating base image
       ansible.builtin.include_tasks:
-        file: "{{ image_create_distribution }}/base.yml"
+        file: "{{ image_create_distribution | default('ubuntu') }}/base.yml"
       when: image_create_minimal | default(True)
 
     - debug:
@@ -27,9 +27,9 @@
 
     - name: Extending base image
       ansible.builtin.include_tasks:
-        file: "{{ image_create_distribution }}/extend.yml"
+        file: "{{ image_create_distribution | default('ubuntu') }}/extend.yml"
       when: image_create_full | default(True)
-  when: not in_image
+  when: not in_image | default(false)
 
 - block:
     - block:
@@ -38,7 +38,7 @@
 
         - name: Tasks inside image
           ansible.builtin.include_tasks:
-            file: "{{ image_create_distribution }}/osgrab.yml"
+            file: "{{ image_create_distribution | default('ubuntu') }}/osgrab.yml"
       when: image_extend_osgrab | default(False) or image_extend_scratch | default(False)
 
     - block:
@@ -47,9 +47,9 @@
 
         - name: Tasks inside image
           ansible.builtin.include_tasks:
-            file: "{{ image_create_distribution }}/docker.yml"
+            file: "{{ image_create_distribution | default('ubuntu') }}/docker.yml"
       when: image_extend_docker | default(False)
 
     - debug:
         msg: "------------------------- image_create / finished -------------------------"
-  when: in_image
+  when: in_image | default(false)
